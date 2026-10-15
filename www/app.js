@@ -3446,16 +3446,21 @@ extra += `<div class="swipe" onclick="event.stopPropagation()"><button onclick="
 + `<span>${(m.ci||0)+1}/${m.candidates.length}</span>`
 + `<button onclick="swipeMsg(${jq(idx)},1)">›</button></div>`;
 }
+/* P0: 穿越模式的 regenMsg 是坏的（CHAT.runId 为空），改走 regenMsgAt */
+const regenBtn = CHAT.mode==="traverse"
+? `<button onclick="event.stopPropagation();regenMsgAt(${jq(idx)})">↻ 重生</button>`
+: `<button onclick="event.stopPropagation();regenMsg()">↻ 重生</button>`;
 extra += `<div class="msgtools">` + rateBtns + memBtn
 + voiceBubbleHTML(idx, m)
 + (repickInfo() ? `<button onclick="event.stopPropagation();repickOption()" title="回到上一个决策点重新选择">↩ 重选</button>` : "")
 + `<button onclick="event.stopPropagation();editMsg(${jq(idx)})">编辑</button>`
 + `<button onclick="event.stopPropagation();copyMsg(${jq(idx)})">复制</button>`
-+ `<button onclick="event.stopPropagation();regenMsg()">↻ 重生</button>`
++ regenBtn
 + `<button onclick="event.stopPropagation();delMsg(${jq(idx)})">删除</button></div>`;
 } else {
 extra = `<div class="msgtools">` + rateBtns + memBtn
 + (m.role==="assistant"?voiceBubbleHTML(idx,m):"")
++ (m.role==="assistant" ? `<button onclick="event.stopPropagation();regenMsgAt(${jq(idx)})" title="重生这条（会删掉它后面的消息）">↻ 重生</button>` : "")
 + `<button onclick="event.stopPropagation();editMsg(${jq(idx)})">编辑</button>`
 + `<button onclick="event.stopPropagation();copyMsg(${jq(idx)})">复制</button>`
 + `<button onclick="event.stopPropagation();delMsg(${jq(idx)})">删除</button></div>`;
@@ -3862,6 +3867,31 @@ setStreaming(false);
 renderChat();
 }
 };;
+/* 指定位置重生：对任意一条 AI 消息重试。做法是截掉该条及之后的历史，
+ * 用它前面那条用户消息走正常发送管线重生成 —— 三模式（单聊/群聊/穿越）通用，
+ * 顺带修了 regenMsg 在穿越模式下 CHAT.runId 为空的坏 key 问题。 */
+window.regenMsgAt = async (idx)=>{
+if(STREAMING || document.getElementById("live")){ rpToast("正在生成中，等这条回复完成再重生"); return; }
+const k = chatHistKey();
+/* P0-3: 历史读失败则拒绝（不能拿空历史去覆盖） */
+let h = null;
+try{ h = getHist(k); }catch(e){ rpToast("聊天记录读取失败"); return; }
+const m = h[idx];
+if(!m || m.role !== "assistant"){ rpToast("这条不是 AI 回复"); return; }
+/* 找它前面最后一条用户消息 */
+let uidx = -1;
+for(let i = idx - 1; i >= 0; i--){ if(h[i].role === "user"){ uidx = i; break; } }
+if(uidx < 0){ rpToast("找不到对应的用户消息"); return; }
+/* 非末尾：会删掉后面的消息，先确认 */
+const after = h.length - 1 - idx;
+if(after > 0){
+if(!confirm(`重生这条回复会删掉它后面的 ${after} 条消息，继续吗？`)) return;
+}
+const userText = h[uidx].content;
+saveHist(k, h.slice(0, idx));
+renderChat();
+await sendChatText(userText);
+};
 /* P0-4: 每轮发送独立 AbortController + 代数。旧的单全局 aborter 会被新发送覆盖，
  * 导致上一轮流永远无法取消；代数用于 streamToken 校验"这条 token 属于当前在飞的轮次"。 */
 let __genSeq = 0, __curGen = 0;
