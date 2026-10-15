@@ -3964,7 +3964,7 @@ const spk = CHAT.mode==="group"
 const atb = CHAT.mode==="group"
 ? `<button id="atbtn" class="cb-tool" onclick="toggleAtMenu(event)" title="＠ 指定角色：本轮点名 TA 先回"><span class="cb-ico">＠</span><span class="cb-tx">点名</span></button>` : "";
 return `<div class="cb-tools" data-xfade>`
-+ `<button id="pushbtn" class="cb-tool${CHAT.pushStory?" on":""}" onclick="togglePushStory(event)" title="推剧情：下一条回复自动推进"><span class="cb-ico">${icon("clapperboard",15)}</span><span class="cb-tx">推剧情</span></button>`
++ `<button id="pushbtn" class="cb-tool${CHAT.pushStory?" on":""}" onclick="togglePushStory(event)" title="推剧情：立即重生最后一条回复并推进"><span class="cb-ico">${icon("clapperboard",15)}</span><span class="cb-tx">推剧情</span></button>`
 + `<button id="narrbtn" class="cb-tool${CHAT.narrMode?" on":""}" onclick="toggleNarr()" title="旁白模式：发送场景/动作描写"><span class="cb-ico">${icon("scroll",15)}</span><span class="cb-tx">旁白</span></button>`
 + `${atb}${spk}`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
@@ -3993,7 +3993,7 @@ inp.focus();
 const m = document.getElementById("atmenu"); if(m) m.remove();
 };
 /* Push Story: 一键推剧情 (Marinara Narrative Director 思路) */
-window.togglePushStory = (ev)=>{
+window.togglePushStory = async (ev)=>{
   if(ev && ev.stopPropagation) ev.stopPropagation();
   /* P0: key 必须和注入点一致。穿越模式走 sendTraverse(wsIdT="nd_travchat_"+travId)，
      CHAT.runId 为空时旧代码会武装到垃圾 key "nd_pushstory_"，穿越里点了等于没点。 */
@@ -4011,6 +4011,26 @@ window.togglePushStory = (ev)=>{
   if(typeof AGENT_PUSHSTORY !== "undefined") AGENT_PUSHSTORY.arm(chatId, mode);
   CHAT.pushStory = true;
   var b = document.getElementById("pushbtn"); if(b) b.classList.add("on");
+  /* 点完立即有下文：重生最后一条 AI 回复，推进指令随注入进 prompt（一次性，用完自解）。
+     无 AI 回复时保持武装，下一条消息生效。 */
+  try{
+    const k = chatHistKey();
+    const h = getHist(k) || [];
+    let lastAI = -1;
+    for(let i = h.length - 1; i >= 0; i--){ if(h[i].role === "assistant"){ lastAI = i; break; } }
+    if(lastAI >= 0 && typeof regenMsgAt === "function"){
+      await regenMsgAt(lastAI);
+    }else if(lastAI < 0){
+      rpToast("已武装：发送下一条消息时自动推进剧情");
+    }
+  }catch(e){}
+  /* 同步按钮状态：injectPrompt 是一次性的，重生走完即已消费 */
+  try{
+    if(typeof AGENT_PUSHSTORY !== "undefined" && !AGENT_PUSHSTORY.isArmed(chatId)){
+      CHAT.pushStory = false;
+      var b2 = document.getElementById("pushbtn"); if(b2) b2.classList.remove("on");
+    }
+  }catch(e2){}
 };
 window.toggleNarr = ()=>{
 CHAT.narrMode = !CHAT.narrMode;
