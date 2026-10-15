@@ -3965,16 +3965,21 @@ const m = document.getElementById("atmenu"); if(m) m.remove();
 /* Push Story: 一键推剧情 (Marinara Narrative Director 思路) */
 window.togglePushStory = (ev)=>{
   if(ev && ev.stopPropagation) ev.stopPropagation();
-  var chatId = (typeof chatKey !== "undefined" && CHAT.runId) ? chatKey(CHAT.runId, CHAT.name) : "";
+  /* P0: key 必须和注入点一致。穿越模式走 sendTraverse(wsIdT="nd_travchat_"+travId)，
+     CHAT.runId 为空时旧代码会武装到垃圾 key "nd_pushstory_"，穿越里点了等于没点。 */
+  var chatId = (CHAT.mode === "traverse" && CHAT.travId) ? ("nd_travchat_" + CHAT.travId)
+    : (typeof chatKey !== "undefined" && CHAT.runId) ? chatKey(CHAT.runId, CHAT.name) : "";
   // 已武装则解除
   if(typeof AGENT_PUSHSTORY !== "undefined" && AGENT_PUSHSTORY.isArmed(chatId)){
     AGENT_PUSHSTORY.disarm(chatId);
+    CHAT.pushStory = false;
     var b0 = document.getElementById("pushbtn"); if(b0) b0.classList.remove("on");
     return;
   }
   // 选模式
   var mode = confirm("点确定=顺推剧情，点取消=加意外转折") ? "natural" : "event";
   if(typeof AGENT_PUSHSTORY !== "undefined") AGENT_PUSHSTORY.arm(chatId, mode);
+  CHAT.pushStory = true;
   var b = document.getElementById("pushbtn"); if(b) b.classList.add("on");
 };
 window.toggleNarr = ()=>{

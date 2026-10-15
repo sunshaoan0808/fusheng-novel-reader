@@ -1290,6 +1290,15 @@ async function sendTraverse(travId, text, opts){
     if(dirTextT && b.messages.length && b.messages[0].role === "system")
       b.messages[0].content += "\n\n" + dirTextT;
   }catch(e){}
+  /* Push Story: 一次性剧情推进指令（穿越会话）。单聊/群聊的注入在 RP.send，
+     穿越走 sendTraverse 以前没接这条线，点了等于没点。 */
+  try{
+    if(typeof AGENT_PUSHSTORY !== "undefined"){
+      var pushTextT = AGENT_PUSHSTORY.injectPrompt(wsIdT);
+      if(pushTextT && b.messages.length && b.messages[0].role === "system")
+        b.messages[0].content += "\n\n" + pushTextT;
+    }
+  }catch(e){}
   /* 剧情选项卡: 与单聊/群聊一致, 由 RP 设置里的选项开关控制 */
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + optCardsInstr(opts.optCount, opts.optMood);
