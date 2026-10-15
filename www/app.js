@@ -4124,6 +4124,7 @@ const r = isGroup
   optCards: sendOpts.optCards, optCount: sendOpts.optCount, optMood: sendOpts.optMood,
   signal: sendOpts.signal, onToken: sendOpts.onToken, onPush: sendOpts.onPush,
   onUserMsg: sendOpts.onUserMsg, onSystem: sendOpts.onSystem,
+  userMtype: CHAT.narrMode ? "narr" : "player",
   ppa: sendOpts.ppa, onAligning: sendOpts.onAligning,
   extraPrompt: travExtraPrompt(CHAT.travId, text)})
 : await RP.send(CHAT.runId, CHAT.name, text, sendOpts);

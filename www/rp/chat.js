@@ -1235,7 +1235,7 @@ async function sendTraverse(travId, text, opts){
   var trav = RP_TRAVERSE.get(travId);
   if(!trav) throw new Error("穿越会话不存在");
 
-  h.push(newMsg("user", text));
+  h.push(tagUserMsg(newMsg("user", text), opts));
   if(opts.onPush) opts.onPush();
   if(opts.onUserMsg) opts.onUserMsg();
 
