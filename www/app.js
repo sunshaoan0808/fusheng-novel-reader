@@ -7866,14 +7866,35 @@ window.travMode = (m)=>{
   else if(m==="plotline") plotlinePickBook();
 };
 /* 走原著线：选书 → 选幕（断点续玩）→ 开局 */
+/* 导入卡也走原著线：导入卡没有蒸馏世界卡(worldcard)，所以选书页补一节 RP_CARDIMPORT。
+   有世界补完(AI)的卡才列得出幕 —— 点进选幕；没补完的卡点进去先补完，不假装它有原著线。 */
+/* 从选书页进的补完页，返回键/返回按钮要回选书页，不是穿越首页 */
+let PLOTLINE_WB_BACK = false;
+function plotlineCardBible(id){ try{ return JSON.parse(localStorage.getItem("nd_wb2_card_"+id) || "null"); }catch(e){ return null; } }
+/* 剧情锚点 → 幕。补完时锚点不足会留"（待补完）"占位，那是占位不是内容，不当幕渲染 */
+function plotlineCardAnchors(bible){
+  const raw = (bible && Array.isArray(bible.anchors)) ? bible.anchors : [];
+  return raw.map(s=>String(s==null?"":s).trim()).filter(s=>s && s!=="（待补完）");
+}
 function plotlinePickBook(){
   const idx = (window.__DATA__ && window.__DATA__.index) || [];
   const runs = idx.filter(r => r.has_worldcard);
+  PLOTLINE_WB_BACK = false;
+  const cards = (typeof RP_CARDIMPORT!=="undefined") ? RP_CARDIMPORT.list() : [];
+  const cardSec = cards.length ? `<h2 class="sec">导入卡</h2>` + cards.map(c=>{
+    const done = !!plotlineCardBible(c.id);
+    const inner = `<div class="row"><div><div class="name">${esc(c.name||c.id)}</div>
+      <div class="meta">角色卡 · <span class="badge">${done?"导入卡·已补完":"导入卡·待补完"}</span></div></div><div class="tm-go">›</div></div></div>`;
+    /* onclick 整段分支写死：动态值只在 jq() 里, 不把整条 handler 插进属性 */
+    return done ? `<div class="card card--tap" onclick="plotlinePickCardStage('${jq(c.id)}')">${inner}</div>`
+                : `<div class="card card--tap" onclick="PLOTLINE_WB_BACK=true;travWorldComplete('card','${jq(c.id)}')">${inner}</div>`;
+  }).join("") : "";
   titleEl.innerHTML = icon("clapperboard")+" 走原著线"; subEl.textContent = "选一本书，沿原著因果线推进";
   view.innerHTML = `<button class="back" onclick="showTraverse()">‹ 返回穿越</button>`
     + (runs.length ? runs.map(r=>`<div class="card card--tap" onclick="plotlinePickStage('${jq(r.run_id)}')">
       <div class="name">${esc(r.novel)}</div><div class="meta">${esc(r.run_id)} · <span class="badge">有世界卡</span></div></div>`).join("")
-      : `<div class="empty">暂无带世界卡的书<br><span style="font-size:calc(12px * var(--fs))">管线执行 worldcard 阶段后自动出现</span></div>`);
+      : `<div class="empty">暂无带世界卡的书<br><span style="font-size:calc(12px * var(--fs))">管线执行 worldcard 阶段后自动出现</span></div>`)
+    + cardSec;
   window.scrollTo(0,0);
 }
 function plotlinePickStage(runId){
@@ -7898,6 +7919,35 @@ function plotlineStart(runId, stageId, plotrunId){
   const r = idx.find(x=>x.run_id===runId) || {};
   const sess = RP_TRAVERSE.newSession({mode:"plotline", worldKind:"book", worldId:runId,
     worldName:r.novel||runId, charName:"", anchorTitle:"走原著线", plotrunId:st.id});
+  CHAT = {mode:"traverse", travId:sess.id};
+  setNav("chat");
+}
+/* 导入卡·选幕：AI 补完出来的剧情锚点就是幕。锚点为空/全是占位时说实话 —— 不编造幕 */
+function plotlinePickCardStage(cardId){
+  const card = (typeof RP_CARDIMPORT!=="undefined") ? RP_CARDIMPORT.findById(cardId) : null;
+  const nm = (card && card.name) || cardId;
+  const bible = plotlineCardBible(cardId);
+  const anchors = plotlineCardAnchors(bible);
+  const desc = String((bible&&bible.bg)||"").slice(0,60);
+  titleEl.innerHTML = icon("clapperboard")+" 走原著线"; subEl.textContent = nm;
+  view.innerHTML = `<button class="back" onclick="plotlinePickBook()">‹ 返回选书</button>`
+    + (anchors.length ? `<h2 class="sec">选一幕 · ${anchors.length} 幕</h2>`
+      + anchors.map((a,i)=>`<div class="card card--tap" onclick="plotlineStartCard('${jq(cardId)}',${i})">
+        <div class="row"><div><div class="name">${esc(a)}</div>
+        <div class="meta">《${esc(nm)}》的世界 · <span class="badge">AI 补完</span></div>
+        ${desc?`<div class="st">${esc(desc)}</div>`:""}</div><div class="tm-go">›</div></div></div>`).join("")
+      : `<div class="empty">这张卡还没有可走的幕<br><span style="font-size:calc(12px * var(--fs))">导入卡没有原著章节线，先「AI 补完世界」拿到剧情锚点才能走原著线</span>
+        <div class="btnrow" style="margin-top:12px"><button class="btn" style="flex:1" onclick="PLOTLINE_WB_BACK=true;travWorldComplete('card','${jq(cardId)}')">${icon("scroll")} 去 AI 补完世界</button></div></div>`);
+  window.scrollTo(0,0);
+}
+/* 导入卡·开局：与 plotlineStart 同尾，但没有 RP_PLOTRUN 剧情运行时（导入卡无原著节点） */
+function plotlineStartCard(cardId, anchorIdx){
+  const card = (typeof RP_CARDIMPORT!=="undefined") ? RP_CARDIMPORT.findById(cardId) : null;
+  const anchors = plotlineCardAnchors(plotlineCardBible(cardId));
+  const a = anchors[anchorIdx];
+  if(!a) return;
+  const sess = RP_TRAVERSE.newSession({mode:"plotline", worldKind:"card", worldId:cardId,
+    worldName:"《"+((card&&card.name)||cardId)+"》的世界", charName:"", anchorTitle:a});
   CHAT = {mode:"traverse", travId:sess.id};
   setNav("chat");
 }
@@ -8812,7 +8862,9 @@ function travExtraPrompt(travId, userText){
 
 /* ---- P1: 角色卡世界 AI 补完 ---- */
 window.travWorldComplete = (kind, id)=>{
-  __backAction = ()=>showTraverse();
+  /* 走原著线选书页进来的补完页(PLOTLINE_WB_BACK): 返回回选书页, 不是穿越首页 */
+  const backPlot = PLOTLINE_WB_BACK && kind === "card";
+  __backAction = backPlot ? ()=>plotlinePickBook() : ()=>showTraverse();
   document.body.classList.remove("chatmode","immersive"); /* P2-1: 切页同时清 immersive, 不留残 */
   const wname = RP_TRAVERSE.worldDisplayName(kind, id);
   titleEl.innerHTML = icon("scroll")+" 世界补完"; subEl.textContent = wname;
@@ -8820,7 +8872,10 @@ window.travWorldComplete = (kind, id)=>{
   const seed = RP_TRAVERSE2.extractSeed(card);
   let done = null;
   try{ done = JSON.parse(localStorage.getItem("nd_wb2_"+kind+"_"+id) || "null"); }catch(e){}
-  view.innerHTML = `<button class="back" onclick="showTraverse()">${icon("back")} 返回</button>
+  const backBtn = backPlot
+    ? `<button class="back" onclick="plotlinePickBook()">${icon("back")} 返回</button>`
+    : `<button class="back" onclick="showTraverse()">${icon("back")} 返回</button>`;
+  view.innerHTML = backBtn + `
   <div class="card"><div class="kv">角色卡原文设定</div>
   <div class="hint">名称：${esc((card&&card.name)||"")} · 种子文本 ${seed.length} 字</div>
   <div class="meta" style="white-space:pre-wrap;max-height:120px;overflow:hidden">${esc(seed.slice(0,300))}${seed.length>300?"…":""}</div></div>
