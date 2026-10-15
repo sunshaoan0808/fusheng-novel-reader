@@ -1723,3 +1723,22 @@ body.chatmode.immersive #asst_fab{ bottom:calc(16px + env(safe-area-inset-bottom
   .optbtn:active, .bw-card:active, .go-enter:active, .railcard:active,
   .drawer .ditem:not(.danger):active{transform:none;}
 }
+
+/* 推剧情选项弹窗：替代原生 confirm，风格与应用统一 */
+.pushmask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;
+  display:flex;align-items:center;justify-content:center;padding:32px;
+  animation:pushfade .18s ease;}
+.pushcard{background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:20px;width:100%;max-width:320px;box-shadow:0 12px 40px rgba(0,0,0,.5);
+  animation:pushpop .22s cubic-bezier(.2,1.4,.4,1);}
+.pushcard .pt{font-size:16px;font-weight:700;color:var(--ink);margin-bottom:6px;text-align:center;}
+.pushcard .pd{font-size:13px;color:var(--ink-dim);margin-bottom:16px;text-align:center;line-height:1.5;}
+.pushrow{display:flex;gap:10px;}
+.pushbtn{flex:1;padding:12px 0;border-radius:12px;border:1px solid var(--line);
+  background:var(--card2);color:var(--ink);font-size:15px;font-weight:600;cursor:pointer;}
+.pushbtn:active{transform:scale(.97);}
+.pushbtn.primary{background:linear-gradient(135deg,var(--gold),var(--gold-deep));
+  border-color:var(--gold-deep);color:#1a1408;}
+.pushbtn .sub{display:block;font-size:11px;font-weight:400;opacity:.7;margin-top:2px;}
+@keyframes pushfade{from{opacity:0;}to{opacity:1;}}
+@keyframes pushpop{from{opacity:0;transform:scale(.92) translateY(8px);}to{opacity:1;transform:none;}}

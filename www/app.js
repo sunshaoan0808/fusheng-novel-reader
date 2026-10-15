@@ -3993,6 +3993,27 @@ inp.focus();
 const m = document.getElementById("atmenu"); if(m) m.remove();
 };
 /* Push Story: 一键推剧情 (Marinara Narrative Director 思路) */
+/* 推剧情选项弹窗：替代原生 confirm。返回 "natural"/"event"，点遮罩取消返回 null。 */
+function pushStoryChoice(){
+  return new Promise((resolve)=>{
+    const old = document.getElementById("pushmask");
+    if(old) old.remove();
+    const mask = document.createElement("div");
+    mask.id = "pushmask"; mask.className = "pushmask";
+    mask.innerHTML = `<div class="pushcard" onclick="event.stopPropagation()">`
+      + `<div class="pt">推剧情</div>`
+      + `<div class="pd">选一种方式推进，立即重生最后一条回复</div>`
+      + `<div class="pushrow">`
+      + `<button class="pushbtn primary" id="pushNatural">顺推<span class="sub">沿当前剧情往前走</span></button>`
+      + `<button class="pushbtn" id="pushEvent">转折<span class="sub">加一个意外转折</span></button>`
+      + `</div></div>`;
+    const done = (v)=>{ mask.remove(); resolve(v); };
+    mask.onclick = ()=> done(null);
+    document.body.appendChild(mask);
+    document.getElementById("pushNatural").onclick = ()=> done("natural");
+    document.getElementById("pushEvent").onclick = ()=> done("event");
+  });
+}
 window.togglePushStory = async (ev)=>{
   if(ev && ev.stopPropagation) ev.stopPropagation();
   /* P0: key 必须和注入点一致。穿越模式走 sendTraverse(wsIdT="nd_travchat_"+travId)，
@@ -4006,8 +4027,9 @@ window.togglePushStory = async (ev)=>{
     var b0 = document.getElementById("pushbtn"); if(b0) b0.classList.remove("on");
     return;
   }
-  // 选模式
-  var mode = confirm("点确定=顺推剧情，点取消=加意外转折") ? "natural" : "event";
+  // 选模式（App 内弹窗，不用原生 confirm）
+  var mode = await pushStoryChoice();
+  if(!mode) return; // 点遮罩取消
   if(typeof AGENT_PUSHSTORY !== "undefined") AGENT_PUSHSTORY.arm(chatId, mode);
   CHAT.pushStory = true;
   var b = document.getElementById("pushbtn"); if(b) b.classList.add("on");
