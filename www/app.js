@@ -3421,6 +3421,10 @@ if(m.role==="assistant" && m.content.indexOf("⚠️")!==0
 /* v37: 命中集合每次渲染只建一次，避免每条消息 indexOf 线性查找 */
 const __hitSet = SEARCH.active ? new Set(SEARCH.hits) : null;
 log.innerHTML = h.map((m, idx)=>{
+/* 推剧情触发注记：居中显示，不占气泡 */
+if(m.pushNote){
+  return `<div class="pushnote">${icon("clapperboard",13)} 剧情推进</div>`;
+}
 const mtype = m.mtype || (m.role==="user" ? "player" : "char");
 const who = m.role==="user"
 ? (mtype==="narr" ? icon("scroll")+" 旁白" : (mtype==="npc" ? (m.speaker||"我") : travPlayerName()))
@@ -3964,7 +3968,7 @@ const spk = CHAT.mode==="group"
 const atb = CHAT.mode==="group"
 ? `<button id="atbtn" class="cb-tool" onclick="toggleAtMenu(event)" title="＠ 指定角色：本轮点名 TA 先回"><span class="cb-ico">＠</span><span class="cb-tx">点名</span></button>` : "";
 return `<div class="cb-tools" data-xfade>`
-+ `<button id="pushbtn" class="cb-tool${CHAT.pushStory?" on":""}" onclick="togglePushStory(event)" title="推剧情：立即重生最后一条回复并推进"><span class="cb-ico">${icon("clapperboard",15)}</span><span class="cb-tx">推剧情</span></button>`
++ `<button id="pushbtn" class="cb-tool${CHAT.pushStory?" on":""}" onclick="togglePushStory(event)" title="推剧情：基于当前剧情生成新的发展"><span class="cb-ico">${icon("clapperboard",15)}</span><span class="cb-tx">推剧情</span></button>`
 + `<button id="narrbtn" class="cb-tool${CHAT.narrMode?" on":""}" onclick="toggleNarr()" title="旁白模式：发送场景/动作描写"><span class="cb-ico">${icon("scroll",15)}</span><span class="cb-tx">旁白</span></button>`
 + `${atb}${spk}`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
@@ -4002,7 +4006,7 @@ function pushStoryChoice(){
     mask.id = "pushmask"; mask.className = "pushmask";
     mask.innerHTML = `<div class="pushcard" onclick="event.stopPropagation()">`
       + `<div class="pt">推剧情</div>`
-      + `<div class="pd">选一种方式推进，立即重生最后一条回复</div>`
+      + `<div class="pd">选一种方式，基于当前剧情生成新的发展</div>`
       + `<div class="pushrow">`
       + `<button class="pushbtn primary" id="pushNatural">顺推<span class="sub">沿当前剧情往前走</span></button>`
       + `<button class="pushbtn" id="pushEvent">转折<span class="sub">加一个意外转折</span></button>`
@@ -4030,30 +4034,39 @@ window.togglePushStory = async (ev)=>{
   // 选模式（App 内弹窗，不用原生 confirm）
   var mode = await pushStoryChoice();
   if(!mode) return; // 点遮罩取消
+  await pushStoryAdvance(chatId, mode);
+};
+/* 推剧情新实现：不删历史、不重生。追加一条推进触发，AI 基于全部剧情生成新的发展。
+   触发消息渲染为居中注记（pushNote），不污染对话气泡。 */
+async function pushStoryAdvance(chatId, mode){
   if(typeof AGENT_PUSHSTORY !== "undefined") AGENT_PUSHSTORY.arm(chatId, mode);
   CHAT.pushStory = true;
   var b = document.getElementById("pushbtn"); if(b) b.classList.add("on");
-  /* 点完立即有下文：重生最后一条 AI 回复，推进指令随注入进 prompt（一次性，用完自解）。
-     无 AI 回复时保持武装，下一条消息生效。 */
+  /* 触发文本：AI 侧看到完整指令 */
+  var triggerText = mode === "event"
+    ? "【系统】用户点击了推剧情（转折）。请根据以上全部剧情，写一段新的剧情发展：必须包含一个意外转折，且转折后局面实质改变。不要重写已有内容。"
+    : "【系统】用户点击了推剧情（顺推）。请根据以上全部剧情，写一段新的剧情发展：让故事实质性往前走（人物做决定/冲突升级/新信息揭露/场景转换四选一）。不要重写已有内容。";
+  try{
+    await sendChatText(triggerText);
+  }catch(e){}
+  /* 把触发消息标记为居中注记并重渲染 */
   try{
     const k = chatHistKey();
     const h = getHist(k) || [];
-    let lastAI = -1;
-    for(let i = h.length - 1; i >= 0; i--){ if(h[i].role === "assistant"){ lastAI = i; break; } }
-    if(lastAI >= 0 && typeof regenMsgAt === "function"){
-      await regenMsgAt(lastAI);
-    }else if(lastAI < 0){
-      rpToast("已武装：发送下一条消息时自动推进剧情");
+    for(let i = h.length - 1; i >= 0; i--){
+      if(h[i].role === "user" && h[i].content === triggerText){ h[i].pushNote = true; break; }
     }
+    saveHist(k, h);
+    renderChat(true);
   }catch(e){}
-  /* 同步按钮状态：injectPrompt 是一次性的，重生走完即已消费 */
+  /* 同步按钮状态：injectPrompt 是一次性的，生成走完即已消费 */
   try{
     if(typeof AGENT_PUSHSTORY !== "undefined" && !AGENT_PUSHSTORY.isArmed(chatId)){
       CHAT.pushStory = false;
       var b2 = document.getElementById("pushbtn"); if(b2) b2.classList.remove("on");
     }
   }catch(e2){}
-};
+}
 window.toggleNarr = ()=>{
 CHAT.narrMode = !CHAT.narrMode;
 const b = document.getElementById("narrbtn");
