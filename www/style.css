@@ -1049,7 +1049,7 @@ button.charcard-hit:active{transform:none !important;}
 
 /* --- 底栏重设计（2026-10-09）：工具行 + 输入行，发送按钮显眼 --- */
 .chatbar{display:flex; flex-direction:column; gap:8px;}
-.cb-tools{display:flex; gap:8px; align-items:center; overflow-x:auto; padding:2px;
+.cb-tools{display:flex; gap:8px; align-items:center; flex-wrap:wrap; padding:2px;
   scrollbar-width:none;}
 .cb-tools::-webkit-scrollbar{display:none;}
 .cb-tool{flex:none; display:inline-flex; align-items:center; gap:6px;
