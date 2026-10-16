@@ -28,7 +28,7 @@ function ok(name, cond){ if(cond){ pass++; console.log("  PASS", name); } else {
 let PS = freshEnv();
 const wsIdT = "nd_travchat_abc123";
 PS.arm(wsIdT, "natural");
-ok("穿越注入命中", PS.injectPrompt(wsIdT).indexOf("推进剧情") >= 0);
+ok("穿越注入命中", PS.injectPrompt(wsIdT).indexOf("剧情推进指令") >= 0);
 
 // 2. 一次性：用完即解除
 ok("一次性解除", PS.injectPrompt(wsIdT) === "");
