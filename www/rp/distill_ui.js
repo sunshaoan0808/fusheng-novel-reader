@@ -23,6 +23,16 @@ function escA(s){
   return esc(s);
 }
 
+/* 断点续跑键: 按「书 + 角色集合 + 深度」指纹，与 pkg id 解耦。
+ * 旧实现把这把键绑在 S.pkg.id 上，而每次发现角色都 createPackage 生成新 id，
+ * 于是每个会话都得到新键 —— 旧断点永远读不到。 */
+function ckptFingerprint(fileName, chars, depth){
+  var s = String(fileName || "") + "|" + chars.slice().sort().join(",") + "|" + (depth || "");
+  var h = 5381;
+  for(var i = 0; i < s.length; i++){ h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
+  return (h >>> 0).toString(36) + "_" + s.length.toString(36);
+}
+
 function show(){
   S.step = 0;
   render();
@@ -338,17 +348,29 @@ function renderDistill(){
     (S.paused ?
       `<button class="btn primary" id="d_resume" style="flex:1">▶ 继续</button>` :
       `<button class="btn" id="d_pause" style="flex:1">⏸ 暂停</button>`) : "";
+  // 3600 次调用按 15s/次是 15 小时；只有"暂停"没有"中止"，误点一次就只能杀进程
+  var abortBtn = S.running ? `<button class="btn" id="d_abort" style="flex:1;color:#e74c3c">■ 中止</button>` : "";
   return `<div class="card">
     <div id="d_stages"></div>
     <div id="d_bar" style="height:8px;background:var(--line);border-radius:4px;margin-top:12px">
       <i style="display:block;height:100%;width:0;background:var(--gold);border-radius:4px"></i></div>
     <div id="d_msg" style="font-size:calc(12px * var(--fs));margin-top:8px">准备...</div>
-    ${pauseBtn ? `<div class="btnrow" style="margin-top:12px">${pauseBtn}</div>` : ""}
+    ${(pauseBtn || abortBtn) ? `<div class="btnrow" style="margin-top:12px">${pauseBtn}${abortBtn}</div>` : ""}
   </div><div id="d_results"></div>`;
+}
+
+function abortDistill(){
+  if(!S.running) return;
+  if(typeof confirm === "function" &&
+     !confirm("中止蒸馏？已完成的块会保留，下次同样的书+角色+深度可以从断点继续。")) return;
+  S.aborted = true;
+  S.paused = false;   // 让 waitIfPaused 退出，跑到最近一个检查点停下
+  try{ if(S._saveCkpt) S._saveCkpt(true); }catch(e){}
 }
 
 function togglePause(){
   S.paused = !S.paused;
+  if(S.paused && S._saveCkpt){ try{ S._saveCkpt(true); }catch(e){} }
   render();
   // 恢复渲染后需要重建 stages 显示
   if(S.running) restoreStages();
@@ -367,8 +389,13 @@ function renderPackages(){
   var citeWarn = S.citationWarnings ? `<div style="font-size:calc(12px * var(--fs));color:#f0ad4e;margin:8px 0">⚠️ ${esc(S.citationWarnings)}</div>` : "";
   return `<h2 class="sec">剧本包 (${pkgs.length})</h2>` + citeWarn + pkgs.map(function(p){
     return `<div class="card card--tap" style="padding:12px" data-dact="openPackage" data-did="${p.id}">
-      <div style="font-weight:600">${esc(p.novel)}</div>
-      <div style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">${p.charCount} 个角色</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px">
+        <div>
+          <div style="font-weight:600">${esc(p.novel)}</div>
+          <div style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">${p.charCount} 个角色</div>
+        </div>
+        <button class="btn" data-dact="deletePackage" data-did="${p.id}" style="color:#e74c3c">删除</button>
+      </div>
     </div>`;
   }).join("");
 }
@@ -376,7 +403,9 @@ function renderPackages(){
 /* P1-3 修复：document 级委托监听只注册一次（模块加载时），wire() 每次 render 不再累加。
  * 旧实现 wire() 每 render +1 click +1 change 监听 → 点暂停翻转 N 次、选文件 import N 次。 */
 function onPauseClick(e){
-  if(e.target && (e.target.id === "d_pause" || e.target.id === "d_resume")) togglePause();
+  if(!e.target) return;
+  if(e.target.id === "d_pause" || e.target.id === "d_resume") togglePause();
+  else if(e.target.id === "d_abort") abortDistill();
 }
 function onImportChange(e){
   if(e.target && e.target.id === "d_import_pkg" && e.target.files[0]){
@@ -477,12 +506,13 @@ async function onStartDistill(){
   S.step = 4; render();
   S.running = true;
   S.paused = false;
+  S.aborted = false;
   S._stageState = "";
   if(window.DISTILL_LLM && DISTILL_LLM.resetStats) DISTILL_LLM.resetStats();
 
-  // 暂停检查: 在每个 await 前调用，暂停时阻塞
+  // 暂停检查: 在每个 await 前调用，暂停时阻塞；中止时不阻塞
   async function waitIfPaused(){
-    while(S.paused && S.running){
+    while(S.paused && S.running && !S.aborted){
       var m = document.getElementById("d_msg");
       if(m) m.textContent = "已暂停，点击继续恢复…";
       await new Promise(function(r){ setTimeout(r, 500); });
@@ -515,9 +545,33 @@ async function onStartDistill(){
     var b = document.getElementById("d_bar"); if(b && b.firstElementChild) b.firstElementChild.style.width = (pct || 0) + "%";
   }
 
-  var ckptKey = "nd_distill_ckpt_" + S.pkg.id;
+  var ckptKey = "nd_distill_ckpt_" + ckptFingerprint(S.fileName, chars, depth);
+  // 记下「包 -> 断点键」，删除剧本包时才能把对应断点一起清掉
+  try{
+    var _ci = JSON.parse(localStorage.getItem("nd_distill_ckpt_idx") || "{}");
+    _ci[S.pkg.id] = ckptKey;
+    localStorage.setItem("nd_distill_ckpt_idx", JSON.stringify(_ci));
+  }catch(e){}
   var checkpoint = {};
   try{ checkpoint = JSON.parse(localStorage.getItem(ckptKey) || "{}"); }catch(e){}
+  if(checkpoint.aliasMap) prog("发现上次未完成的断点，继续跑…", 0);
+  /* checkpoint 每完成一块就全量重写一次 → 写入量随进度平方增长，真机上表现为进度条周期性卡顿。
+   * 改为「每 5 条或每 5 秒」两者取先，阶段边界/暂停/中止时强制落盘。 */
+  var _ckptSavedAt = 0, _ckptDirty = 0;
+  function saveCkpt(force){
+    if(!force && _ckptDirty < 5 && Date.now() - _ckptSavedAt < 5000) return;
+    _ckptSavedAt = Date.now();
+    _ckptDirty = 0;
+    try{ localStorage.setItem(ckptKey, JSON.stringify(checkpoint)); }catch(e){}
+  }
+  function onCkpt(){
+    _ckptDirty++;
+    saveCkpt(false);
+  }
+  S._saveCkpt = function(force){ saveCkpt(force); };
+  function abortGuard(){
+    if(S.aborted) throw new Error("__aborted__");
+  }
 
   try{
     // 别名
@@ -532,7 +586,7 @@ async function onStartDistill(){
         Object.assign(aliasMap, judged);
       }
       checkpoint.aliasMap = aliasMap;
-      localStorage.setItem(ckptKey, JSON.stringify(checkpoint));
+      saveCkpt(true);
     }
     prog("别名: " + Object.keys(aliasMap).length + " 条", 20);
     setStage("alias", "done");
@@ -544,8 +598,9 @@ async function onStartDistill(){
       checkpoint: checkpoint,
       aliasMap: aliasMap,   // 上一段算出的 {别名: 正名}，缺了它正文用简称的章节会被整章跳过
       shouldPause: function(){ return S.paused; },
+      shouldAbort: function(){ return !!S.aborted; },
       onProgress: function(d, t, m){ prog("[画像] " + m, 20 + d / t * 30); },
-      onCheckpoint: function(cp){ try{ localStorage.setItem(ckptKey, JSON.stringify(cp)); }catch(e){} }
+      onCheckpoint: function(){ onCkpt(); }
     });
     // 存角色卡进剧本包
     chars.forEach(function(ch){
@@ -561,14 +616,17 @@ async function onStartDistill(){
       }
     });
     setStage("profile", "done");
+    saveCkpt(true);
+    abortGuard();   // 已完成的角色卡已落盘，可以安全停下
 
     // 关系
     await waitIfPaused();
     setStage("relations", "run");
     var edges = DISTILL_RELATIONS.extractPairs(S.chunks, chars, aliasMap, {});
-    await DISTILL_RELATIONS.enrichEdges(edges, function(d, t, m){ prog("[关系] " + m, 50 + d / t * 15); }, {shouldPause: function(){ return S.paused; }});
+    await DISTILL_RELATIONS.enrichEdges(edges, function(d, t, m){ prog("[关系] " + m, 50 + d / t * 15); }, {shouldPause: function(){ return S.paused; }, shouldAbort: function(){ return !!S.aborted; }});
     DISTILL_PACKAGE.saveData(S.pkg.id, "relations", edges);
     setStage("relations", "done");
+    abortGuard();
 
     // 剧情 (完整模式)
     if(depth === "full"){
@@ -577,8 +635,9 @@ async function onStartDistill(){
       var summaries = await DISTILL_PLOT.summarizeChunks(S.chunks, chars, aliasMap, {
         checkpoint: checkpoint,
         shouldPause: function(){ return S.paused; },
+        shouldAbort: function(){ return !!S.aborted; },
         onProgress: function(d, t, m){ prog("[剧情] " + m, 65 + d / t * 20); },
-        onCheckpoint: function(cp){ try{ localStorage.setItem(ckptKey, JSON.stringify(cp)); }catch(e){} }
+        onCheckpoint: function(){ onCkpt(); }
       });
       var sections = await DISTILL_PLOT.buildOutline(summaries, {});
       var conflicts = await DISTILL_PLOT.extractConflicts(sections, {});
@@ -590,14 +649,17 @@ async function onStartDistill(){
       prog("[世界书] 提取世界观...", 88);
       var worldbook = await DISTILL_WORLDBOOK.extractWorldbook(summaries, chars, {
         shouldPause: function(){ return S.paused; },
+        shouldAbort: function(){ return !!S.aborted; },
         onProgress: function(m){ prog("[世界书] " + m, 88); }
       });
       DISTILL_PACKAGE.saveData(S.pkg.id, "worldbook", worldbook);
+      abortGuard();
 
       // 开场白
       prog("[开场白] 生成中...", 95);
       await DISTILL_OPENINGS.generateAll(S.pkg.id, chars, {
         shouldPause: function(){ return S.paused; },
+        shouldAbort: function(){ return !!S.aborted; },
         onProgress: function(d, t, m){ prog("[开场白] " + m, 95 + d / t * 4); }
       });
       setStage("plot", "done");
@@ -644,7 +706,17 @@ async function onStartDistill(){
     setTimeout(function(){ S.step = 5; render(); }, 1500);
   }catch(e){
     S.running = false;
-    prog("出错: " + e.message, 0);
+    saveCkpt(true);   // 中止/出错时把已有进度落盘，下次能续
+    var msg;
+    if(e && e.message === "__aborted__"){
+      S.aborted = false;
+      msg = "已中止。已完成的块已保存，下次同样的书+角色+深度会从断点继续。";
+    }else{
+      msg = "出错: " + ((e && e.message) || e);
+    }
+    render();
+    restoreStages();
+    prog(msg, 0);
   }
 }
 
@@ -931,6 +1003,24 @@ function exportPkg(pkgId){
   }catch(e){
     alert("导出失败: " + e.message);
   }
+}
+
+function deletePackageFlow(pkgId){
+  var pkg = DISTILL_PACKAGE.getPackage(pkgId);
+  if(!pkg) return;
+  if(typeof confirm === "function" &&
+     !confirm("删除剧本包《" + pkg.novel + "》？\n角色卡、关系、剧情、世界书、出处索引都会删除，无法恢复。")) return;
+  // 连带清掉这个包的断点（断点键按内容指纹生成，不绑 pkg id）
+  try{
+    var ci = JSON.parse(localStorage.getItem("nd_distill_ckpt_idx") || "{}");
+    if(ci[pkgId]){
+      localStorage.removeItem(ci[pkgId]);
+      delete ci[pkgId];
+      localStorage.setItem("nd_distill_ckpt_idx", JSON.stringify(ci));
+    }
+  }catch(e){}
+  DISTILL_PACKAGE.deletePackage(pkgId);
+  render();
 }
 
 function importPkg(file){
@@ -1296,7 +1386,7 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
     });
     html += `<button class="btn" data-dact="openPackage" data-did="${id}">返回</button>`;
     v.innerHTML = html;
-  }, exportPkg: exportPkg, regenOpenings: regenOpenings};
+  }, exportPkg: exportPkg, deletePackage: deletePackageFlow, regenOpenings: regenOpenings};
 
 /* 点击事件委托（XSS 修复 2026-10-13）：替代全部内联 onclick 字符串模板。
  * 动态值走 data-* 属性（escA 做 HTML 属性转义，含双引号）；dataset 读出即原文，
@@ -1318,6 +1408,7 @@ function onDelegatedClick(e){
   try{
     switch(act){
       case "openPackage": api.openPackage(d.did); break;
+      case "deletePackage": api.deletePackage(d.did); break;
       case "openCharacter": api.openCharacter(d.did, d.dname, d.dstage); break;
       case "showProvenance": api.showProvenance(d.did, d.dname); break;
       case "showWorldbook": api.showWorldbook(d.did); break;

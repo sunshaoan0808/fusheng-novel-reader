@@ -38,9 +38,17 @@ function _storeGet(key){
 function _storeDel(key){
   try{ localStorage.removeItem(key); }catch(e){}
   try{
-    if(typeof RP_STORE !== "undefined" && RP_STORE.evictFile) RP_STORE.evictFile(key);
+    /* 只删 localStorage 会漏掉 RP_STORE 已搬到 IndexedDB / 文件层的那份，
+     * 于是"删了的包"仍占着空间、还能被 getSync 读回来。 */
+    if(typeof RP_STORE !== "undefined" && RP_STORE.removeItemAsync) RP_STORE.removeItemAsync(key);
+    else if(typeof RP_STORE !== "undefined" && RP_STORE.evictFile) RP_STORE.evictFile(key);
   }catch(e){}
 }
+
+/* 剧本包内的固定数据分区 (saveData 用到的 key)，删除时要逐个点名，
+ * 不能只依赖 localStorage 枚举 —— 大包的数据根本不在 localStorage 里。 */
+var DATA_KEYS = ["relations", "plot", "worldbook", "provenance", "audits", "probes",
+  "openings", "unanchored", "change_log"];
 
 function listPackages(){
   try{
@@ -118,13 +126,19 @@ function getData(pkgId, key){
 
 function deletePackage(id){
   var pkg = getPackage(id);
-  if(!pkg) return;
-  // 删所有相关 key
-  var keys = [];
-  for(var i = 0; i < localStorage.length; i++){
-    var k = localStorage.key(i);
-    if(k && k.indexOf(PREFIX + id) === 0) keys.push(k);
-  }
+  // 已知 key 全点名（不依赖 localStorage 枚举：搬到 IDB/文件层的键枚举不到）
+  var keys = [PREFIX + id + "_meta"];
+  DATA_KEYS.forEach(function(k){ keys.push(PREFIX + id + "_" + k); });
+  ((pkg && pkg.characters) || []).forEach(function(c){
+    keys.push(PREFIX + id + "_char_" + c.name);
+  });
+  // 兜底：localStorage 里还能枚举到的同前缀键
+  try{
+    for(var i = 0; i < localStorage.length; i++){
+      var k = localStorage.key(i);
+      if(k && k.indexOf(PREFIX + id) === 0 && keys.indexOf(k) < 0) keys.push(k);
+    }
+  }catch(e){}
   keys.forEach(function(k){ _storeDel(k); });
   var idx = listPackages().filter(function(x){ return x.id !== id; });
   saveIndex(idx);

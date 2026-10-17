@@ -130,9 +130,10 @@ async function distillNovel(chunks, characters, opts){
   var onProgress = opts.onProgress || function(){};
   var checkpoint = opts.checkpoint || {};
   var shouldPause = opts.shouldPause || function(){ return false; };
+  var shouldAbort = opts.shouldAbort || function(){ return false; };
   var aliasIndex = buildAliasIndex(opts.aliasMap);
   async function waitPause(){
-    while(shouldPause()){
+    while(shouldPause() && !shouldAbort()){
       onProgress(done, total, "已暂停…");
       await new Promise(function(r){ setTimeout(r, 500); });
     }
@@ -140,14 +141,25 @@ async function distillNovel(chunks, characters, opts){
   var results = {};
   var total = chunks.length * characters.length;
   var done = 0;
+  var aborted = false;
 
-  for(var ci = 0; ci < chunks.length; ci++){
+  for(var ci = 0; ci < chunks.length && !aborted; ci++){
     var chunk = chunks[ci];
     for(var hi = 0; hi < characters.length; hi++){
       await waitPause();
+      // 中止: 立刻停掉后续调用, 已完成的档案照常合并返回
+      if(shouldAbort()){ aborted = true; break; }
       var ch = characters[hi];
       var key = chunk.id + "|" + ch;
-      if(checkpoint[key]){
+      var saved = checkpoint[key];
+      /* 续跑: checkpoint 必须存"结果"而不是"做过了"。
+       * 旧实现写 checkpoint[key]=true，恢复时直接 continue → results[ch] 为空 →
+       * 合并阶段一张角色卡都不会保存，但进度条照常跑到 100%。
+       * 兼容旧断点: 值为 true 的条目无法还原内容，当作没做过重算。 */
+      if(saved && typeof saved === "object" && saved.fields){
+        if(!results[ch]) results[ch] = [];
+        results[ch].push({fields: saved.fields, chunkId: chunk.id, md: "",
+          stage: saved.stage || chunk.stage || "mid", cached: true});
         done++;
         continue;
       }
@@ -163,7 +175,7 @@ async function distillNovel(chunks, characters, opts){
         var fields = parseProfile(r.md);
         if(!results[ch]) results[ch] = [];
         results[ch].push({fields: fields, chunkId: chunk.id, md: r.md, stage: r.stage});
-        checkpoint[key] = true;
+        checkpoint[key] = {fields: fields, stage: r.stage};
         if(opts.onCheckpoint) opts.onCheckpoint(checkpoint);
       }catch(e){
         onProgress(done, total, "失败 " + ch + " @ " + chunk.id + ": " + e.message);

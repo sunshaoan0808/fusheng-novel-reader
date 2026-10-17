@@ -10,12 +10,14 @@ async function summarizeChunks(chunks, characters, aliasMap, opts){
   var onProgress = opts.onProgress || function(){};
   var checkpoint = opts.checkpoint || {};
   var shouldPause = opts.shouldPause || function(){ return false; };
+  var shouldAbort = opts.shouldAbort || function(){ return false; };
   var summaries = [];
   for(var i = 0; i < chunks.length; i++){
-    while(shouldPause()){
+    while(shouldPause() && !shouldAbort()){
       onProgress(i, chunks.length, "已暂停…");
       await new Promise(function(r){ setTimeout(r, 500); });
     }
+    if(shouldAbort()) break;   // 中止: 已完成的梗概留在 checkpoint 里
     var ch = chunks[i];
     if(checkpoint["sum_" + ch.id]){
       if(checkpoint["sum_" + ch.id].summary) summaries.push(checkpoint["sum_" + ch.id].summary);
