@@ -1,7 +1,13 @@
 *.apk
 *.apk.idsig
 *.keystore
+*.jks
 android/build/
 android/out/
+android/app/
+build/
 node_modules/
+__pycache__/
+*.pyc
 .DS_Store
+Thumbs.db

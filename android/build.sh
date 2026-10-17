@@ -1,16 +1,19 @@
 #!/bin/bash
 # 零依赖手动打包 APK: aapt2 + javac + d8 + apksigner (build-tools 34.0.0)
 # 用法: VCODE=9 VNAME=1.8 bash build.sh   (默认 9 / 1.8)
+#       CI 里可覆盖路径: APP=<工作目录> SDK=<android sdk> BT=<build-tools 目录> JAVA_HOME=<jdk17>
 set -e
 VCODE=${VCODE:-9}
 VNAME=${VNAME:-1.8}
 APKNAME="novel-reader-v${VCODE}.apk"
-APP=~/workspace/apk-work/app
-SDK=~/android-sdk
-BT=$SDK/build-tools/34.0.0
+APP=${APP:-$HOME/workspace/apk-work/app}
+SDK=${SDK:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}
+BT=${BT:-$SDK/build-tools/34.0.0}
 PJ=$SDK/platforms/android-34/android.jar
 OUT=$APP/build
 rm -rf $OUT && mkdir -p $OUT/{compiled,res-out,classes,dex}
+[ -f "$PJ" ] || { echo "FATAL: 找不到 $PJ，请检查 SDK 路径"; exit 1; }
+[ -x "$BT/aapt2" ] || { echo "FATAL: 找不到 $BT/aapt2，请检查 build-tools 34.0.0"; exit 1; }
 
 echo "[0/6] 生成内联数据 data.js (JSON 内联进页面, 不走 fetch)"
 python3 - "$APP/assets/www" <<'EOF'
@@ -59,8 +62,8 @@ $BT/aapt2 link -o $OUT/base.apk \
   $OUT/compiled.zip -A $APP/assets
 
 echo "[3/6] javac"
-export PATH=~/jdk17/bin:$PATH
-export JAVA_HOME=~/jdk17
+if [ -z "$JAVA_HOME" ]; then export JAVA_HOME=$HOME/jdk17; fi
+export PATH="$JAVA_HOME/bin:$PATH"
 mkdir -p $OUT/gen/com/ling/novelreader
 find $OUT/gen $APP/src -name "*.java" > $OUT/sources.txt
 javac -encoding UTF-8 -source 8 -target 8 -classpath $PJ -d $OUT/classes @$OUT/sources.txt 2>&1 | grep -v "bootstrap\|deprecat" || true
