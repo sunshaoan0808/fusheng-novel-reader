@@ -325,6 +325,12 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         web = new WebView(this);
+        /* 验收/排障用：只有 APK 自身是「可调试构建」（android:debuggable=1）时才开 WebView 远程调试。
+         * release 包的 FLAG_DEBUGGABLE 为 0，因此正式包不会开放 webview_devtools 套接字，
+         * 任何第三方 App 都无法通过 adb forward 接管页面执行 JS。 */
+        if ((getApplicationInfo().flags & android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE) != 0) {
+            WebView.setWebContentsDebuggingEnabled(true);
+        }
         WebSettings s = web.getSettings();
         s.setJavaScriptEnabled(true);
         s.setDomStorageEnabled(true);

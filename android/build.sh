@@ -5,7 +5,14 @@
 set -e
 VCODE=${VCODE:-9}
 VNAME=${VNAME:-1.8}
-APKNAME="novel-reader-v${VCODE}.apk"
+# DEBUG=1 打「可调试包」：android:debuggable=1 + WebView 远程调试可用，仅用于真机/模拟器验收。
+# 正式包不要带这个开关。
+DBG=${DEBUG:-0}
+if [ "$DBG" = "1" ]; then
+  APKNAME="novel-reader-v${VCODE}-debug.apk"
+else
+  APKNAME="novel-reader-v${VCODE}.apk"
+fi
 APP=${APP:-$HOME/workspace/apk-work/app}
 SDK=${SDK:-${ANDROID_SDK_ROOT:-$HOME/android-sdk}}
 BT=${BT:-$SDK/build-tools/34.0.0}
@@ -53,12 +60,15 @@ echo "[1/6] aapt2 compile"
 $BT/aapt2 compile --dir $APP/res -o $OUT/compiled.zip
 
 echo "[2/6] aapt2 link"
+LINK_EXTRA=""
+if [ "$DBG" = "1" ]; then LINK_EXTRA="--debug-mode"; fi
 $BT/aapt2 link -o $OUT/base.apk \
   -I $PJ \
   --manifest $APP/AndroidManifest.xml \
   --java $OUT/gen \
   --min-sdk-version 24 --target-sdk-version 34 \
   --version-code $VCODE --version-name $VNAME \
+  $LINK_EXTRA \
   $OUT/compiled.zip -A $APP/assets
 
 echo "[3/6] javac"

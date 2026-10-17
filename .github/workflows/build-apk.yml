@@ -8,6 +8,11 @@ on:
   push:
     branches: [master, main]
   workflow_dispatch:
+    inputs:
+      debug:
+        description: "打可调试包（开启 WebView 远程调试，仅真机验收用）"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -84,11 +89,13 @@ jobs:
         env:
           VCODE: ${{ github.run_number }}
           VNAME: "1.8.${{ github.run_number }}"
+          DEBUG: ${{ inputs.debug == true && '1' || '0' }}
         run: |
           set -e
-          SDK="$SDK_DIR" APP="$APP" bash android/build.sh
+          echo "DEBUG=$DEBUG"
+          SDK="$SDK_DIR" APP="$APP" DEBUG="$DEBUG" bash android/build.sh
           ls -la "$APP"/*.apk
-          echo "APK_PATH=$APP/novel-reader-v${VCODE}.apk" >> "$GITHUB_ENV"
+          echo "APK_PATH=$(ls "$APP"/*.apk | head -1)" >> "$GITHUB_ENV"
 
       - name: Verify APK
         run: |
