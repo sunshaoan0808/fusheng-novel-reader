@@ -1211,14 +1211,17 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
         if(el) el.textContent = msg;
       }
     });
+    var probeHead = result.pass === null ? "⚪ 未完成"
+      : result.pass ? "✅ 通过" : "⚠️ 存疑";
     var html = `<h2 class="sec">🎭 探针结果 · ${esc(name)}</h2>
-      <div style="font-size:calc(13px * var(--fs));margin-bottom:12px">${result.pass ? "✅ 通过" : "⚠️ 存疑"} (${result.ooc_count}/9 题 OOC)</div>`;
+      <div style="font-size:calc(13px * var(--fs));margin-bottom:12px">${probeHead} (${result.ooc_count}/${result.results.length} 题 OOC${result.error_count ? " · " + result.error_count + " 题失败" : ""})</div>`;
     result.results.forEach(function(r, i){
-      var icon = r.ooc ? "🔴" : "🟢";
+      var icon = r.ooc === null ? "⚪" : (r.ooc ? "🔴" : "🟢");
       html += `<div class="card" style="margin-bottom:8px">
         <div style="font-size:calc(13px * var(--fs));font-weight:600">${icon} Q${i+1}: ${esc(r.question)}</div>
         <div style="font-size:calc(13px * var(--fs));margin-top:4px">答：${esc(r.answer.slice(0, 100))}</div>
         ${r.ooc ? `<div style="font-size:calc(12px * var(--fs));color:#f0ad4e;margin-top:4px">OOC: ${esc(r.reason)}</div>` : ""}
+        ${r.ooc === null ? `<div style="font-size:calc(12px * var(--fs));color:#e74c3c;margin-top:4px">${esc(r.reason)}</div>` : ""}
       </div>`;
     });
     html += `<button class="btn" data-dact="openPackage" data-did="${id}">返回</button>`;
@@ -1279,12 +1282,16 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
     var html = `<h2 class="sec">🔍 审计结果</h2>`;
     Object.keys(results).forEach(function(name){
       var r = results[name];
-      var badge = r.pass ? "✅" : "⚠️";
+      // pass 三态: null = 审计没跑完, 不能打 ✅
+      var badge = r.pass === null ? "⚪" : (r.pass ? "✅" : "⚠️");
       html += `<div class="card" style="margin-bottom:8px"><div style="font-weight:600">${badge} ${esc(name)}</div>`;
+      if(r.status && r.status !== "ok"){
+        html += `<div style="font-size:calc(13px * var(--fs));color:#e74c3c;margin-top:4px">未完成：${esc(r.error || r.status)}</div>`;
+      }
       (r.issues || []).forEach(function(iss){
         html += `<div style="font-size:calc(13px * var(--fs));color:var(--ink-faint);margin-top:4px">• [${iss.severity}] ${esc(iss.desc)}</div>`;
       });
-      if(!(r.issues || []).length) html += `<div style="font-size:calc(13px * var(--fs));color:var(--ink-faint)">无问题</div>`;
+      if((r.pass !== null) && !(r.issues || []).length) html += `<div style="font-size:calc(13px * var(--fs));color:var(--ink-faint)">无问题</div>`;
       html += `</div>`;
     });
     html += `<button class="btn" data-dact="openPackage" data-did="${id}">返回</button>`;

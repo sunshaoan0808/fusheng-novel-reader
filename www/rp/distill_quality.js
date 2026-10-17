@@ -5,10 +5,17 @@
 var DISTILL_QUALITY = (function(){
 "use strict";
 
-// 画像期望字段 (distill_core.js 的 8 字段)
-var PROFILE_FIELDS = ["core_identity", "brief_intro", "core_traits", "appearance", "speech_style",
-  "background", "relationships_summary", "key_events", "arc_summary",
-  "age", "gender", "height", "ethnicity", "likes", "dislikes", "interests", "fears"];
+/* 画像字段口径: 必须与 distill_core 的提示词同一份常量。
+ * 早期这里手写了 17 个字段, 而提示词只产出 8 个 → 完整度上限 24%, 恒判"建议重蒸"。 */
+var FALLBACK_FIELDS = ["core_identity", "core_traits", "speech_style", "typical_lines",
+  "background", "soul_goal", "key_bonds", "evidence"];
+var PROFILE_FIELDS = (function(){
+  try{
+    if(typeof DISTILL_CORE !== "undefined" && DISTILL_CORE.PROFILE_FIELDS &&
+       DISTILL_CORE.PROFILE_FIELDS.length) return DISTILL_CORE.PROFILE_FIELDS.slice();
+  }catch(e){}
+  return FALLBACK_FIELDS.slice();
+})();
 
 // AI 腔禁用模式 (dama-cyber 镜像翻转: 他的"去AI味" → 我们的"档案去AI腔")
 var AI_CLICHE_PATTERNS = [

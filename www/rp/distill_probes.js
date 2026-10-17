@@ -52,24 +52,31 @@ var r2 = await DISTILL_LLM.chat([
 {role: "user", content: "\n" + profile + "\n\n" + q + "\n" + answer}
 ]);
 var m = r2.content.match(/\{[\s\S]*\}/);
-var judge = m? JSON.parse(m[0]): {ooc: false, reason: ""};
-
+// 判定员没返回 JSON 时不能当作"不 OOC"——那是把故障记成通过
+if(!m) results.push({question: q, answer: answer, ooc: null, status: "unparsed", reason: "判定结果不是 JSON"});
+else {
+var judge = JSON.parse(m[0]);
 results.push({
 question: q,
 answer: answer,
 ooc:!!judge.ooc,
+status: "ok",
 reason: judge.reason || ""
 });
+}
 }catch(e){
-results.push({question: q, answer: "", ooc: false, reason: "探针失败: " + e.message});
+results.push({question: q, answer: "", ooc: null, status: "error", reason: "探针失败: " + e.message});
 }
 }
 
-var oocCount = results.filter(function(r){ return r.ooc;}).length;
+var oocCount = results.filter(function(r){ return r.ooc === true;}).length;
+var failCount = results.filter(function(r){ return r.ooc === null;}).length;
 var result = {
 results: results,
 ooc_count: oocCount,
-pass: oocCount <= 2, // 允许2题以内偏差
+error_count: failCount,
+// pass 三态: true 通过 / false 存疑 / null 未完成(有题目没跑出来, 不能下结论)
+pass: failCount > 0 ? null : (oocCount <= 2),
 probed_at: Date.now()
 };
 

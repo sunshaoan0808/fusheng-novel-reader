@@ -115,14 +115,18 @@ function extractCandidates(text, opts){
 
 // 第二遍: LLM 确认 + 别名归一
 // 为每个候选提取 N 条证据句（名字出现的原句），供 LLM 快速判断是否为真角色
-function extractEvidence(text, name, n){
+// sentences 可由调用方预先切好复用：对 30 个候选各切一次全文是纯浪费（30 万字实测 747ms）
+function extractEvidence(text, name, n, sentences){
   n = n || 5;
   var out = [];
   // 按句切分（。！？\n），找包含名字的句子
-  var sentences = text.split(/[。！？\n]+/);
-  for(var i = 0; i < sentences.length && out.length < n; i++){
-    var s = sentences[i].trim();
-    if(s.indexOf(name) >= 0 && s.length >= 8 && s.length <= 120){
+  var list = sentences || String(text == null ? "" : text).split(/[。！？\n]+/);
+  for(var i = 0; i < list.length && out.length < n; i++){
+    var raw = list[i];
+    // 先做最便宜的 indexOf, 命中才 trim —— trim 每次都会新建字符串, 对 Top30 各扫一遍全句时占大头
+    if(raw.indexOf(name) < 0) continue;
+    var s = raw.trim();
+    if(s.length >= 8 && s.length <= 120){
       // 去重：太相似的跳过
       var dup = out.some(function(e){ return e === s; });
       if(!dup) out.push(s);
@@ -138,9 +142,10 @@ async function confirmCharacters(candidates, text, opts, warnings){
   // 取 Top 30 让 LLM 确认
   var top = candidates.slice(0, 30);
   onProgress(0, 1, "提取证据句...");
-  // 每个候选附 5 条证据句
+  // 每个候选附 5 条证据句（全文只切一次，Top30 复用）
+  var sentences = String(text == null ? "" : text).split(/[。！？\n]+/);
   var candsWithEv = top.map(function(c){
-    return {name: c.name, count: c.count, evidence: extractEvidence(text, c.name, 5)};
+    return {name: c.name, count: c.count, evidence: extractEvidence(null, c.name, 5, sentences)};
   });
   onProgress(0, 1, "LLM 确认角色...");
   try{

@@ -42,24 +42,32 @@ var LAYERS = {
     "shadow_side","big_five","ooc_redline"],
   speech: ["speech_style","cadence","signature_phrases","typical_lines",
     "subtext_style","sentence_openers","forbidden_fillers"],
-  background: ["life_timeline","social_soil","socio_economics","key_bonds",
+  background: ["background","life_timeline","social_soil","socio_economics","key_bonds",
     "faction_position","visual_identity","voice_dressing","appearance_feature",
     "physical_marks","signature_items","reputation","action_pattern",
     "stress_response","fear_triggers","taboo_topics"],
 };
 
+/* 蒸馏产出的四态来源标注 ([canon:ch003] / [ref:ch012] / [inference:ch007] / [unknown])
+ * 是给 UI 和出处索引用的人类可读标记, 对模型只是噪声, 且每轮 system prompt 都会重发。
+ * 早期 background 也不在 LAYERS 里, 蒸馏抽出的背景从未进过 prompt。 */
+var SRC_MARK_RE = /\[(canon|ref|inference|unknown)(?::[A-Za-z0-9_\-]+)?\]/gi;
+function stripSrcMarks(s){
+  return String(s == null ? "" : s).replace(SRC_MARK_RE, "").replace(/[ \t]{2,}/g, " ").trim();
+}
+
 function val(f){
   if(f == null) return "";
-  if(typeof f === "string") return f.trim();
+  if(typeof f === "string") return stripSrcMarks(f);
   /* 纯数组字段(typical_lines 等在各处都存成数组): 逐行拼, 以前这里直接吞成空字符串 */
   if(Array.isArray(f)){
-    return f.map(function(it){ return String(it == null ? "" : it).trim(); })
+    return f.map(function(it){ return stripSrcMarks(it); })
       .filter(function(it){ return it; }).join("\n").trim();
   }
   var parts = [];
-  if(f.v) parts.push(String(f.v).trim());
+  if(f.v) parts.push(stripSrcMarks(f.v));
   (f.items || []).forEach(function(it){
-    it = String(it).trim();
+    it = stripSrcMarks(it);
     if(it) parts.push("· " + it);
   });
   return parts.join("\n").trim();

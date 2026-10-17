@@ -36,11 +36,13 @@ var r = await DISTILL_LLM.chat([
 {role: "user", content: "" + charName + "\n\n\n" + md}
 ]);
 var m = r.content.match(/\{[\s\S]*\}/);
-if(!m) return {issues: [], pass: true};
+// 模型没按 JSON 返回 ≠ 审计通过。旧代码返回 pass:true, 于是"审计失败"在界面上显示成"✅ 全员通过"。
+if(!m) return {issues: [], pass: null, status: "unparsed", error: "审计结果不是 JSON"};
 var obj = JSON.parse(m[0]);
 var result = {
 issues: obj.issues || [],
 pass: obj.pass!== false &&!(obj.issues || []).some(function(i){ return i.severity === "high";}),
+status: "ok",
 audited_at: Date.now()
 };
 // 存审计结果
@@ -51,7 +53,8 @@ DISTILL_PACKAGE.saveData(pkgId, "audits", all);
 }catch(e){}
 return result;
 }catch(e){
-return {issues: [], pass: true, error: e.message};
+// fail-open 会让"LLM 全挂"显示成"✅ 全员通过", 这里必须区分"通过"与"未完成"
+return {issues: [], pass: null, status: "error", error: e.message};
 }
 }
 

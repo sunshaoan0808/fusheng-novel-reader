@@ -5,17 +5,24 @@
 var DISTILL_CORE = (function(){
 "use strict";
 
+/* 画像字段唯一来源: 提示词、合并、质量门三处都从这里取,
+ * 避免"提示词产出 8 个字段、质量门按 17 个算完整度"这类口径漂移。 */
+var FIELD_SPEC = [
+  ["core_identity", "一句话身份定位"],
+  ["core_traits", "核心性格特征 (逗号分隔, 最多5个)"],
+  ["speech_style", "说话方式描述"],
+  ["typical_lines", "典型台词 (最多3句, 每句40字内)"],
+  ["background", "背景经历摘要"],
+  ["soul_goal", "核心追求"],
+  ["key_bonds", "关键人物关系 (逗号分隔)"],
+  ["evidence", "关键证据原文引用 (最多3条)"]
+];
+var PROFILE_FIELDS = FIELD_SPEC.map(function(f){ return f[0]; });
+
 var SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文片段中提取指定人物的结构化档案。
 
 ## 输出格式 (Markdown)
-- core_identity: 一句话身份定位
-- core_traits: 核心性格特征 (逗号分隔, 最多5个)
-- speech_style: 说话方式描述
-- typical_lines: 典型台词 (最多3句, 每句40字内)
-- background: 背景经历摘要
-- soul_goal: 核心追求
-- key_bonds: 关键人物关系 (逗号分隔)
-- evidence: 关键证据原文引用 (最多3条)
+${FIELD_SPEC.map(function(f){ return "- " + f[0] + ": " + f[1]; }).join("\n")}
 
 ## 来源标注 (四态, 借鉴 TavernWeave)
 每个事实后必须标注来源状态:
@@ -74,10 +81,9 @@ function mergeProfiles(profileList){
     var st = p.stage || "mid";
     if(byStage[st]) byStage[st].push(p);
   });
-  var keys = ["core_identity", "brief_intro", "core_traits", "speech_style", "typical_lines",
-              "background", "soul_goal", "key_bonds", "evidence",
-              "age", "gender", "height", "ethnicity",
-              "likes", "dislikes", "interests", "fears"];
+  var keys = PROFILE_FIELDS.concat(["brief_intro", "appearance", "relationships_summary",
+    "key_events", "arc_summary", "age", "gender", "height", "ethnicity",
+    "likes", "dislikes", "interests", "fears"]);
   ["early", "mid", "late"].forEach(function(st){
     merged[st] = {};
     keys.forEach(function(k){
@@ -186,6 +192,7 @@ return {
   parseProfile: parseProfile,
   buildAliasIndex: buildAliasIndex,
   appearsIn: appearsIn,
+  PROFILE_FIELDS: PROFILE_FIELDS,
   SYSTEM_PROMPT: SYSTEM_PROMPT
 };
 })();

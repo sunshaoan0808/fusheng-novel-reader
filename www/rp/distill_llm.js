@@ -48,6 +48,20 @@ function fmtStats(){
   return "调用 " + _stats.calls + " 次" + (_stats.errors ? " (失败 " + _stats.errors + ")" : "") + " · 耗时 " + s + "s";
 }
 
+/* 错误分流: 4xx（除 429）是参数/鉴权问题, 重试 3 次只是让用户多等 6 秒;
+ * 5xx、429、网络中断、超时才算可重试。 */
+function mkHttpError(status){
+  var hint = status === 401 ? " 未授权(Key 无效)"
+    : status === 403 ? " 无权限"
+    : status === 404 ? " 接口不存在"
+    : status === 429 ? " 请求过于频繁"
+    : "";
+  var e = new Error("HTTP " + status + hint);
+  e.status = status;
+  e.retryable = (status === 429 || status >= 500);
+  return e;
+}
+
 async function chat(messages, opts){
   opts = opts || {};
   var c = cfg();
@@ -58,13 +72,16 @@ async function chat(messages, opts){
   var model = opts.model || c.model;
   if(!model) throw new Error("未指定蒸馏模型, 请到设置页填写");
   var url = c.baseUrl.replace(/\/$/, "") + "/chat/completions";
+  // 60s 对"6000 字正文 + 8 字段输出"在慢模型/慢网下并不宽裕, 默认放宽到 120s
+  var timeoutMs = opts.timeoutMs || 120000;
   var lastErr = null;
   /* v37: 去掉硬编码的第三方 fallback 模型——它会让用户 Key 被发往非预期模型/渠道。 */
   var models = [model];
   for(var mi = 0; mi < models.length; mi++){
+    var fatal = false;
     for(var attempt = 0; attempt < 3; attempt++){
       var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
-      var timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, 60000) : null;
+      var timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, timeoutMs) : null;
       try{
         var r = await fetch(url, {
           method: "POST",
@@ -72,7 +89,7 @@ async function chat(messages, opts){
           body: JSON.stringify({model: models[mi], messages: messages, temperature: opts.temp || 0.7}),
           signal: ctrl ? ctrl.signal : undefined
         });
-        if(!r.ok) throw new Error("HTTP " + r.status);
+        if(!r.ok) throw mkHttpError(r.status);
         var d = await r.json();
         var content = (((d.choices || [])[0] || {}).message || {}).content || "";
         if(!content.trim()) throw new Error("空正文");
@@ -80,11 +97,18 @@ async function chat(messages, opts){
         return {content: content, model: models[mi]};
       }catch(e){
         lastErr = e;
+        if(e && e.name === "AbortError"){
+          lastErr = new Error("请求超时 (" + Math.round(timeoutMs / 1000) + "s)");
+          lastErr.retryable = true;
+        }
+        // 不可重试的错误直接冒泡, 不要拿 6 秒换同一个 401
+        if(lastErr && lastErr.retryable === false){ fatal = true; break; }
         if(attempt < 2) await new Promise(res=>setTimeout(res, 2000 * (attempt + 1)));
       }finally{
         if(timer) clearTimeout(timer);
       }
     }
+    if(fatal) break;
   }
   _stats.errors++;
   _stats.totalMs += Date.now() - t0;
