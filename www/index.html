@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>浮生</title>
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="rp/soul_warm.css">
+<script src="rp/theme.js"></script>
+<script src="rp/escutil.js"></script>
+<script>
+try{ RP_THEME.init(); }catch(e){}
+/* P0-28：字号倍率在样式解析前就得落到根元素上（app.js 里的 applyFontScale 兜底重放）。
+   只缩文字不缩布局盒子，详见 style.css 的 --fs */
+try{ var _fsv = parseFloat(localStorage.getItem("nd_font_scale"));
+      document.documentElement.style.setProperty("--fs", String([1,1.15,1.3].indexOf(_fsv)>=0?_fsv:1)); }catch(e){}
+</script>
+</head>
+<body>
+<div id="app">
+  <header id="topbar"><span id="title">浮生</span><span id="sub"></span></header>
+  <nav id="tabs" class="hidden" data-xfade>
+    <button data-tab="chars" class="active">人物</button>
+    <button data-tab="outline">大纲</button>
+    <button data-tab="relations">关系</button>
+    <button data-tab="storyline">剧情线</button>
+    <button data-tab="world">世界</button>
+    <button data-tab="more">更多</button>
+  </nav>
+  <main id="view"></main>
+  <nav id="mainnav">
+    <button data-nav="product" class="active">产物</button>
+    <button data-nav="chat">聊天</button>
+    <button data-nav="distill" class="create-tab">蒸馏</button>
+    <button data-nav="traverse">穿越</button>
+    <button data-nav="writer">写卡</button>
+    <button data-nav="settings">设置</button>
+  </nav>
+</div>
+<script src="data.js"></script>
+<script src="data/charimg.js"></script>
+<script src="data/covers.js"></script>
+<script src="icons.js"></script>
+<script src="data/char_plots.js"></script>
+<script src="data/foreshadow_cal.js"></script>
+<script src="rp/foreshadow.js"></script>
+<script src="rp/vibecreate.js"></script>
+<script src="rp/novel.js"></script>
+<script src="rp/scope.js"></script>
+<script src="rp/lorebook.js"></script>
+<script src="rp/gouhua.js"></script>
+<script src="rp/prompt.js"></script>
+<script src="rp/preset.js"></script>
+<script src="rp/presetexport.js"></script>
+<script src="rp/persona.js"></script>
+<script src="rp/warn.js"></script>
+<script src="rp/memory.js"></script>
+<script src="rp/apex.js"></script>
+<script src="rp/tasks.js"></script>
+<script src="rp/cardwriter.js"></script>
+<script src="rp/ooc.js"></script>
+<script src="rp/playstats.js"></script>
+<script src="rp/portrait.js"></script>
+<script src="rp/chat.js"></script>
+<script src="rp/soul.js"></script>
+<script src="rp/soul_runtime.js"></script>
+<script src="rp/soul_detone.js"></script>
+<script src="rp/soul_orch.js"></script>
+<script src="rp/soul_config.js"></script>
+<script src="rp/soul_gen.js"></script>
+<script src="rp/soul_data.js"></script>
+<script src="rp/soul_group.js"></script>
+<script src="rp/soul_mem.js"></script>
+<script src="rp/soul_model.js"></script>
+<script src="rp/soul_debug.js"></script>
+<script src="rp/soul_ux.js"></script>
+<script src="rp/soul_warm.js"></script>
+<script src="rp/soul_sync.js"></script>
+<script src="rp/soul_h.js"></script>
+<script src="rp/soul_i.js"></script>
+<script src="rp/soul_j.js"></script>
+<script src="rp/soul_k.js"></script>
+<script src="rp/soul_l.js"></script>
+<script src="rp/soul_m.js"></script>
+<script src="rp/soul_n.js"></script>
+<script src="rp/soul_o.js"></script>
+<script src="rp/soul_p.js"></script>
+<script src="rp/soul_q.js"></script>
+<script src="rp/soul_r.js"></script>
+<script src="rp/soul_s.js"></script>
+<script src="rp/soul_t.js"></script>
+<script src="rp/soul_u.js"></script>
+<script src="rp/soul_v.js"></script>
+<script src="rp/soul_w.js"></script>
+<script src="rp/soul_x.js"></script>
+<script src="rp/group.js"></script>
+<script src="rp/cardexport.js"></script>
+<script src="rp/cardimport.js"></script>
+<script src="rp/traverse.js"></script>
+<script src="rp/achieve.js"></script>
+<script src="rp/pinlock.js"></script>
+<script src="rp/typewriter.js"></script>
+<script src="rp/filestore.js"></script>
+<script src="rp/aifill.js"></script>
+<script src="rp/store.js"></script>
+<script src="rp/appearance.js"></script>
+<script src="rp/traverse2.js"></script>
+<script src="rp/distill_llm.js"></script>
+<script src="rp/distill_chunk.js"></script>
+<script src="rp/distill_core.js"></script>
+<script src="rp/distill_alias.js"></script>
+<script src="rp/distill_speaker.js"></script>
+<script src="rp/distill_relations.js"></script>
+<script src="rp/distill_plot.js"></script>
+<script src="rp/distill_discover.js"></script>
+<script src="rp/distill_package.js"></script>
+<script src="rp/distill_provenance.js"></script>
+<script src="rp/distill_quality.js"></script>
+<script src="rp/distill_change.js"></script>
+<script src="rp/distill_library.js"></script>
+<script src="rp/distill_worldbook.js"></script>
+<script src="rp/distill_timeleak.js"></script>
+<script src="rp/distill_openings.js"></script>
+<script src="rp/distill_auditor.js"></script>
+<script src="rp/distill_playground.js"></script>
+<script src="rp/distill_probes.js"></script>
+<script src="rp/distill_backup.js"></script>
+<script src="rp/distill_macro.js"></script>
+<script src="rp/distill_memory.js"></script>
+<script src="rp/chat_candidates.js"></script>
+<script src="rp/chat_pin_story.js"></script>
+<script src="rp/style_presets.js"></script>
+<script src="rp/distill_style.js"></script>
+<script src="rp/agent_lorekeeper.js"></script>
+<script src="rp/agent_pushstory.js"></script>
+<script src="rp/agent_relations.js"></script>
+<script src="rp/agent_cardevo.js"></script>
+<script src="rp/agent_continuity.js"></script>
+<script src="rp/assistant.js"></script>
+<script src="rp/distill_ui.js"></script>
+<script src="rp/worldsim.js"></script>
+<script src="rp/director.js"></script>
+<script src="rp/plotrun.js"></script>
+<script src="rp/arc.js"></script>
+<script src="rp/temporal.js"></script>
+<script src="rp/ppa.js"></script>
+<script src="rp/modeltags.js"></script>
+<script src="rp/heartbeat.js"></script>
+<script src="rp/theme.js"></script>
+<script src="rp/checkin.js"></script>
+<script src="rp/album.js"></script>
+<script src="app.js"></script>
+<button id="asst_fab" type="button" title="浮生小助手" aria-label="浮生小助手"></button>
+<script>document.getElementById("asst_fab").innerHTML = icon("lightbulb",22);</script>
+<script>
+/* 小助手悬浮球：可拖动，点按打开；位置记忆 */
+(function(){
+  var fab = document.getElementById("asst_fab");
+  if(!fab) return;
+  /* 恢复上次位置（避开顶栏区） */
+  try{
+    var pos = JSON.parse(localStorage.getItem("nd_asst_fab_pos") || "null");
+    if(pos && typeof pos.x === "number" && typeof pos.y === "number"){
+      var cy = Math.max(220, Math.min(window.innerHeight - 48, pos.y));
+      fab.style.left = pos.x + "px"; fab.style.top = cy + "px";
+      fab.style.right = "auto"; fab.style.bottom = "auto";
+    }
+  }catch(e){}
+  var sx, sy, ox, oy, moved, pid;
+  function clamp(v, lo, hi){ return Math.max(lo, Math.min(hi, v)); }
+  function onStart(e){
+    var t = e.touches ? e.touches[0] : e;
+    pid = e.pointerId;
+    sx = t.clientX; sy = t.clientY;
+    var r = fab.getBoundingClientRect();
+    ox = r.left; oy = r.top;
+    moved = false;
+    fab.classList.add("dragging");
+    fab.style.left = ox + "px"; fab.style.top = oy + "px";
+    fab.style.right = "auto"; fab.style.bottom = "auto";
+    if(fab.setPointerCapture && pid !== undefined){ try{ fab.setPointerCapture(pid); }catch(_){} }
+    e.preventDefault();
+  }
+  function onMove(e){
+    if(sx === undefined) return;
+    var t = e.touches ? e.touches[0] : e;
+    var dx = t.clientX - sx, dy = t.clientY - sy;
+    if(Math.abs(dx) + Math.abs(dy) > 8) moved = true;
+    if(!moved) return;
+    var nx = clamp(ox + dx, 0, window.innerWidth - 48);
+    /* 避开顶栏区（chathead+ctxbar+wsbar 约 220px），不遮挡内容 */
+    var ny = clamp(oy + dy, 220, window.innerHeight - 48);
+    fab.style.left = nx + "px"; fab.style.top = ny + "px";
+    e.preventDefault();
+  }
+  function onEnd(e){
+    if(sx === undefined) return;
+    fab.classList.remove("dragging");
+    if(!moved){
+      /* 点按：打开小助手 */
+      if(typeof openAssistant === "function") openAssistant();
+    }else{
+      /* 拖拽结束：记忆位置 */
+      try{
+        var r = fab.getBoundingClientRect();
+        localStorage.setItem("nd_asst_fab_pos", JSON.stringify({x: Math.round(r.left), y: Math.round(r.top)}));
+      }catch(_){}
+    }
+    sx = undefined;
+  }
+  fab.addEventListener("pointerdown", onStart);
+  fab.addEventListener("pointermove", onMove);
+  fab.addEventListener("pointerup", onEnd);
+  fab.addEventListener("pointercancel", onEnd);
+
+  /* P0-2/P1-32 内容避让：
+     1) 球被拖过（或上次就存过位置）就标 .pinned，此后一律交给 inline left/top，
+        CSS 里的按页摆位规则不再插手 —— 用户的摆放说了算；
+     2) 没 pin 时滚动就淡出让位，停手 700ms 再回来。悬浮球天生要盖在内容上，
+        滚动时收起是唯一既不挡内容又不牺牲可点的办法。 */
+  try{
+    var saved = JSON.parse(localStorage.getItem("nd_asst_fab_pos") || "null");
+    if(saved && typeof saved.x === "number" && typeof saved.y === "number") fab.classList.add("pinned");
+  }catch(e){}
+  var awayTimer = null;
+  window.addEventListener("scroll", function(){
+    if(fab.classList.contains("pinned")) return;
+    fab.classList.add("away");
+    clearTimeout(awayTimer);
+    awayTimer = setTimeout(function(){ fab.classList.remove("away"); }, 700);
+  }, {passive:true});
+})();
+</script>
+</body>
+</html>

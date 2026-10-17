@@ -1,0 +1,111 @@
+{
+ "url": "file:///home/hatch/workspace/github/novel-reader/www/index.html",
+ "results": [
+  {
+   "name": "ctxbar-no-stray",
+   "ok": true,
+   "detail": {
+    "low": {
+     "tail0": false,
+     "hasNaN": false,
+     "tail": "触发：大观园</div>"
+    },
+    "high": {
+     "tail0": false,
+     "hasNaN": false,
+     "hasWarn": true,
+     "tail": "会一直保留。</div>"
+    }
+   }
+  },
+  {
+   "name": "scroll-no-jitter",
+   "ok": true,
+   "detail": {
+    "s0": 60,
+    "s1": 60,
+    "s2": 60,
+    "s3": 60,
+    "lastAI": 17,
+    "twRan": true,
+    "twDrift": 0,
+    "streamDrift": 0
+   }
+  },
+  {
+   "name": "scroll-hidebars",
+   "ok": true,
+   "detail": {
+    "initHidden": true,
+    "tapShown": true,
+    "scrollHidden": true,
+    "tapShown2": true
+   }
+  },
+  {
+   "name": "immersive-bg",
+   "ok": true,
+   "detail": {
+    "bgExists": true,
+    "layerExists": true,
+    "shadeExists": true,
+    "full": true,
+    "bubbleBlur": "blur(10px)",
+    "headBlur": "blur(14px)",
+    "anim": "chatbreathe",
+    "reduced": false
+   }
+  },
+  {
+   "name": "bars-follow-bg",
+   "ok": true,
+   "detail": {
+    "ready": true,
+    "headBg": "rgba(242, 184, 198, 0.58)",
+    "simBg": "rgba(242, 184, 198, 0.94)",
+    "barBg": "rgba(242, 184, 198, 0.78)",
+    "light": true,
+    "cnameColor": "rgb(42, 32, 19)"
+   }
+  },
+  {
+   "name": "bars-transition",
+   "ok": true,
+   "detail": {
+    "head": "transform 0.3s",
+    "sim": "transform 0.3s",
+    "bar": "transform 0.3s"
+   }
+  },
+  {
+   "name": "layout-no-overlap",
+   "ok": true,
+   "detail": {
+    "chat": {
+     "overlaps": 0,
+     "overflows": 0,
+     "pageOverflow": false,
+     "nLeaf": 124,
+     "overlapSample": [],
+     "overflowSample": []
+    },
+    "settings": {
+     "overlaps": 0,
+     "overflows": 0,
+     "pageOverflow": false,
+     "nLeaf": 186,
+     "overlapSample": [],
+     "overflowSample": []
+    },
+    "traverse": {
+     "overlaps": 0,
+     "overflows": 0,
+     "pageOverflow": false,
+     "nLeaf": 46,
+     "overlapSample": [],
+     "overflowSample": []
+    }
+   }
+  }
+ ]
+}
