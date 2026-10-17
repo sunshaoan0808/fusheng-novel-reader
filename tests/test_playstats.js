@@ -74,5 +74,15 @@ t("不同卡隔离", S.get("r1", "贾宝玉").s === 1 && S.get("r1", "林黛玉"
 S.recordSession("r2", "林黛玉");
 t("不同run隔离", S.get("r2", "林黛玉").s === 1);
 
+/* 7) prompt 以数组传入（v38: 发送路径不再 join 出整份副本，改为逐条累加） */
+{
+  const piArr = S.recordTurn("r3", "数组", ["第一段中文", "second part", "第三段"], "回复", false).pi;
+  const piStr = S.recordTurn("r4", "字符串", "第一段中文", "回复", false).pi;
+  t("数组 prompt 会累加多段 token", piArr > piStr);
+  const pa = S.recordTurn("r5", "数组2", ["a", "b"], "x", false).pi;
+  const pb = S.recordTurn("r6", "数组3", ["ab"], "x", false).pi;
+  t("数组 prompt 逐条估算（不是按拼接串算）", pa >= pb);
+}
+
 console.log(`\n${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

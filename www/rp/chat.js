@@ -315,17 +315,30 @@ function applyRegex(text, rules, depth){
    * 渲染, 视为显示路径); 纯 promptOnly(只在 prompt 构建时执行)本机无此路径, 跳过;
    * minDepth/maxDepth 按 depth 过滤(新回复 depth=0)。 */
   if(depth == null) depth = 0;
-  var out = text.length > RX_MAXLEN ? text.slice(-RX_MAXLEN) : text;
-  rules.forEach(function(r){
-    if(r.enabled === false || !r.find) return;
-    if(r.promptOnly && !r.markdownOnly) return;
-    if(r.minDepth != null && depth < r.minDepth) return;
-    if(r.maxDepth != null && depth > r.maxDepth) return;
-    if(unsafePattern(r.find)) return;   /* ReDoS 形态直接不执行 */
-    try{ out = out.replace(new RegExp(r.find, r.flags || "g"), r.replace == null ? "" : r.replace); }
-    catch(e){ /* 非法正则跳过 */ }
-  });
-  return out;
+  function run(src){
+    var out = src;
+    rules.forEach(function(r){
+      if(r.enabled === false || !r.find) return;
+      if(r.promptOnly && !r.markdownOnly) return;
+      if(r.minDepth != null && depth < r.minDepth) return;
+      if(r.maxDepth != null && depth > r.maxDepth) return;
+      if(unsafePattern(r.find)) return;   /* ReDoS 形态直接不执行 */
+      try{ out = out.replace(new RegExp(r.find, r.flags || "g"), r.replace == null ? "" : r.replace); }
+      catch(e){ /* 非法正则跳过 */ }
+    });
+    return out;
+  }
+  if(text.length <= RX_MAXLEN) return run(text);
+  /* v38 修正: 原先超长文本直接 slice(-RX_MAXLEN) 返回, 超过 2 万字的回复会被
+   * 砍掉开头——规则没命中时也照样丢内容。改为全文按 RX_MAXLEN 分块处理:
+   * 每块送进正则的输入仍有上界, 但全部字符都会被处理且一个都不会少。
+   * 唯一代价是跨块边界(20K 的整数倍处)的匹配可能漏, 比丢 60% 正文划算。 */
+  var acc = "", at = 0;
+  while(at < text.length){
+    acc += run(text.slice(at, at + RX_MAXLEN));
+    at += RX_MAXLEN;
+  }
+  return acc;
 }
 
 /* S 级补全: 穿越的正则键名。魂穿用被附身角色名, 肉身/异世界用世界名 */
@@ -979,11 +992,11 @@ async function regenerate(runId, name, opts){
     /* 游玩统计：重抽只记 token，不记轮数（纯本地，RP_STATS） */
     try{
       if(typeof RP_STATS !== "undefined"){
-        var _pc2 = b.messages.map(function(m){
+        /* v38: 与首轮同口径——传数组让 recordTurn 逐条累加, 不再 join 出一份完整副本 */
+        RP_STATS.recordTurn(runId, name, b.messages.map(function(m){
           var c = m && m.content;
           return (typeof c === "string") ? c : (c ? JSON.stringify(c) : "");
-        }).join("\n");
-        RP_STATS.recordTurn(runId, name, _pc2, reply, true);
+        }), reply, true);
       }
     }catch(e){}
   }

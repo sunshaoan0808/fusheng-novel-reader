@@ -63,11 +63,20 @@ vm.createContext(c2);
 vm.runInContext(extract(chatSrc, "getRegex"), c2);
 vm.runInContext(extract(chatSrc, "applyRegex"), c2);
 
-/* 文本截断兜底：超过 20000 字符的输入只取末段（把最坏成本压成常量） */
+/* 分块处理：超过 20000 字符的输入按块送正则（成本有上界），但正文一个字都不能少。
+ * 曾经的实现是 slice(-20000) 只留末段——那不是兜底，是把长回复的开头直接删掉。 */
 const huge = "a".repeat(50000) + "!";
 const trunc = vm.runInContext(
   `applyRegex(${JSON.stringify(huge)}, [{find: "zzz", replace: ""}], 0)`, c2);
-t("applyRegex 对超长文本截断到 20000", trunc.length === 20000);
+t("applyRegex 超长文本不被截断（长度守恒）", trunc.length === huge.length);
+t("applyRegex 超长文本内容完全一致", trunc === huge);
+t("applyRegex 超长文本首尾规则都生效",
+  vm.runInContext(`(function(){
+    var s = "HEAD" + "x".repeat(50000) + "TAIL";
+    var o = applyRegex(s, [{find: "HEAD", replace: "H"}, {find: "TAIL", replace: "T"}], 0);
+    return o.charAt(0) === "H" && o.charAt(o.length - 1) === "T" &&
+      o.length === s.length - 6;
+  })()`, c2) === true);
 
 /* ST 正则脚本执行点（chat.js applyRegex）：同一条恶意规则必须被跳过且不改文本 */
 const big = "a".repeat(9000) + "!";
