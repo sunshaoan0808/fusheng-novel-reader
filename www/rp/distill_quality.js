@@ -261,12 +261,20 @@ function check(pkgId){
 var LEVEL_ICON = {pass: "✅", warn: "⚠️", fail: "❌"};
 var LEVEL_COLOR = {pass: "var(--gold)", warn: "#f0ad4e", fail: "#e74c3c"};
 
+/* 与其它模块一致: 优先用全局 escH, 独立加载(测试 vm)时回退同款实现。
+ * 直接调 esc 在没有 app.js 的环境里会 ReferenceError，整个质量门渲染就废了。 */
+var escQ = (typeof escH === "function") ? escH : function(s){
+  return String(s == null ? "" : s)
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+};
+
 function renderReport(q){
   return `<div class="card" style="margin-bottom:12px">
     <div style="font-weight:600;margin-bottom:8px">质量门 <span style="color:${LEVEL_COLOR[q.level]}">${LEVEL_ICON[q.level]} ${q.score}分</span></div>
     ${q.checks.map(function(c){
       return `<div style="font-size:calc(12px * var(--fs));padding:3px 0">
-        <span style="color:${LEVEL_COLOR[c.level]}">${LEVEL_ICON[c.level]}</span> ${esc(c.msg)}</div>`;
+        <span style="color:${LEVEL_COLOR[c.level]}">${LEVEL_ICON[c.level]}</span> ${escQ(c.msg)}</div>`;
     }).join("")}
   </div>`;
 }
