@@ -41,7 +41,7 @@ const warnings = [];
 const perfRows = [];
 
 function T(id, label, cond, detail){
-  if(cond){ pass++; if(VERBOSE) console.log("  ok   " + id + "  " + label); }
+  if(cond){ pass++; if(VERBOSE) console.log("  ok   " + id + "  " + label + (detail ? "  [" + detail + "]" : "")); }
   else { fail++; failures.push({ id, label, detail }); console.log("  FAIL " + id + "  " + label + (detail ? "  <- " + detail : "")); }
 }
 function W(id, label, detail){ warn++; warnings.push({ id, label, detail }); console.log("  WARN " + id + "  " + label + (detail ? "  <- " + detail : "")); }
