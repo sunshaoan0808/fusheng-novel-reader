@@ -114,15 +114,63 @@ function normalizeAll(entries){
 
 /* 关键词匹配: /pattern/flags 视为 RegEx (case_sensitive 对正则无效, Janitor ignoredOnRegexKeys);
  * 纯 CJK key 无词边界概念, 子串命中即算 whole word。 */
+/* v37 安全: 用户正则来自导入的 ST 卡, 属于不可信输入。JS 无正则超时机制,
+ * 灾难性回溯(如 /(a+)+$/) 会永久卡死 UI 线程, 故导入/执行前做静态检查:
+ *   1) 长度上限 200 (正常触发词远小于此)
+ *   2) 拒绝"被量词修饰的分组再被量词修饰"这一 ReDoS 主形态: (x+)+ / (x*)* / (x|y)+ ...
+ *   3) 拒绝嵌套量词 (x{1,999}{1,999} 之类)
+ * 检查通过也不代表绝对安全, 执行侧仍有文本截断兜底 (见 keyMatches)。 */
+var SAFE_RX_MAX_LEN = 200;
+var _rxSafeCache = (typeof Map !== "undefined") ? new Map() : null;
+function safeRegexCheck(pattern){
+  var p = String(pattern == null ? "" : pattern);
+  if(!p || p.length > SAFE_RX_MAX_LEN) return false;
+  if(_rxSafeCache && _rxSafeCache.has(p)) return _rxSafeCache.get(p);
+  var ok = true;
+  /* 分组内含量词, 分组本身又被 + * { 修饰 => 回溯爆炸 (如 (a+)+ / (\\s+)*) */
+  if(/\((?:\\.|[^()])*[+*](?:\\.|[^()])*\)\s*[+*{]/.test(p)) ok = false;
+  /* 含重叠分支的分组再被量词修饰 => 同样爆炸 (如 (a|aa)+) */
+  if(ok && /\((?:\\.|[^()])*\|(?:\\.|[^()])*\)\s*[+*{]/.test(p)) ok = false;
+  /* 连续两个贪婪量词(如 a{1,2}{3,}); 注意放行惰性量词 +? / *? / ?? */
+  if(ok && /[+*}]\s*[+*{]/.test(p)) ok = false;
+  if(_rxSafeCache){
+    if(_rxSafeCache.size > 500) _rxSafeCache.clear();
+    _rxSafeCache.set(p, ok);
+  }
+  return ok;
+}
+var _rxCompileCache = (typeof Map !== "undefined") ? new Map() : null;
+/* 匹配用文本截断: 世界书只看近期上下文, 正则路径只喂末 4000 字符,
+ * 把最坏回溯成本从"全文长度"压到常量级。 */
+var RX_TEXT_MAX = 4000;
+/* 同一次匹配中 text 会被每个词条反复 toLowerCase, 这里只算一次 */
+var _lcSrc = null, _lcOut = null;
+function lowerCached(t){
+  t = str(t);
+  if(t === _lcSrc) return _lcOut;
+  _lcSrc = t; _lcOut = t.toLowerCase();
+  return _lcOut;
+}
 function parseRegexKey(k){
   k = trimStr(k);
   if(k.length < 2 || k.charAt(0) !== "/") return null;
   var last = k.lastIndexOf("/");
   if(last <= 0) return null;
+  var body = k.slice(1, last);
+  if(!body) return null;                       /* "//" 会编译成恒真空正则, 拒绝 */
+  if(!safeRegexCheck(body)) return null;       /* ReDoS 形态直接不生效 */
   var flags = k.slice(last + 1);
   if(!/^[gimsuy]*$/.test(flags)) return null;
-  try { return new RegExp(k.slice(1, last), flags); }
-  catch(e){ return null; }
+  var sig = body + "\u0000" + flags;
+  if(_rxCompileCache && _rxCompileCache.has(sig)) return _rxCompileCache.get(sig);
+  var rx = null;
+  try { rx = new RegExp(body, flags); }
+  catch(e){ rx = null; }
+  if(_rxCompileCache){
+    if(_rxCompileCache.size > 500) _rxCompileCache.clear();
+    _rxCompileCache.set(sig, rx);
+  }
+  return rx;
 }
 function escRe(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"); }
 function keyMatches(k, text, opts){
@@ -130,9 +178,12 @@ function keyMatches(k, text, opts){
   k = trimStr(k); text = str(text);
   if(!k) return false;
   var rx = parseRegexKey(k);
-  if(rx) return rx.test(text);
+  if(rx){
+    var scan = text.length > RX_TEXT_MAX ? text.slice(-RX_TEXT_MAX) : text;
+    return rx.test(scan);
+  }
   var key = k, t = text;
-  if(!opts.case_sensitive){ key = key.toLowerCase(); t = t.toLowerCase(); }
+  if(!opts.case_sensitive){ key = key.toLowerCase(); t = lowerCached(text); }
   if(t.indexOf(key) < 0) return false;
   if(!opts.matchWholeWords) return true;
   if(!/[A-Za-z0-9_]/.test(key)) return true; /* CJK 等无词边界: 子串即整词 */
@@ -230,10 +281,20 @@ function matchMessages(entries, messages, msgCount){
     return typeof m === "string" ? m : str(m && m.content);
   });
   var out = [];
+  /* v37 性能: 同 depth 的消息拼接只做一次。原先每条目各自 slice+join,
+   * 200 条目 = 200 次全量字符串拼接, 是每次发送的主要延迟来源之一。 */
+  var textByDepth = {};
   list.forEach(function(e){
     if(!e.enabled) return;
     if(!e.constant && e.minMessages > 0 && msgCount != null && msgCount < e.minMessages) return;
-    var text = e.constant ? "" : msgs.slice(-(e.depth || 4)).join("\n");
+    var text = "";
+    if(!e.constant){
+      var d = e.depth || 4;
+      if(!Object.prototype.hasOwnProperty.call(textByDepth, d)){
+        textByDepth[d] = msgs.slice(-d).join("\n");
+      }
+      text = textByDepth[d];
+    }
     var m = evalEntry(e, text);
     if(m < 0) return;
     e._m = m;

@@ -273,17 +273,36 @@ function getRegex(runId, name){
   catch(e){ return []; }
 }
 function applyRegex(text, rules, depth){
+  /* v37 安全: r.find 来自导入的 ST 正则脚本(不可信)。JS 正则无超时, 灾难性回溯
+   * (如 (a+)+$ 对长回复)会卡死 UI 线程, 故执行前做静态检查 + 文本截断。
+   * 检查逻辑内联在本函数内(测试按函数名抽取执行, 不能依赖外部辅助符号)。 */
+  var RX_MAXLEN = 20000;          /* 单次替换的输入上限 */
+  /* 注意: 本函数被测试按大括号配对抽取执行, 函数体内不能出现字面大括号,
+     所以量词花括号用 fromCharCode 拼 */
+  var LB = String.fromCharCode(123), RB = String.fromCharCode(125);
+  var reGroupQuant = new RegExp("\\([^()]*[+*][^()]*\\)\\s*[+*" + LB + "]");
+  var reAltQuant = new RegExp("\\([^()]*\\|[^()]*\\)\\s*[+*" + LB + "]");
+  var reDoubleQuant = new RegExp("[+*" + RB + "]\\s*[+*" + LB + "]");
+  function unsafePattern(p){
+    p = String(p == null ? "" : p);
+    if(!p || p.length > 200) return true;
+    if(reGroupQuant.test(p)) return true;   /* (a+)+ 型 */
+    if(reAltQuant.test(p)) return true;     /* (a|aa)+ 型 */
+    if(reDoubleQuant.test(p)) return true;  /* 连续量词 */
+    return false;
+  }
   if(!text || !rules || !rules.length) return text;
   /* ST 语义(engine.js): markdownOnly 只在 markdown 显示路径执行(本机气泡即 markdown
    * 渲染, 视为显示路径); 纯 promptOnly(只在 prompt 构建时执行)本机无此路径, 跳过;
    * minDepth/maxDepth 按 depth 过滤(新回复 depth=0)。 */
   if(depth == null) depth = 0;
-  var out = text;
+  var out = text.length > RX_MAXLEN ? text.slice(-RX_MAXLEN) : text;
   rules.forEach(function(r){
     if(r.enabled === false || !r.find) return;
     if(r.promptOnly && !r.markdownOnly) return;
     if(r.minDepth != null && depth < r.minDepth) return;
     if(r.maxDepth != null && depth > r.maxDepth) return;
+    if(unsafePattern(r.find)) return;   /* ReDoS 形态直接不执行 */
     try{ out = out.replace(new RegExp(r.find, r.flags || "g"), r.replace == null ? "" : r.replace); }
     catch(e){ /* 非法正则跳过 */ }
   });

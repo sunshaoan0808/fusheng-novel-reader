@@ -735,7 +735,11 @@ const box = ov.querySelector("#v_img");
 box.innerHTML = `<div class="empty">画画中…（约十几秒）</div>`;
 try{
 const url = await RP_NET.generateImage(cfg, ov.querySelector("#v_prompt").value, cfg.imgModel);
-box.innerHTML = `<img src="${url}">`;
+/* v37 安全: 生图返回的 url 来自远端网关(不可信), 未转义直插 src 可被 " 截断属性注入。
+ * 只放行 data:image/ 与 https:, 其余拒绝渲染。 */
+const safeUrl = (typeof url === "string" && /^(data:image\/|https:\/\/)/i.test(url)) ? url : "";
+if(!safeUrl){ box.innerHTML = `<div class="empty">失败：图片地址不合法</div>`; return; }
+box.innerHTML = `<img src="${escH(safeUrl)}">`;
 const sv = ov.querySelector("#v_save");
 sv.style.display = "";
 sv.onclick = ()=>{
@@ -1682,7 +1686,7 @@ ${chatBgHTML()}
 <button class="backbtn" onclick="exitChat()">‹</button>
 <div class="avatar">${esc((CHAT.name||"?")[0])}</div>
 <div class="chead-main"><div class="cname">${esc(CHAT.name)}<span class="aimark">AI</span></div>
-<div class="cstat">${run.novel?`<span>${esc(run.novel)}</span>`:""}<span id="chapter_hbadge" style="display:none;font-size:calc(11px * var(--fs));color:var(--gold);border:1px solid var(--line-soft);border-radius:999px;padding:1px 8px;cursor:pointer" onclick="chapterPicker()"></span><button onclick="toggleDrawer(false);openAlbum(CHAT.runId,CHAT.name)"><span class="mement">${icon("brain",15)} ${memN}条记忆</span>›</button></div></div>
+<div class="cstat">${run.novel?`<span>${esc(run.novel)}</span>`:""}<span id="chapter_hbadge" style="display:none;font-size:calc(11px * var(--fs));color:var(--gold);border:1px solid var(--line-soft);border-radius:999px;padding:1px 8px;cursor:pointer" onclick="chapterPicker()"></span><button onclick="toggleDrawer(false);openAlbum('${jq(CHAT.runId)}','${jq(CHAT.name)}')"><span class="mement">${icon("brain",15)} ${memN}条记忆</span>›</button></div></div>
 <button class="menubtn" onclick="toggleChatSearch()" title="搜索聊天记录">${icon("search")}</button>
 <button class="menubtn" onclick="toggleDrawer(true)" title="菜单">${icon("menu")}</button>
 </div>
@@ -1703,17 +1707,17 @@ ${cs.map(c=>`<button class="whoami ${c.runId===CHAT.runId&&c.name===CHAT.name?"a
 <h3>叙事视角</h3>
 ${povChipsHTML()}
 <h3>聊天</h3>
-<button class="ditem" onclick="toggleDrawer(false);openAlbum(CHAT.runId,CHAT.name)">${icon("books")} 记忆事件簿</button>
+<button class="ditem" onclick="toggleDrawer(false);openAlbum('${jq(CHAT.runId)}','${jq(CHAT.name)}')">${icon("books")} 记忆事件簿</button>
 <button class="ditem" onclick="toggleDrawer(false);wallpaperEditor()">🖼️ 聊天壁纸</button>
 <button class="ditem" onclick="toggleDrawer(false);openSaves()">${icon("save")} 平行存档</button>
 <button class="ditem" onclick="toggleDrawer(false);newChatSameRole()">${icon("plus")} 开新聊天</button>
-<button class="ditem" onclick="toggleDrawer(false);personaEditor(CHAT.runId,'chat')">${icon("user")} 我的人设（本次覆盖）</button>
-<button class="ditem" onclick="toggleDrawer(false);charDetail(CHAT.runId,CHAT.name)">${icon("user")} 角色详情</button>
+<button class="ditem" onclick="toggleDrawer(false);personaEditor('${jq(CHAT.runId)}','chat')">${icon("user")} 我的人设（本次覆盖）</button>
+<button class="ditem" onclick="toggleDrawer(false);charDetail('${jq(CHAT.runId)}','${jq(CHAT.name)}')">${icon("user")} 角色详情</button>
 <button class="ditem" onclick="toggleDrawer(false);showATasks()">${icon("chart")} 分析任务</button>
 <button class="ditem" onclick="toggleDrawer(false);plotEditor()">${icon("book-open")} 剧情线</button>
 ${chapterEntryHTML(true)}
-<button class="ditem" onclick="toggleDrawer(false);loreEditor(CHAT.runId,'chat')">${icon("book-open")} 世界书管理</button>
-<button class="ditem" onclick="toggleDrawer(false);regexEditor(CHAT.runId,CHAT.name,'chat')">🔤 正则替换</button>
+<button class="ditem" onclick="toggleDrawer(false);loreEditor('${jq(CHAT.runId)}','chat')">${icon("book-open")} 世界书管理</button>
+<button class="ditem" onclick="toggleDrawer(false);regexEditor('${jq(CHAT.runId)}','${jq(CHAT.name)}','chat')">🔤 正则替换</button>
 <button class="ditem" onclick="toggleDrawer(false);showSystem()">${icon("settings")} 人设 prompt 预览</button>
 <button class="ditem" onclick="toggleDrawer(false);promptDiag()">${icon("chart")} Prompt 诊断</button>
 <h3>AI 助手</h3>
@@ -1819,8 +1823,8 @@ ${chapterEntryHTML(false)}
 <button class="ditem" onclick="toggleDrawer(false);openSaves()">${icon("save")} 平行存档</button>
 <button class="ditem" onclick="toggleDrawer(false);wallpaperEditor()">🖼️ 聊天壁纸</button>
 <button class="ditem" onclick="toggleDrawer(false);personaEditor(null,'chat')">${icon("user")} 我的人设（全局）</button>
-<button class="ditem" onclick="toggleDrawer(false);loreEditor(CHAT.runId,'chat')">${icon("book-open")} 世界书管理</button>
-<button class="ditem" onclick="toggleDrawer(false);regexEditor(CHAT.runId,null,'chat')">🔤 正则替换</button>
+<button class="ditem" onclick="toggleDrawer(false);loreEditor('${jq(CHAT.runId)}','chat')">${icon("book-open")} 世界书管理</button>
+<button class="ditem" onclick="toggleDrawer(false);regexEditor('${jq(CHAT.runId)}',null,'chat')">🔤 正则替换</button>
 <button class="ditem" onclick="toggleDrawer(false);exportChat()">&#x1F4E4; 复制聊天记录</button>
 ${foreEntryHTML()}
 <button class="ditem" onclick="toggleDrawer(false);exportChatTxt()">${icon("download")} 导出聊天 TXT</button>
@@ -3070,8 +3074,14 @@ setTimeout(lockCount, 1000);
 const wipe = ()=>{
 if(!confirm("确定清除全部数据吗？\n所有聊天记录、记忆、角色卡、存档都会被删除, 不可恢复！")) return;
 if(!confirm("最后确认: 真的要清空一切吗？")) return;
-try{ localStorage.clear(); }catch(e){}
-location.reload();
+/* 必须走统一执行器：只 localStorage.clear() 会留下 IDB 整库和原生 ndblob 文件，
+ * 重启后数据"隐身"但仍可被恢复，与"不可恢复"承诺不符。 */
+if(typeof window.__wipeAllData === "function"){
+  window.__wipeAllData({clearAll:true, reload:true});
+}else{
+  try{ localStorage.clear(); }catch(e){}
+  location.reload();
+}
 };
 document.body.appendChild(ov);
 document.body.classList.add("pinlocked");
@@ -5906,7 +5916,7 @@ window.showChatSettings = ()=>{
       <div class="btnrow">
         <button class="btn" style="font-size:calc(12px * var(--fs))" onclick="showRelManager()">关系管理</button>
         <button class="btn" style="font-size:calc(12px * var(--fs))" onclick="showCardEvo()">卡更新建议</button>
-        <button class="btn" style="font-size:calc(12px * var(--fs))" onclick="loreEditor(CHAT.runId,'chat')">世界书</button>
+        <button class="btn" style="font-size:calc(12px * var(--fs))" onclick="loreEditor('${jq(CHAT.runId)}','chat')">世界书</button>
       </div>
     </div>
 
@@ -6942,20 +6952,33 @@ rd.readAsText(f);
 };
 inp.click();
 };
+/* v36: 统一的"清空数据"执行器——所有清空入口（设置页 wipeAll / PIN 锁屏 wipe）
+ * 必须走这里，否则 IDB 整库与原生 ndblob 文件会残留，与"不可恢复"的承诺不符。
+ * 顺序不能反：先清存储层（IDB 整库 + 原生文件 + 内存镜像 + 标记），再删 localStorage
+ * 业务键。RP_STORE.wipeAll 内部不再依赖标记，但旧版本桥接的逐个删除回退路径需要标记；
+ * 先删标记会导致原生文件变孤儿删不掉。 */
+window.__wipeAllData = function(opts){
+  opts = opts || {};
+  const finish = ()=>{
+    try{
+      if(opts.clearAll){
+        localStorage.clear();
+      }else{
+        Object.keys(localStorage).filter(k=>k.startsWith("nd_")).forEach(k=>localStorage.removeItem(k));
+      }
+    }catch(e){}
+    if(opts.reload){ location.reload(); return; }
+    if(typeof opts.after === "function"){ try{ opts.after(); }catch(e){} }
+  };
+  try{
+    if(typeof RP_STORE!=="undefined" && RP_STORE && RP_STORE.wipeAll){
+      RP_STORE.wipeAll().then(finish, finish);
+    } else finish();
+  }catch(e){ finish(); }
+};
 window.wipeAll = ()=>{
 if(!confirm("清空所有任务、聊天记录和 API 配置? 产物数据不受影响。")) return;
-/* v36: 先清存储层（IDB 整库 + 原生文件 + 内存镜像 + 标记），再删 localStorage 业务键。
- * 顺序不能反：RP_STORE.wipeAll 内部不再依赖标记，但旧版本桥接的逐个删除回退路径
- * 需要标记；先删标记会导致原生文件变孤儿删不掉。 */
-const finish = ()=>{
-  Object.keys(localStorage).filter(k=>k.startsWith("nd_")).forEach(k=>localStorage.removeItem(k));
-  alert("已清空"); showSettings();
-};
-try{
-  if(typeof RP_STORE!=="undefined" && RP_STORE.wipeAll){
-    RP_STORE.wipeAll().then(finish, finish);
-  } else finish();
-}catch(e){ finish(); }
+window.__wipeAllData({clearAll:false, after:()=>{ alert("已清空"); showSettings(); }});
 };
 
 
