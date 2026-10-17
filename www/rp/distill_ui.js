@@ -667,15 +667,19 @@ async function onStartDistill(){
 
     S.running = false;
     try{ localStorage.removeItem(ckptKey); }catch(e){}
-    // 保存 chunks 轻量引用供时序泄漏检测
+    // 时序泄漏检测：在正文还在内存里时算好并落盘。
+    /* 原来存 window._distillChunks（只存每块前 2000 字、永不清除）：
+     * 截断导致漏报，全局恒存导致泄漏，而且重开 App 后质量门永远跳过这项。 */
     try{
-      window._distillChunks = (S.chunks || []).map(function(c){
-        return {id: c.id, text: (c.text || "").slice(0, 2000)};
-      });
+      if(typeof DISTILL_TIMELEAK !== "undefined" && S.chunks && S.chunks.length){
+        var leaks = DISTILL_TIMELEAK.detect(S.pkg.id, S.chunks);
+        DISTILL_PACKAGE.saveData(S.pkg.id, "timeleak", leaks || []);
+      }
     }catch(e){}
     // 构建出处索引 + 引用校验 (存在性 + 内容真实性)
     try{
-      var chars = Object.keys(S.selected).filter(function(k){ return S.selected[k]; });
+      /* 这里不能重新声明 chars：var 是函数作用域，会静默把外层的「实际蒸馏角色集」
+       * 覆盖成「当前勾选集」，出处索引就按错的角色集构建。 */
       var idx = DISTILL_PROVENANCE.buildIndex(S.pkg.id, chars);
       // B1: 补充来源哈希+字符位置
       try{ DISTILL_PROVENANCE.enrichSourceLocation(idx, S.chunks); }catch(e){}
@@ -795,7 +799,16 @@ function openCharacter(pkgId, name, stage){
   var d = card._distill || {};
   // 按阶段取 (防剧透: early 只看 early, mid 看 early+mid, late 全看)
   var stageData = d[stage] || {};
-  if(stage === "mid") stageData = Object.assign({}, d.early, d.mid);
+  if(stage === "mid"){
+    /* 合并时必须跳过空值: mergeProfiles 会给每个字段都建键，缺失字段是空串，
+     * 直接 Object.assign({}, d.early, d.mid) 会让空串反向覆盖掉 early 的值。 */
+    stageData = {};
+    var eLayer = d.early || {}, mLayer = d.mid || {};
+    Object.keys(eLayer).forEach(function(k){ stageData[k] = eLayer[k]; });
+    Object.keys(mLayer).forEach(function(k){
+      if(String(mLayer[k] == null ? "" : mLayer[k]).trim()) stageData[k] = mLayer[k];
+    });
+  }
   if(stage === "late") stageData = d; // 顶层为全量
 
   var prov = DISTILL_PACKAGE.getData(pkgId, "provenance");
@@ -885,6 +898,24 @@ function showProvenance(pkgId, name){
     return;
   }
   var facts = prov.facts.filter(function(f){ return !name || f.character === name; });
+  /* 每条事实在「本角色事实列表」中的下标：编辑/删除按钮要用。
+   * 原来对每一行都做一次 prov.facts.filter + indexOf → O(n²)（800 条事实约 64 万次遍历，
+   * 手机上滚动时可见卡顿）。这里先建一次索引。 */
+  var posByChar = {};
+  prov.facts.forEach(function(f){
+    var arr = posByChar[f.character] || (posByChar[f.character] = []);
+    arr.push(f);
+  });
+  var posMap = (typeof Map === "function") ? new Map() : null;
+  if(posMap){
+    Object.keys(posByChar).forEach(function(c){
+      posByChar[c].forEach(function(f, i){ posMap.set(f, i); });
+    });
+  }
+  function factIndex(f){
+    if(posMap) return posMap.get(f);
+    return posByChar[f.character].indexOf(f);
+  }
   var libStats = (typeof DISTILL_LIBRARY !== "undefined") ? DISTILL_LIBRARY.stats(pkgId) : null;
   v.innerHTML = `<h2 class="sec">📚 资料库 ${name ? "· " + esc(name) : ""}
     ${name ? `<button class="btn" style="font-size:calc(12px * var(--fs));margin-left:8px" data-dact="autoExtractFacts" data-did="${pkgId}" data-dname="${escA(name)}">⚡ 自动抽取</button>` : ""}</h2>
@@ -898,8 +929,7 @@ function showProvenance(pkgId, name){
       var color = DISTILL_PROVENANCE.SOURCE_COLOR[f.source] || "var(--ink-faint)";
       var label = DISTILL_PROVENANCE.SOURCE_LABEL[f.source] || f.source;
       // 找到该角色事实列表中的 index
-      var charFacts = prov.facts.filter(function(x){ return x.character === f.character; });
-      var fidx = charFacts.indexOf(f);
+      var fidx = factIndex(f);
       return `<div class="card" style="padding:10px;margin-bottom:8px">
         <div style="font-size:calc(12px * var(--fs))"><b>${esc(f.field)}</b>:
           <span style="color:${color};font-size:calc(11px * var(--fs));margin-left:6px">${label}${f.chunk_id ? " · " + esc(f.chunk_id) : ""}${f.edited ? " · ✏️已编辑" : ""}</span>

@@ -134,6 +134,13 @@ function recompileCard(pkgId, charName){
   });
 
   var card = DISTILL_PACKAGE.getCharacterCard(pkgId, charName) || {name: charName};
+  /* 保留 early/mid/late 分层。重编译只能产出"全量"字段（事实里没有 chunk 阶段信息），
+   * 若直接 _distill = distill，分层就被永久抹掉：中期视图退回全量 → 防剧透失效，
+   * 时序泄漏检测也读不到 d.early。这里只覆盖顶层扁平字段。 */
+  var old = card._distill || {};
+  ["early", "mid", "late"].forEach(function(st){
+    if(old[st] && typeof old[st] === "object") distill[st] = old[st];
+  });
   card._distill = distill;
   if(distill.core_identity) card.description = distill.core_identity;
   if(distill.core_traits) card.personality = distill.core_traits;

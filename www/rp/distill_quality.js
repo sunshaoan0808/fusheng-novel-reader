@@ -140,8 +140,8 @@ function checkInner(pkgId){
     var total = prov.facts.length;
     var grounded = (st.canon || 0) + (st.ref || 0);
     var rate = grounded / total;
-    // 引用存在性校验
-    var chunkIds = []; // 包内不存 chunks，跳过存在性检查
+    // 引用存在性校验依赖 chunks，而包里不存正文；真正的存在性/无锚定校验在蒸馏结束时
+    // 由 DISTILL_PROVENANCE.validateCitations + verifyCitationContent 做，结果存在 unanchored 里。
     if(rate >= 0.6){
       checks.push({id: "citations", level: "pass",
         msg: "引用覆盖 " + Math.round(rate * 100) + "% (" + grounded + "/" + total + " 有依据)"});
@@ -211,15 +211,15 @@ function checkInner(pkgId){
       msg: unanchored.length + " 条引用内容在原文找不到 (幻觉嫌疑)"});
   }
 
-  // 4.7 时序泄漏 (需要 chunks 数据，包内不存时跳过)
+  // 4.7 时序泄漏 (蒸馏结束时算好并存在包里，见 distill_ui；不再依赖内存里的 window 全局)
   try{
-    if(typeof DISTILL_TIMELEAK !== "undefined" && window._distillChunks){
-      var leaks = DISTILL_TIMELEAK.detect(pkgId, window._distillChunks);
-      if(leaks.length){
-        checks.push({id: "timeleak", level: "fail",
-          msg: leaks.length + " 处疑似时序泄漏 (前期档案含后期信息: " +
-            leaks.slice(0, 2).map(function(l){ return l.character + ":" + l.term; }).join("、") + ")"});
-      }
+    var leaks = DISTILL_PACKAGE.getData(pkgId, "timeleak");
+    if(leaks && leaks.length){
+      checks.push({id: "timeleak", level: "fail",
+        msg: leaks.length + " 处疑似时序泄漏 (前期档案含后期信息: " +
+          leaks.slice(0, 2).map(function(l){ return l.character + ":" + l.term; }).join("、") + ")"});
+    }else if(leaks){
+      checks.push({id: "timeleak", level: "pass", msg: "无时序泄漏"});
     }
   }catch(e){}
 

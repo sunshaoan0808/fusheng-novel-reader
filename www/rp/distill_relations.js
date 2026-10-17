@@ -4,8 +4,19 @@
 var DISTILL_RELATIONS = (function(){
 "use strict";
 
-var DIALOG_MARK = /[“”\"]|说|道|问|答|笑|喊|骂|应|叹|低声|大声/;
-var ACTION_MARK = /看|望|盯|拉|抱|打|推|递|给|搀|扶|吻|拥|指|拍/;
+/* "明确交互"判据: 原来 DIALOG_MARK 含单字 说/道/问/答/笑/应/叹，
+ * 而"道"同时是"知道/道路/道理"——窗口里只要出现一个"道"字，
+ * 任意两个共现人物就被记成一次明确交互，直接进 strong 档。
+ * 实测 50k 字 12 条边全是 strong，三档失去区分力。
+ * 现在只认多字言语动词、具体动作、或对话引号。 */
+var QUOTE_MARK = /[“”"]/;
+var SPEECH_VERB = /(说道|问道|答道|笑道|叫道|喊道|骂道|叹道|应道|斥道|低声道|大声道|开口道|回答|反问|插嘴|补充道|解释道|喃喃|嘀咕|低语)/;
+var ACTION_MARK = /(拉住|抱住|推开|递给|搀|扶住|亲吻|拥抱|抓住|握住|拽住|揪住|拍了拍|摸了摸|对视|相视|点头|摇头)/;
+
+function hasExplicitInteraction(text){
+  if(!text) return false;
+  return SPEECH_VERB.test(text) || ACTION_MARK.test(text) || QUOTE_MARK.test(text);
+}
 
 function sentencesOf(text){
   return text.split(/(?<=[。！？…])|(?<=\n)/).map(function(s){ return s.trim(); }).filter(Boolean);
@@ -54,7 +65,7 @@ function extractPairs(chunks, characters, aliasMap, opts){
         var mj = mentions[i + j];
         if(!mi.length || !mj.length) continue;
         var winText = sents.slice(i, i + j + 1).join("");
-        if(!DIALOG_MARK.test(winText) && !ACTION_MARK.test(winText)) continue;
+        if(!hasExplicitInteraction(winText)) continue;
         mi.forEach(function(a){
           mj.forEach(function(b){
             if(a === b) return;
@@ -147,6 +158,7 @@ async function enrichEdges(edges, onProgress, opts){
 return {
   extractPairs: extractPairs,
   enrichEdges: enrichEdges,
-  sentencesOf: sentencesOf
+  sentencesOf: sentencesOf,
+  hasExplicitInteraction: hasExplicitInteraction
 };
 })();

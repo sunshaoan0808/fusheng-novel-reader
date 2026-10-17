@@ -15,10 +15,13 @@ var shouldPause = opts.shouldPause || function(){ return false;};
 // 档案文本
 var md = Object.keys(profileFields || {}).map(function(k){
 var v = profileFields[k];
+/* early/mid/late 是分层对象，不是字段值。旧实现走 "" + v 会拼出字面的
+   "[object Object]" 混进 prompt；这里直接跳过非字符串。 */
+if(typeof v !== "string") return "";
 // 去掉引用标注，LLM 不需要
-if(typeof v === "string") v = v.replace(/\[(canon|ref|inference|unknown)(:[a-z0-9_\-]+)?\]/gi, "");
-return "" + (v || "");
-}).join("\n").slice(0, 6000);
+v = v.replace(/\[(canon|ref|inference|unknown)(:[a-z0-9_\-]+)?\]/gi, "").trim();
+return v ? (k + ": " + v) : "";
+}).filter(Boolean).join("\n").slice(0, 6000);
 
 if(!md.trim()) return [];
 

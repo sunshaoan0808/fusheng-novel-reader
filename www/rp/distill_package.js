@@ -61,7 +61,8 @@ function saveIndex(idx){
 }
 
 function createPackage(novelName){
-  var id = "pkg_" + Date.now().toString(36);
+  // 加随机后缀: 同毫秒内连续创建(批量导入/快速重跑)原来会撞 id，后一个覆盖前一个
+  var id = "pkg_" + Date.now().toString(36) + "_" + Math.random().toString(36).slice(2, 6);
   var pkg = {
     id: id,
     novel: novelName,

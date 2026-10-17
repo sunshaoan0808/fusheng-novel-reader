@@ -56,7 +56,7 @@ function sceneBreaks(text, start, end){
 
 function chunkText(text, maxChars, overlap){
   if(text.length <= maxChars) return [{text: text, cut: "single"}];
-  var chunks = [], start = 0;
+  var chunks = [], start = 0, prevStart = -1;
   while(start < text.length){
     var end = Math.min(start + maxChars, text.length);
     var cutKind = "hard";
@@ -81,7 +81,12 @@ function chunkText(text, maxChars, overlap){
     }
     chunks.push({text: text.slice(start, end), cut: cutKind});
     if(end >= text.length) break;
+    prevStart = start;
     start = end - overlap;
+    /* 断点可能落在 start+maxChars/3 之前(场景/句切失败时)，于是 end-overlap 可能
+     * 不前进 —— overlap >= maxChars/3 时就是死循环。这里兜底保证每次至少前进
+     * maxChars/3，参数再离谱也只是块变多，不会卡死。 */
+    if(start - prevStart < 1) start = prevStart + Math.max(1, Math.floor(maxChars / 3));
   }
   return chunks;
 }
