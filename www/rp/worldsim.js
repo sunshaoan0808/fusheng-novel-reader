@@ -176,6 +176,22 @@ function curPlace(st){
 for(var i=0;i<st.places.length;i++) if(st.places[i].id === st.cur) return st.places[i];
 return st.places[0] || {id: "?", name: "未知", desc: "", mood: ""};
 }
+/* v37: 地点表上限。AI 标记会不断登记新地名，原先 st.places 无界增长，
+ * 超 localStorage 配额后写失败会导致世界状态静默丢失。 */
+var PLACES_MAX = 100;
+function capPlaces(st){
+  try{
+    if(!st || !st.places || st.places.length <= PLACES_MAX) return st;
+    var curId = st.cur;
+    var keep = st.places.slice(-PLACES_MAX);
+    if(curId && !keep.some(function(x){ return x.id === curId; })){
+      var curP = st.places.filter(function(x){ return x.id === curId; })[0];
+      if(curP) keep[0] = curP;
+    }
+    st.places = keep;
+  }catch(e){}
+  return st;
+}
 function findPlace(st, name){
 name = String(name||"").trim();
 for(var i=0;i<st.places.length;i++) if(st.places[i].name === name) return st.places[i];
@@ -189,6 +205,7 @@ var p = findPlace(st, name);
 if(!p){ /* Chronicle 式 AI 发现：未知地点自动登记 */
 p = {id: "p"+Date.now().toString(36), name: name, desc: desc||"", mood: ""};
 st.places.push(p);
+capPlaces(st);
 }
 if(p.id!== st.cur){
 st.cur = p.id;
@@ -240,7 +257,7 @@ if(mk.timeAdd){ addMinutes(st, mk.timeAdd); changed = true;}
 if(mk.weather!= null){ st.wx = mk.weather; changed = true;}
 if(mk.place){ /* 地点标记走 moveTo（含移动耗时），但 AI 已在叙述中铺垫则不重复扣时间 */
 var p = findPlace(st, mk.place);
-if(!p){ p = {id: "p"+Date.now().toString(36), name: mk.place, desc: "", mood: ""}; st.places.push(p);}
+if(!p){ p = {id: "p"+Date.now().toString(36), name: mk.place, desc: "", mood: ""}; st.places.push(p); capPlaces(st);}
 if(p.id!== st.cur){ st.cur = p.id; changed = true;}
 }
 if(changed) save(chatId, st);

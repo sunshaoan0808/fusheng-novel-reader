@@ -814,6 +814,15 @@ try{
 let url = ttsCache[k];
 if(!url){
 url = await RP_NET.tts(cfg, text, cfg.ttsModel, cfg.ttsVoice||"alloy");
+/* v37: 缓存上限 20 条，淘汰时 revoke blob URL，避免长聊天持续泄漏内存 */
+try{
+  const _ks = Object.keys(ttsCache);
+  if(_ks.length >= 20){
+    const _old = _ks[0];
+    try{ URL.revokeObjectURL(ttsCache[_old]); }catch(_){}
+    delete ttsCache[_old];
+  }
+}catch(_){}
 ttsCache[k] = url;
 }
 const a = new Audio(url);
@@ -3309,6 +3318,8 @@ h.forEach((m, i)=>{
 if(m.role==="assistant" && m.content.indexOf("⚠️")!==0
 && m.content.indexOf("【OOC")!==0 && m.content.indexOf("（已停止")!==0) lastAI = i;
 });
+/* v37: 命中集合每次渲染只建一次，避免每条消息 indexOf 线性查找 */
+const __hitSet = SEARCH.active ? new Set(SEARCH.hits) : null;
 log.innerHTML = h.map((m, idx)=>{
 const mtype = m.mtype || (m.role==="user" ? "player" : "char");
 const who = m.role==="user"
@@ -3354,7 +3365,7 @@ if(m.role==="assistant"){
 const oc = parseOptCard(m.content);
 if(oc){ body = m.content.replace(oc.full, "").trim(); cardHTML = optCardHTML(oc, idx===lastAI, idx); }
 }
-const isHit = SEARCH.active && SEARCH.hits.indexOf(idx)>=0;
+const isHit = !!__hitSet && __hitSet.has(idx);
 const isCur = isHit && SEARCH.hits[SEARCH.cur]===idx;
 const rendered = hlRestore(md(hlSearchRaw(body))) + cardHTML;
 /* M4: 长文本折叠（Talkie FoldTextView，阈值 600 字） */
@@ -4476,7 +4487,7 @@ window.toggleEventPerm = (id)=>{
 const st = RP_MEM.get(ALBUM.runId, ALBUM.name) || {};
 const apexW = (typeof RP_APEX !== "undefined") && RP_MEM.leanmemOn() && RP_APEX.on();
 const latest = apexW ? RP_APEX.latestOf(st.event3) : ((st && st.event3) || []);
-const hit = latest.filter(e=>e && e.id == id)[0];
+const hit = latest.filter(e=>e && String(e.id) === String(id))[0];
 const r = RP_MEM.setEventPerm(ALBUM.runId, ALBUM.name, id, !(hit && hit.perm));
 if(r === "limit") alert(RP_MEM.permLimitMsg());
 renderAlbum();
@@ -4622,7 +4633,16 @@ if(typeof RP_NOVEL === "undefined"){ rpToast("小说模块未加载"); return; }
 NOV = {runId: ALBUM.runId, name: ALBUM.name};
 renderNovel3();
 };
-function novelChatId(){ return `nd_chat_${NOV.runId}_${NOV.name}`; }
+function novelChatId(){
+/* v37: 群聊/穿越会话的存储键是 nd_group_/nd_travchat_ 格式，硬拼 nd_chat_ 会让
+ * "分章小说"对这两类会话永远读到空历史。当前会话匹配时直接复用 chatHistKey()。 */
+try{
+  if(typeof CHAT !== "undefined" && CHAT && CHAT.runId === NOV.runId && CHAT.name === NOV.name){
+    return chatHistKey();
+  }
+}catch(e){}
+return `nd_chat_${NOV.runId}_${NOV.name}`;
+}
 function novelMaterial(){
 const runId = NOV.runId, name = NOV.name;
 let facts = "";
@@ -6692,8 +6712,11 @@ if(sel && cached.length) sel.innerHTML = cached.map(id=>"<option>"+esc(id)+"</op
 })();
 }
 window.saveCfgUI = ()=>{
+const base = $("#c_base").value.trim();
+/* v37 安全: http:// 会明文传输 API Key，保存前必须让用户明确知晓 */
+if(/^http:\/\//i.test(base) && !confirm("当前接口地址是 http://，API Key 将以明文在网络上传输，存在被窃听风险。\n建议改用 https://。仍要保存吗？")) return;
 const m = $("#c_model").value.trim() || $("#c_model_sel").value;
-saveCfg({base:$("#c_base").value.trim(), key:$("#c_key").value.trim(), model:m,
+saveCfg({base:base, key:$("#c_key").value.trim(), model:m,
 imgModel:$("#c_img").value.trim(), ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
 alert("已保存");
 };
@@ -8129,10 +8152,12 @@ function anchorOptionsHTML(anchors){
     const geoTitles = wb.filter(e=>e.category==="geography").map(e=>e.title);
     /* 从标题提取具体地名（取前2-4字核心词） */
     const placeSet = new Set();
+    /* v37: 原先 23 个候选地名各做一次全量 JSON.stringify(wb)，worldbook 大时很贵 */
+    const __wbStr = JSON.stringify(wb);
     ["大观园","潇湘馆","怡红院","蘅芜苑","荣国府","宁国府","太虚幻境","铁槛寺",
      "梁山泊","忠义堂","东京","郓城","阳谷","景阳冈","二龙山","桃花山",
      "梨香院","栊翠庵","藕香榭","滴翠亭","金陵","神京","姑苏"].forEach(p=>{
-      if(JSON.stringify(wb).includes(p)) placeSet.add(p);
+      if(__wbStr.includes(p)) placeSet.add(p);
     });
     geoTitles.forEach(t=>{
       const m = t.match(/^(.{2,6}?)(整体|方位|格局|布局|与|之|的)/);

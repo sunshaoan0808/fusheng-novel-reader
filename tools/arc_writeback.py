@@ -20,6 +20,15 @@ REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JSON_PATH = os.path.join(REPO, "www", "data", "rp_cards_honglou_full.json")
 DATAJS_PATH = os.path.join(REPO, "www", "data.js")
 
+def atomic_write(path, text):
+    """先写 tmp + fsync 再原子替换，避免中途失败留下半截文件。"""
+    tmp = path + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
+        f.write(text)
+        f.flush()
+        os.fsync(f.fileno())
+    os.replace(tmp, path)
+
 # name -> {arc_type, arc_start, mids[list], arc_end, timeline_stage}
 ARCS = {
     "林黛玉": {
@@ -174,15 +183,12 @@ def main():
         assert a["timeline_stage"], nm
         assert a["mids"], nm
 
-    # 1) rp_cards_honglou_full.json
+    # 1) 两份事实源先全部读入并校验，验证通过后才落盘。
+    #    原实现先写 json 再校验 data.js，后者 assert 失败会留下两个事实源分叉。
     with open(JSON_PATH, encoding="utf-8") as f:
         cards = json.load(f)
     assert isinstance(cards, list) and len(cards) == 10, len(cards)
     u1 = apply_to_cards(cards)
-    with open(JSON_PATH, "w", encoding="utf-8") as f:
-        json.dump(cards, f, ensure_ascii=False, indent=2)
-        f.write("\n")
-    print("json 更新:", len(u1), "卡:", ",".join(u1))
 
     # 2) data.js (单行 window.__DATA__=...;)
     raw = open(DATAJS_PATH, encoding="utf-8").read().strip()
@@ -191,9 +197,13 @@ def main():
     dcards = data["rp_cards"]["honglou_full"]
     assert len(dcards) == 10, len(dcards)
     u2 = apply_to_cards(dcards)
+
+    # 3) 原子落盘（两份都成功后才会执行到这里）
+    json_text = json.dumps(cards, ensure_ascii=False, indent=2) + "\n"
     out = "window.__DATA__=" + json.dumps(data, ensure_ascii=False, separators=(",", ":")) + ";"
-    with open(DATAJS_PATH, "w", encoding="utf-8") as f:
-        f.write(out)
+    atomic_write(JSON_PATH, json_text)
+    atomic_write(DATAJS_PATH, out)
+    print("json 更新:", len(u1), "卡:", ",".join(u1))
     print("data.js 更新:", len(u2), "卡")
 
     # 3) 回读校验

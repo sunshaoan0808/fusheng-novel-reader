@@ -17,6 +17,22 @@ var COPY_PREFIX = "nd_idbcopied_"; /* 已复制到 IDB 的键标记（localStora
 var FILE_PREFIX = "nd_fileidx_"; /* 已搬进文件层的键标记（localStorage 副本已删，同步读走 MEM 内存镜像） */
 /* 同步读取缓存：IDB/文件内容的内存镜像，保证 localStorage 副本被手动清理后同步读取仍能命中 */
 var MEM = {};
+/* v37: 内存镜像加 LRU 上限。MEM 原先只进不出，长会话/多聊天持续涨内存；
+ * 淘汰只影响"同步读命中"，后续会从 IDB/文件/localStorage 重新补读，不丢数据。 */
+var MEM_MAX = 40;
+function memSet(k, v){
+  MEM[k] = v;   /* 直接赋值：批量替换曾把它改成自调用，别再改回 memSet */
+  try{
+    var ks = Object.keys(MEM);
+    if(ks.length > MEM_MAX){
+      var drop = ks.length - MEM_MAX;
+      for(var i = 0; i < ks.length && drop > 0; i++){
+        if(ks[i] === k) continue;
+        delete MEM[ks[i]]; drop--;
+      }
+    }
+  }catch(e){}
+}
 var BIG_MIN_BYTES = 64 * 1024;
 var FILE_MIN_BYTES = 256 * 1024; /* 超过此体积且有原生桥接时走文件层（2GB），否则走 IDB */
 
@@ -141,7 +157,7 @@ function fileOK(){
 function hasFileMark(k){ return _lsGet(FILE_PREFIX + k) === "1"; }
 /* 文件层写入：成功记标记 + 删 localStorage/IDB 副本（只留一份）；失败抛错由调用方回退 */
 function fileSetItem(k, v){
-  MEM[k] = v;
+  memSet(k, v);
   return NDFILE.setItem(k, v).then(function(){
     _lsSet(FILE_PREFIX + k, "1");
     _lsDel(k); _lsDel(IDX_PREFIX + k); _lsDel(COPY_PREFIX + k);
@@ -199,7 +215,7 @@ function setItemAsync(key, value){
      *（此前最终都 resolve，成功提示是假的）。idbSetItem 只在全部落盘失败时 reject，
      * 成功时 resolve，故此处无需二次校验（直接查 LS/MEM 会误判 IDB 成功为失败）。 */
     return fileSetItem(k, v).then(function(){}, function(){
-      return idbSetItem(k, v).then(function(){ MEM[k] = v; });
+      return idbSetItem(k, v).then(function(){ memSet(k, v); });
     });
   }
   if(fileOK() && hasFileMark(k)){
@@ -257,8 +273,9 @@ function migrate(onProgress){
     if(v == null || v.length <= BIG_MIN_BYTES){ prog(); return step(); }
     return setItemAsync(k, v).then(function(){
       /* 复制模式：IDB 落盘后 localStorage 副本保留（同步读取不受影响），只记标记 + 内存镜像 */
-      MEM[k] = v;
-      _lsSet(COPY_PREFIX + k, "1");
+      memSet(k, v);
+      /* v37: 文件层成功时由 fileSetItem 写 FILE 标记，不能再补 COPY 标记（统计会虚高） */
+      if(!hasFileMark(k)) _lsSet(COPY_PREFIX + k, "1");
       moved++;
       prog();
       return step();
@@ -290,7 +307,7 @@ function getSync(key){
       catch(e2){ failed = true; }
     }
     if(failed) return null; /* 标记保留：下次还能读到，不可当作"无数据" */
-    if(v != null){ MEM[k] = v; return v; }
+    if(v != null){ memSet(k, v); return v; }
     /* 桥明确返回 null = 文件确实不存在：清掉过期标记，回退下层 */
     _lsDel(FILE_PREFIX + k);
   }
@@ -309,7 +326,7 @@ function getSyncStrict(key){
       catch(e2){ err = e2; }
     }
     if(err) throw err; /* 标记保留，调用方按失败处理 */
-    if(v != null){ MEM[k] = v; return v; }
+    if(v != null){ memSet(k, v); return v; }
     _lsDel(FILE_PREFIX + k);
   }
   var lv = _lsGet(k);
@@ -336,7 +353,7 @@ function evictFile(key){
 function syncBig(key, value){
   var k = String(key), v = (value == null)? "": String(value);
   if(!isBigKey(k) || v.length <= BIG_MIN_BYTES) return;
-  MEM[k] = v;
+  memSet(k, v);
   if(fileOK() && v.length > FILE_MIN_BYTES){
     NDFILE.setItem(k, v).then(function(){
       _lsSet(FILE_PREFIX + k, "1");
@@ -373,7 +390,7 @@ function warmCache(){
       .map(function(k){ return k.slice(COPY_PREFIX.length); });
     keys.forEach(function(k){
       chain = chain.then(function(){
-        return getIdbOnly(k).then(function(v){ if(v != null){ MEM[k] = v; n++; } }, function(){});
+        return getIdbOnly(k).then(function(v){ if(v != null){ memSet(k, v); n++; } }, function(){});
       });
     });
   }
@@ -382,7 +399,7 @@ function warmCache(){
       .map(function(k){ return k.slice(FILE_PREFIX.length); });
     fkeys.forEach(function(k){
       chain = chain.then(function(){
-        return NDFILE.getItem(k).then(function(v){ if(v != null){ MEM[k] = v; n++; } }, function(){});
+        return NDFILE.getItem(k).then(function(v){ if(v != null){ memSet(k, v); n++; } }, function(){});
       });
     });
   }
@@ -400,7 +417,7 @@ function cleanupCopied(){
         if(v == null) return; /* IDB 没这份，不删 */
         var cur = _lsGet(k);
         if(cur != null){ freed += cur.length; _lsDel(k); count++; }
-        MEM[k] = v;
+        memSet(k, v);
       }, function(){});
     });
   });

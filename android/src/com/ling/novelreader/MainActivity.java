@@ -33,6 +33,10 @@ public class MainActivity extends Activity {
     private static final int REQ_FILE_CHOOSER = 1001;
     /** P1-6: 当前页面 URL（WebViewClient.onPageStarted 维护），供 JS 桥做来源白名单校验 */
     private volatile String lastPageUrl = null;
+    /** v37: Android 13+ 通知权限被拒时暂存本次通知，授权回调里补发 */
+    private String pendingNotifyTitle = null;
+    private String pendingNotifyText = null;
+    private static final int REQ_NOTIFY_PERM = 1002;
 
     /** JS 桥: 分享 PNG 角色卡。base64 解码后写 cache/shared, 经 SharedFileProvider
      *  以 content:// URI 调起系统分享面板。文件名做白名单过滤, 防路径穿越。 */
@@ -255,8 +259,11 @@ public class MainActivity extends Activity {
                 if (Build.VERSION.SDK_INT >= 33 &&
                     checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
                         != PackageManager.PERMISSION_GRANTED) {
+                    /* v37: 暂存本次通知，用户授权后补发（原先直接丢掉，要等下次触发） */
+                    pendingNotifyTitle = title;
+                    pendingNotifyText = text;
                     requestPermissions(
-                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 1002);
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, REQ_NOTIFY_PERM);
                     return;
                 }
                 final String t = (title == null || title.isEmpty()) ? "TA" : title;
@@ -449,6 +456,20 @@ public class MainActivity extends Activity {
         if (web != null) web.evaluateJavascript(
             "(function(){try{if(window.__onAppResumed)window.__onAppResumed();}catch(e){}})()",
             null);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_NOTIFY_PERM && grantResults.length > 0
+                && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            String t = pendingNotifyTitle, c = pendingNotifyText;
+            pendingNotifyTitle = null;
+            pendingNotifyText = null;
+            if (t != null) {
+                try { new JsBridge().notifyLocal(t, c); } catch (Exception e) {}
+            }
+        }
     }
 
     @Override

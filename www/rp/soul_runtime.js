@@ -83,12 +83,21 @@ function clearCallHistory(){
 function startTurn(turnId){
   currentTurn = turnId;
   tokenStats[turnId] = {};
+  /* v37: 统计表上限 10 轮，防止长时间使用无限增长 */
+  try{
+    var ks = Object.keys(tokenStats);
+    for(var i = 0; i < ks.length - 10; i++) delete tokenStats[ks[i]];
+  }catch(e){}
 }
 
-function recordTokens(soulName, usage){
-  if(!currentTurn) return;
-  var st = tokenStats[currentTurn][soulName] =
-    tokenStats[currentTurn][soulName] || {prompt: 0, completion: 0, total: 0};
+/* v37: 轮次 id 由调用参数显式传入，不再只依赖模块级 currentTurn——
+ * 并发轮次（连发/群聊与单聊并行）会互相覆盖统计与预算熔断判断。 */
+function recordTokens(soulName, usage, turnId){
+  var tid = turnId || currentTurn;
+  if(!tid) return;
+  if(!tokenStats[tid]) tokenStats[tid] = {};
+  var st = tokenStats[tid][soulName] =
+    tokenStats[tid][soulName] || {prompt: 0, completion: 0, total: 0};
   if(usage){
     st.prompt += usage.prompt_tokens || 0;
     st.completion += usage.completion_tokens || 0;
@@ -96,9 +105,10 @@ function recordTokens(soulName, usage){
   }
 }
 
-function turnTotal(){
-  if(!currentTurn || !tokenStats[currentTurn]) return 0;
-  var sum = 0, m = tokenStats[currentTurn];
+function turnTotal(turnId){
+  var tid = turnId || currentTurn;
+  if(!tid || !tokenStats[tid]) return 0;
+  var sum = 0, m = tokenStats[tid];
   for(var k in m) sum += m[k].total;
   return sum;
 }
@@ -165,7 +175,7 @@ async function doCall(opts){
   var soulName = opts.soulName || "unknown";
 
   /* 预算熔断 */
-  if(turnTotal() >= TURN_TOKEN_BUDGET){
+  if(turnTotal(opts.turnId) >= TURN_TOKEN_BUDGET){
     return {ok: false, error: "budget_exceeded", soulName: soulName, skipped: true};
   }
 
@@ -210,17 +220,15 @@ async function doCall(opts){
         : Promise.reject(new Error("RP_NET 未加载"));
       var r = await withTimeout(p, opts.timeoutMs || getTimeoutMs(), soulName, ctrl);
 
-      /* 竞态保护: 完成后验证 */
-      if(opts.contextToken !== undefined && opts.contextToken !== tokenAtStart){
-        logCall({soul: soulName, model: c.model, ms: Date.now() - startMs,
-                 ok: false, error: "context_changed"});
-        return {ok: false, error: "context_changed", soulName: soulName, aborted: true};
-      }
+      /* v37: 原"完成后竞态校验"比较的是同一个变量（opts.contextToken 与开始时快照），
+       * 恒为真、形同虚设。真正的竞态由调用方传入会变化的 token 才能在完成时判断；
+       * 这里删除死逻辑，避免误导后续维护者。 */
+      void tokenAtStart;
 
       /* r 可能是 string (complete 返回文本) */
       var text = (typeof r === "string") ? r : (r.text || r.content || "");
       if(opts.onToken && r && r.usage) opts.onToken(soulName, r.usage);
-      recordTokens(soulName, r && r.usage);
+      recordTokens(soulName, r && r.usage, opts.turnId);
       logCall({soul: soulName, model: c.model, ms: Date.now() - startMs,
                ok: true, fallback: cfgs[i].level,
                tokens: r && r.usage ? (r.usage.total_tokens || 0) : 0});

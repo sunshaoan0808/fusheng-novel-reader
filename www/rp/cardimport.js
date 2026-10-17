@@ -188,8 +188,10 @@ function normalizeTavern(d){
   /* first_mes 不再塞进 typical_lines: 它是开场场景原文(常数千字), 不是"典型台词",
      进了 typical_lines 会污染【说话方式】并被 buildExamples 配上假 opener 生成误导性 few-shot。
      开场白走独立 greeting 字段。 */
-  exampleLines(d.mes_example, name).forEach(function(l){
-    if(l && lines.indexOf(l) < 0) lines.push(l);
+  /* v37: O(n²) indexOf 去重改为哈希表（mes_example 可能很长） */
+  var __seenLine = {};
+  exampleLines(capStr(d.mes_example, FIELD_MAX * 5), name).forEach(function(l){
+    if(l && !__seenLine[l]){ __seenLine[l] = 1; lines.push(l); }
   });
   if(lines.length) fields.typical_lines = lines.slice(0, 5);
   var sysNote = [];

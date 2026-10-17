@@ -192,7 +192,13 @@ if(it && st.items.indexOf(it) < 0) st.items.push(it);
 st.items = st.items.filter(function(x){ return x!== String(it).trim();});
 });
 if(patch.flags && typeof patch.flags === "object"){
-Object.keys(patch.flags).forEach(function(k){ st.flags[k] = patch.flags[k];});
+/* v37: AI 返回的 flags 键空间无界，逐轮累积会撑爆存储。限单轮 20 键、键名 40 字、值 200 字。 */
+Object.keys(patch.flags).slice(0, 20).forEach(function(k){
+var key = String(k).slice(0, 40);
+var v = patch.flags[k];
+if(typeof v === "string" && v.length > 200) v = v.slice(0, 200);
+st.flags[key] = v;
+});
 }
 return st;
 }

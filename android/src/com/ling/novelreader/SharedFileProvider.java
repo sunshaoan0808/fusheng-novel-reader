@@ -17,13 +17,34 @@ public class SharedFileProvider extends ContentProvider {
     @Override
     public boolean onCreate() { return true; }
 
+    private File sharedDir() {
+        return new File(getContext().getCacheDir(), "shared");
+    }
+
     @Override
-    public String getType(Uri uri) { return "image/png"; }
+    public String getType(Uri uri) {
+        /* v37: 只有文件真实存在且是 PNG 才声明 image/png，避免误导消费方 */
+        File f = fileFor(uri);
+        if (f == null || !f.exists()) return null;
+        return f.getName().toLowerCase().endsWith(".png")
+                ? "image/png" : "application/octet-stream";
+    }
 
     private File fileFor(Uri uri) {
         String name = uri.getLastPathSegment();
         if (name == null || !name.matches("[A-Za-z0-9._-]+")) return null;
-        return new File(new File(getContext().getCacheDir(), "shared"), name);
+        /* v37: 白名单正则允许 ".."，显式拒绝目录别名 */
+        if (name.equals(".") || name.equals("..")) return null;
+        try {
+            File dir = sharedDir();
+            File f = new File(dir, name);
+            /* 规范化后校验前缀，兜底任何形式的路径穿越 */
+            String base = dir.getCanonicalPath() + File.separator;
+            if (!f.getCanonicalPath().startsWith(base)) return null;
+            return f;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     @Override

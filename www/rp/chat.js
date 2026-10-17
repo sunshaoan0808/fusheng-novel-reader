@@ -179,26 +179,31 @@ async function stream(cfg, messages, opts, onToken){
   var reader = r.body.getReader();
   var dec = new TextDecoder();
   var buf = "", full = "", finishReason = null;
+  function handleBlock(block){
+    var line = String(block || "").trim();
+    if(line.indexOf("data:") !== 0) return;
+    var payload = line.slice(5).trim();
+    if(payload === "[DONE]") return;
+    try {
+      var j = JSON.parse(payload);
+      var ch0 = j.choices && j.choices[0];
+      if(ch0 && ch0.finish_reason) finishReason = ch0.finish_reason;
+      var tok = ch0 && ch0.delta && ch0.delta.content || "";
+      if(tok){ full += tok; if(onToken) onToken(tok); }
+    } catch(e){}
+  }
   for(;;){
     var rd = await reader.read();
     if(rd.done) break;
     buf += dec.decode(rd.value, {stream: true});
-    var parts = buf.split("\n\n");
+    /* v37: 兼容 CRLF 服务商（\r\n\r\n 分隔），原先只按 \n\n 切分会解析失败 */
+    var parts = buf.split(/\r?\n\r?\n/);
     buf = parts.pop();
-    for(var i = 0; i < parts.length; i++){
-      var line = parts[i].trim();
-      if(line.indexOf("data:") !== 0) continue;
-      var payload = line.slice(5).trim();
-      if(payload === "[DONE]") continue;
-      try {
-        var j = JSON.parse(payload);
-        var ch0 = j.choices && j.choices[0];
-        if(ch0 && ch0.finish_reason) finishReason = ch0.finish_reason;
-        var tok = ch0 && ch0.delta && ch0.delta.content || "";
-        if(tok){ full += tok; if(onToken) onToken(tok); }
-      } catch(e){}
-    }
+    for(var i = 0; i < parts.length; i++) handleBlock(parts[i]);
   }
+  /* v37: flush 解码器残留，并处理最后一个没有空行结尾的 data 块 */
+  try{ var _tail = dec.decode(); if(_tail) buf += _tail; }catch(e){}
+  if(buf.trim()) handleBlock(buf);
   /* 流式截断自动续写一次(非流式补完, 续写部分同样走 onToken) */
   if(looksTruncated(full, finishReason)){
     try{
