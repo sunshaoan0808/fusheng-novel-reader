@@ -161,10 +161,29 @@ function upgradeBlocks(blocks){
 /* Tavern 卡 -> 内部卡片 */
 function normalizeTavern(d){
   d = d || {};
-  var name = String(d.name || "未命名").trim() || "未命名";
+  /* v37 安全: 导入卡是不可信 JSON（用户从网上拿的 PNG/JSON），字段必须有上限，
+   * 否则超长 description/mes_example 会打爆内存与 localStorage 配额。
+   * raw 也做浅层截断，避免原始超大对象整包入库。 */
+  var FIELD_MAX = 20000, NAME_MAX = 200, LIST_MAX = 200, WB_MAX = 500;
+  function capStr(v, max){ var s = String(v == null ? "" : v); return s.length > max ? s.slice(0, max) : s; }
+  function sanitizeRaw(src){
+    var out = {};
+    try{
+      Object.keys(src).forEach(function(k){
+        var v = src[k];
+        if(typeof v === "string") out[k] = capStr(v, FIELD_MAX);
+        else if(Array.isArray(v)) out[k] = v.slice(0, LIST_MAX);
+        else if(v && typeof v === "object"){
+          try{ out[k] = JSON.stringify(v).length <= FIELD_MAX ? v : null; }catch(e){ out[k] = null; }
+        }else out[k] = v;
+      });
+    }catch(e){}
+    return out;
+  }
+  var name = capStr(d.name || "未命名", NAME_MAX).trim() || "未命名";
   var fields = {};
-  if(d.description) fields.core_identity = String(d.description).trim();
-  if(d.personality) fields.core_traits = String(d.personality).trim();
+  if(d.description) fields.core_identity = capStr(d.description, FIELD_MAX).trim();
+  if(d.personality) fields.core_traits = capStr(d.personality, FIELD_MAX).trim();
   var lines = [];
   /* first_mes 不再塞进 typical_lines: 它是开场场景原文(常数千字), 不是"典型台词",
      进了 typical_lines 会污染【说话方式】并被 buildExamples 配上假 opener 生成误导性 few-shot。
@@ -174,23 +193,23 @@ function normalizeTavern(d){
   });
   if(lines.length) fields.typical_lines = lines.slice(0, 5);
   var sysNote = [];
-  if(d.system_prompt) sysNote.push(String(d.system_prompt).trim());
-  if(d.creator_notes) sysNote.push("作者注：" + String(d.creator_notes).trim());
+  if(d.system_prompt) sysNote.push(capStr(d.system_prompt, FIELD_MAX).trim());
+  if(d.creator_notes) sysNote.push("作者注：" + capStr(d.creator_notes, FIELD_MAX).trim());
   /* P0 卡兼容: system_prompt / post_history_instructions / creator_notes 升为一等字段,
    * 进 prompt 组装 (以前只进 sysNote, 全仓库无人渲染, 被静默丢弃) */
-  var systemPrompt = String(d.system_prompt == null ? "" : d.system_prompt).trim();
-  var postHistoryInstructions = String(d.post_history_instructions == null ? "" : d.post_history_instructions).trim();
-  var creatorNotes = String(d.creator_notes == null ? "" : d.creator_notes).trim();
+  var systemPrompt = capStr(d.system_prompt, FIELD_MAX).trim();
+  var postHistoryInstructions = capStr(d.post_history_instructions, FIELD_MAX).trim();
+  var creatorNotes = capStr(d.creator_notes, FIELD_MAX).trim();
   /* v3: depth_prompt / group_only_greetings */
   var dp = (d.depth_prompt && typeof d.depth_prompt === "object") ? d.depth_prompt : null;
-  var depthPrompt = dp && String(dp.prompt == null ? "" : dp.prompt).trim()
-    ? {prompt: String(dp.prompt).trim(), role: dp.role === "user" || dp.role === "assistant" ? dp.role : "system",
+  var depthPrompt = dp && capStr(dp.prompt, FIELD_MAX).trim()
+    ? {prompt: capStr(dp.prompt, FIELD_MAX).trim(), role: dp.role === "user" || dp.role === "assistant" ? dp.role : "system",
        depth: Math.max(0, parseInt(dp.depth, 10) || 0)} : null;
   var groupOnlyGreetings = Array.isArray(d.group_only_greetings)
-    ? d.group_only_greetings.map(function(g){ return String(g == null ? "" : g).trim(); }).filter(function(g){ return g; }) : [];
+    ? d.group_only_greetings.map(function(g){ return capStr(g, FIELD_MAX).trim(); }).filter(function(g){ return g; }).slice(0, 8) : [];
   var worldbook = [];
   var book = d.character_book || {};
-  var rawEntries = book.entries || [];
+  var rawEntries = (Array.isArray(book.entries) ? book.entries : []).slice(0, WB_MAX);
   /* P0 卡兼容: 卡片世界书走 RP_LOREBOOK.importST, secondary_keys/selectiveLogic/
    * constant/position/probability/depth 等 ST 字段完整透传 (以前只留了 4 个字段) */
   var importOk = false;
@@ -211,15 +230,20 @@ function normalizeTavern(d){
       });
     });
   }
+  /* v37: 世界书条目/正文上限（导入卡不可信） */
+  if(worldbook.length > WB_MAX) worldbook = worldbook.slice(0, WB_MAX);
+  worldbook.forEach(function(e){
+    if(e && typeof e.content === "string" && e.content.length > FIELD_MAX) e.content = e.content.slice(0, FIELD_MAX);
+  });
   var bookMeta = {
-    name: String(book.name || "").trim(),
+    name: capStr(book.name, NAME_MAX).trim(),
     scan_depth: book.scan_depth != null ? +book.scan_depth : null,
     token_budget: book.token_budget != null ? +book.token_budget : null,
     recursive_scanning: !!book.recursive_scanning,
   };
   var tags = d.tags || [];
   /* 开场白 first_mes 单独保留: 聊天/穿越开场优先用卡片原开场白, 不再只塞进 typical_lines */
-  var greeting = String(d.first_mes == null ? "" : d.first_mes).trim();
+  var greeting = capStr(d.first_mes, FIELD_MAX).trim();
   /* P1-2: 保留多开场白与示例对话(之前归一化会丢, 导出也写空) */
   var altGreetings = Array.isArray(d.alternate_greetings) ? d.alternate_greetings
     .map(function(g){ return String(g == null ? "" : g).trim(); })
@@ -234,35 +258,50 @@ function normalizeTavern(d){
     greeting: greeting,
     altGreetings: altGreetings,
     exampleDialogue: exampleDialogue,
-    exampleBlocks: exampleBlocks(d.mes_example, name),
-    scenario: String(d.scenario || "").trim(),
+    exampleBlocks: exampleBlocks(capStr(d.mes_example, FIELD_MAX * 5), name).slice(0, LIST_MAX),
+    scenario: capStr(d.scenario, FIELD_MAX).trim(),
     systemPrompt: systemPrompt,
     postHistoryInstructions: postHistoryInstructions,
     creatorNotes: creatorNotes,
     depthPrompt: depthPrompt,
     groupOnlyGreetings: groupOnlyGreetings,
     characterVersion: String(d.character_version == null ? "" : d.character_version).trim(),
-    creator: String(d.creator == null ? "" : d.creator).trim(),
+    creator: capStr(d.creator, NAME_MAX).trim(),
     /* v3 新字段 (2026-10-07): nickname / assets, ccv3 优先读取后透传 */
     cardSpec: String(d.spec == null ? "" : d.spec).trim(),
-    nickname: String(d.nickname == null ? "" : d.nickname).trim(),
-    assets: Array.isArray(d.assets) ? d.assets.filter(function(a){ return a != null; }) : [],
+    nickname: capStr(d.nickname, NAME_MAX).trim(),
+    assets: Array.isArray(d.assets) ? d.assets.filter(function(a){ return a != null; }).slice(0, 100) : [],
     bookMeta: bookMeta,
     sysNote: sysNote.join("\n"),
     worldbook: worldbook,
-    raw: d,
+    raw: sanitizeRaw(d),
     createdAt: Date.now(),
   };
 }
 
 /* ---- 本地库 ---- */
+var CORRUPT_BAK = STORE + "___corrupt_backup";
 function list(){
   try {
     var s = localStorage.getItem(STORE);
     /* P2: localStorage 副本被清理后，回退 IDB 内存镜像；v36: getSync 在文件层同步补读，冷启动也安全 */
     if(s == null && typeof RP_STORE!=="undefined") s = (RP_STORE.getSync || RP_STORE.cacheGet).call(RP_STORE, STORE);
-    return JSON.parse(s) || [];
-  } catch(e){ return []; }
+    if(s == null) return [];
+    var v = JSON.parse(s);
+    return Array.isArray(v) ? v : [];
+  } catch(e){
+    /* v37: 解析失败先备份原始内容。否则后续任何 add/update 都会把空数组写回，
+     * 用户的全部导入卡被静默清空且不可恢复。 */
+    try{
+      var raw = null;
+      try{ raw = localStorage.getItem(STORE); }catch(_e){}
+      if(raw && !localStorage.getItem(CORRUPT_BAK)){
+        localStorage.setItem(CORRUPT_BAK, raw);
+        if(typeof RP_WARN !== "undefined") RP_WARN.saveFail("角色卡库数据损坏，已保留原始备份", e);
+      }
+    }catch(_e){}
+    return [];
+  }
 }
 function save(list){
   var s = JSON.stringify(list);
@@ -345,6 +384,11 @@ function update(card){
 
 /* 文件 -> 归一化卡片（不入库，供预览确认） */
 async function fromFile(file){
+  /* v37 安全: 导入文件大小预检，防止超大文件直接 OOM（原生桥的单次上限管不到这里） */
+  var MAX_FILE = 64 * 1024 * 1024;
+  if(file && typeof file.size === "number" && file.size > MAX_FILE){
+    throw new Error("文件过大（超过 64MB），请确认导入的是角色卡而不是整本小说/图包");
+  }
   var buf = await file.arrayBuffer();
   var name = (file.name || "").toLowerCase();
   var jsonText;

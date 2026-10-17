@@ -1306,6 +1306,11 @@ const chatKey = (runId, name)=> `nd_chat_${runId}_${name}`;
  * - 纯展示类调用点用 getHistSafe(k)（失败当空渲染，绝不写回）；
  * - 任何"读后可能写回"的调用点必须 try/catch，失败时放弃写入并提示用户。 */
 const getHist = (k)=>{
+  /* v37 性能: JSON 解析缓存，挂在函数对象上（本函数被测试按源码段抽取执行，
+   * 不能引用模块级变量）。渲染一轮会调 3+ 次 getHist，原先每次都全量 JSON.parse。
+   * 返回浅拷贝数组：调用方 push 不会污染缓存，消息对象本身共享（字段修改与旧行为一致）。 */
+  const C = getHist;
+  if(!C.__cache) C.__cache = {raw:null, data:null};
   let raw = null;
   if(typeof RP_STORE!=="undefined" && typeof RP_STORE.getSyncStrict==="function"){
     raw = RP_STORE.getSyncStrict(k); /* 文件层持续读失败时抛错 */
@@ -1317,13 +1322,19 @@ const getHist = (k)=>{
     try{ raw = localStorage.getItem(k); }
     catch(e){ throw new Error("HIST_READ_FAIL"); }
   }
-  let h = [];
-  if(raw != null){
+  let h;
+  if(raw == null){
+    h = [];
+  }else if(raw === C.__cache.raw && C.__cache.data){
+    h = C.__cache.data;
+  }else{
     try{ h = JSON.parse(raw); }
     catch(e){ throw new Error("HIST_PARSE_FAIL"); }
     if(!Array.isArray(h)) throw new Error("HIST_PARSE_FAIL");
+    C.__cache = {raw: raw, data: h};
   }
-  /* 老消息补 mid（摘要水位 msg_id 制），只新增字段 */
+  /* 老消息补 mid（摘要水位 msg_id 制），只新增字段。缓存命中时 mid 已补齐，
+   * 不会重复触发 saveHist 全量写回（修掉展示路径误写盘的旧问题）。 */
   let dirty = false;
   for(const m of h){
     if(m && !m.mid && !m.id){
@@ -1333,7 +1344,7 @@ const getHist = (k)=>{
     }
   }
   if(dirty) saveHist(k, h);
-  return h;
+  return h.slice();
 };
 /* 纯展示类调用：读失败当空历史渲染，调用方保证不写回 */
 const getHistSafe = (k)=>{ try{ return getHist(k); }catch(e){ return []; } };
@@ -1355,7 +1366,15 @@ const saveHist = (k,h)=>{
   const MAX_KEEP = 80;
   const dropped = Math.max(0, h.length - MAX_KEEP);
   const kept = h.length - dropped;
-  const s = JSON.stringify(dropped ? h.slice(-MAX_KEEP) : h);
+  const keptArr = dropped ? h.slice(-MAX_KEEP) : h;
+  const s = JSON.stringify(keptArr);
+  /* v37 性能: 同步刷新解析缓存，保证下一次 getHist 直接命中，不再重新 parse。
+   * 挂函数对象以兼容测试的按段抽取执行。 */
+  try{
+    if(typeof getHist === "function"){
+      getHist.__cache = {raw: s, data: keptArr};
+    }
+  }catch(e){}
   /* P0-3: localStorage 写入失败（配额满）必须让用户知道，不能静默，更不能抛到上层打断流程 */
   try{
     localStorage.setItem(k, s);
@@ -1365,6 +1384,8 @@ const saveHist = (k,h)=>{
   /* P1-10: 超上限截断不再静默丢。固定文案 + rpToastOnce 节流，长聊天不刷屏；
      导入场景的精确条数由导入方自己播报（见 doStChatImport）。 */
   if(dropped) rpToastOnce(`聊天记录最多保留 ${MAX_KEEP} 条，更早的消息已丢弃`);
+  /* v37: 维护"最近聊天"轻量索引，避免 onResume 全量扫描解析所有聊天历史 */
+  try{ if(typeof lastChatIndexUpdate === "function") lastChatIndexUpdate(k, keptArr, s); }catch(e){}
   /* P2: 大键双写 IDB（异步，失败静默回退 localStorage） */
   /* v36: 值缩小到文件层阈值下但旧文件还在时，必须把旧文件+标记清掉，
      否则下次冷启动 warmCache 会把旧大文件"复活"，盖掉 localStorage 里的新值。 */
@@ -3235,11 +3256,35 @@ if(chatNearBottom()){ markProgScroll(); log.scrollTop = log.scrollHeight; }
 if(done){ twStop(); renderChat(); /* M4: 播完重渲染，长消息挂上折叠结构 */ }
 }, 45);
 }
+/* v37 性能: 渲染签名——数据未变时跳过全量重建。
+ * 发一条消息的流程会调 renderChat 3+ 次（用户消息入库后 / AI 入库后 / finally），
+ * 其中多次传入的是同一份历史；原先每次都 md() 逐条解析 + 整体替换 innerHTML。 */
+let __chatRenderSig = null;
+function chatRenderSig(k, h){
+const parts = [k, CHAT.mode||"", SEARCH.active ? (SEARCH.q||"") : "", (SEARCH.cur|0)];
+for(let i=0;i<h.length;i++){
+const m = h[i] || {};
+parts.push(m.mid||m.id||i, (m.content||"").length, m.rating||0,
+(m.memHits?m.memHits.length:0), (m.loreHits?m.loreHits.length:0),
+(m.candidates?m.candidates.length:0), m.ci||0, m.mtype||"", m.speaker||"");
+}
+return parts.join("|");
+}
 function renderChat(forceBottom){
 twStop(); /* 新渲染进来（发消息/切tab/新回复）先停掉旧动画 */
-const h = getHistSafe(chatHistKey());
+const _k = chatHistKey();
+const h = getHistSafe(_k);
 const log = $("#chatlog");
 if(!log) return;
+const _sig = chatRenderSig(_k, h);
+/* 切角色/重进聊天会重建 #chatlog（DOM 为空但签名仍是旧的），此时必须强制重绘 */
+const _domFresh = !log.firstChild;
+if(_sig === __chatRenderSig && !(_domFresh && h.length)){
+  /* 数据未变：跳过整页重建（重复调用收敛为一次），仅按需保持滚动位置 */
+  if(forceBottom){ try{ log.scrollTop = log.scrollHeight; }catch(e){} }
+  return;
+}
+__chatRenderSig = _sig;
 /* 用户上滑看历史时不强制回底(防抖动); 发出新消息等场景由调用方传 true */
 const stick = !!forceBottom || chatNearBottom();
 renderChatSearch();
@@ -3828,22 +3873,38 @@ bar.innerHTML = chatbarInner(STREAMING);
 window.__isStreaming = ()=> STREAMING;
 window.stopGen = ()=>{ abortStreaming(); };
 const streamWho = ()=> STREAM_SPEAKER || CHAT.name || "TA";
+/* v37 性能: 流式 token 合帧。
+ * 原实现每个 token 都写 textContent 并读 scrollHeight（强制同步布局），500 token
+ * 的回复 = 500 次 reflow，且 textContent += 会读回全文，累积成 O(n²)。
+ * 现在：token 只累积到字符串，DOM 每帧（rAF）写一次，滚动判断也只在帧内做。 */
+let __liveText = "", __liveRaf = 0;
 function streamToken(tok){
 /* P0-4: 只写"当前在飞轮次 + 当前会话"的 token。切会话/新轮次后旧流的 token 直接丢弃，防串台。 */
 if(__liveGen !== __curGen || chatHistKey() !== __liveKey) return;
 /* P2-2: 页面隐藏(切后台)时不往不可见 DOM 追加 token。流不中断，回前台后继续追加，
    完成时照常 saveHist + renderChat 落全文，不会写坏状态。 */
-if(typeof document !== "undefined" && document.hidden) return;
-const log = $("#chatlog");
+if(typeof document !== "undefined" && document.hidden){ return; }
 let live = document.getElementById("live");
 if(!live){
+const log0 = $("#chatlog");
 if(document.getElementById("typing")) document.getElementById("typing").remove();
-log.insertAdjacentHTML("beforeend",
+if(log0) log0.insertAdjacentHTML("beforeend",
 `<div class="msg"><div class="msgcol">${CHAT.mode==="group"?`<div class="who">${esc(streamWho())}</div>`:""}<div class="bubble" id="live"></div></div></div>`);
 live = document.getElementById("live");
+__liveText = "";
 }
-live.textContent += tok;
-if(chatNearBottom()){ markProgScroll(); log.scrollTop = log.scrollHeight; }
+__liveText += tok;
+if(__liveRaf) return;   /* 本帧已排期，继续累积即可 */
+const flush = ()=>{
+__liveRaf = 0;
+const el = document.getElementById("live");
+const lg = $("#chatlog");
+if(!el || !lg) return;
+el.textContent = __liveText;
+if(chatNearBottom()){ markProgScroll(); lg.scrollTop = lg.scrollHeight; }
+};
+if(typeof requestAnimationFrame === "function"){ __liveRaf = requestAnimationFrame(flush); }
+else flush();
 }
 window.sendChat = ()=>{
 const inp = $("#chat_in");
@@ -6069,8 +6130,24 @@ return String(tpl||"")
 .replace(/\{\{\s*npc_name\s*\}\}/g, String(npcName||"TA"))
 .replace(/\{\{\s*username\s*\}\}/g, String(username||""));
 }
-/* 最近一次聊天活动：扫 nd_chat_ 前缀与 nd_group_ 前缀，取最后一条消息的 ts 与角色名 */
+/* 最近一次聊天活动：优先读轻量索引（v37），索引缺失/失效时才全量扫描。
+ * 旧实现每次 onResume 都遍历全部 localStorage 键并 JSON.parse 每段聊天历史，
+ * 多条长聊天时冷启动会多花数百毫秒主线程时间。 */
+const LASTCHAT_IDX_KEY = "nd_lastchat_idx";
+function histFp(raw){ raw = String(raw == null ? "" : raw); return raw.length + ":" + raw.slice(-24); }
 function lastChatInfo(){
+/* 快路径：索引由 saveHist 维护，不需要解析任何聊天历史。
+ * 历史可能被整体替换（导入/存档恢复/清空），所以用"长度+尾部"指纹校验，
+ * 失配就回退全量扫描并重写索引（自愈）。 */
+try{
+const idx = JSON.parse(localStorage.getItem(LASTCHAT_IDX_KEY) || "null");
+if(idx && idx.key && typeof idx.ts === "number"){
+const raw = localStorage.getItem(idx.key);
+if(raw != null && idx.fp === histFp(raw)){
+return {key:idx.key, ts:idx.ts, name:idx.name||"", group:!!idx.group};
+}
+}
+}catch(e){}
 let best = null;
 const n = localStorage.length;
 for(let i=0;i<n;i++){
@@ -6087,7 +6164,33 @@ if(!ts || (best && ts <= best.ts)) continue;
 const isGroup = k.indexOf("nd_group_")===0;
 best = {key:k, ts:ts, name: isGroup ? (last.speaker || m[2].split("_")[0]) : m[2], group:isGroup};
 }
+/* 扫描结果回写索引，下一次走快路径 */
+if(best){ try{ best.fp = histFp(localStorage.getItem(best.key)); localStorage.setItem(LASTCHAT_IDX_KEY, JSON.stringify(best)); }catch(e){} }
 return best;
+}
+/* saveHist 写历史时同步维护索引（O(1)，不解析全量历史）。
+ * 单独成函数：tests/test_gethist_fallback.js 按源码段抽取 saveHist 执行，
+ * 用 typeof 守卫保证抽取环境下不报错。 */
+function lastChatIndexUpdate(k, h, rawStr){
+try{
+if(!k || (k.indexOf("nd_chat_") !== 0 && k.indexOf("nd_group_") !== 0)) return;
+const last = h && h.length ? h[h.length-1] : null;
+const ts = (last && last.ts) || 0;
+if(!ts){
+/* 历史被清空：若索引指向本条，删掉索引，避免召回通知用到空会话 */
+let cur = null;
+try{ cur = JSON.parse(localStorage.getItem(LASTCHAT_IDX_KEY)||"null"); }catch(e){}
+if(cur && cur.key === k) localStorage.removeItem(LASTCHAT_IDX_KEY);
+return;
+}
+let cur = null;
+try{ cur = JSON.parse(localStorage.getItem(LASTCHAT_IDX_KEY)||"null"); }catch(e){}
+if(cur && cur.key !== k && (cur.ts||0) >= ts) return; /* 别的会话更新，不覆盖 */
+const m = k.match(/^nd_chat_([^_]+)_(.+)$/) || k.match(/^nd_group_([^_]+)_(.+)$/);
+const isGroup = k.indexOf("nd_group_") === 0;
+const name = isGroup ? ((last && last.speaker) || (m ? m[2].split("_")[0] : "群聊")) : (m ? m[2] : "");
+localStorage.setItem(LASTCHAT_IDX_KEY, JSON.stringify({key:k, ts:ts, name:name, group:isGroup, fp:histFp(rawStr != null ? rawStr : JSON.stringify(h))}));
+}catch(e){}
 }
 function usernameOf(){
 try{

@@ -41,9 +41,12 @@ public class MainActivity extends Activity {
          * 以 \u0000 开头，正常文本文件内容不可能以此开头。 */
         private static final String ND_IO_ERROR = "\u0000ND_IO_ERROR";
         /** P1-6: 桥调用来源白名单——只允许 file:///android_asset/ 下的页面调用。
-         * lastPageUrl 由 WebViewClient.onPageStarted 维护。 */
+         *  v37: 改为读 web.getUrl() 实时值（顶层 URL），不再依赖 onPageStarted 快照，
+         *  避免 restoreState 后快照为空导致桥整体失效，也避免同页远程 iframe 绕过。 */
         private boolean pageAllowed(){
-            String u = MainActivity.this.lastPageUrl;
+            String u = null;
+            try { u = MainActivity.this.web != null ? MainActivity.this.web.getUrl() : null; } catch (Exception e) {}
+            if (u == null) u = MainActivity.this.lastPageUrl;
             return u != null && u.startsWith("file:///android_asset/");
         }
         /* P1#3: 单次桥调用大小上限（纵深防御）。sharePng/ndFileWrite 在解码/分配前
@@ -292,6 +295,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** v37: 导航策略。返回 true 表示拦截（不在 WebView 内加载）。 */
+    private boolean handleNavigation(String url){
+        if (url == null) return true;
+        if (url.startsWith("file:///android_asset/")) return false; /* 站内资产页放行 */
+        if (url.startsWith("http://") || url.startsWith("https://")
+                || url.startsWith("mailto:") || url.startsWith("tel:")) {
+            try {
+                Intent it = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
+                it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                startActivity(it);
+            } catch (Exception e) {
+                android.util.Log.e("novelreader", "open external url failed", e);
+            }
+            /* 远程页绝不进 WebView：JS 桥对页面内所有脚本可见，只允许可信资产页 */
+            return true;
+        }
+        return true; /* about: / javascript: / intent: 等一律阻止 */
+    }
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -309,8 +331,23 @@ public class MainActivity extends Activity {
         web.setWebViewClient(new WebViewClient(){
             @Override
             public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon){
-                MainActivity.this.lastPageUrl = url; /* P1-6: 桥白名单用 */
+                MainActivity.this.lastPageUrl = url; /* P1-6: 桥白名单兜底快照 */
                 super.onPageStarted(view, url, favicon);
+            }
+            /* v37 安全: 原先未拦截导航，任何远程页都能被 WebView 加载，而
+             * addJavascriptInterface 对远程源依然可见。现在非资产页一律不在 WebView 内打开：
+             * http/https 交给系统浏览器，其余协议直接拒绝。 */
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url){
+                return handleNavigation(url);
+            }
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request){
+                /* 子框架（iframe）导航一律拒绝：addJavascriptInterface 对所有 frame 生效，
+                 * 远程 iframe 会绕过 pageAllowed（顶层 URL 仍是资产页）。 */
+                if (request != null && !request.isForMainFrame()) return true;
+                return handleNavigation(request != null && request.getUrl() != null
+                        ? request.getUrl().toString() : null);
             }
         });
         web.addJavascriptInterface(new JsBridge(), "Android");
@@ -379,6 +416,8 @@ public class MainActivity extends Activity {
         }
         if (savedInstanceState != null) {
             web.restoreState(savedInstanceState);
+            /* v37: restoreState 不触发 onPageStarted，回填当前 URL 供桥白名单使用 */
+            lastPageUrl = web.getUrl();
         } else {
             web.loadUrl("file:///android_asset/www/index.html");
         }
