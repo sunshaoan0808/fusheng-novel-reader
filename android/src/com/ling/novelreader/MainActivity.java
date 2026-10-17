@@ -357,10 +357,47 @@ public class MainActivity extends Activity {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, android.webkit.WebResourceRequest request){
                 /* 子框架（iframe）导航一律拒绝：addJavascriptInterface 对所有 frame 生效，
-                 * 远程 iframe 会绕过 pageAllowed（顶层 URL 仍是资产页）。 */
+                 * 远程 iframe 会绕过 pageAllowed（顶层 URL 仍是资产页）。
+                 * 注意：Chromium 对 iframe 的程序化导航**不会**回调本方法（真机实测），
+                 * 真正的兜底在下面的 shouldInterceptRequest。 */
                 if (request != null && !request.isForMainFrame()) return true;
                 return handleNavigation(request != null && request.getUrl() != null
                         ? request.getUrl().toString() : null);
+            }
+
+            /* v38: 真机验收发现——iframe 的 src 赋值不会触发 shouldOverrideUrlLoading，
+             * 远程文档照样加载，且跨源子框架里能直接拿到 Android 桥（pageAllowed 判的是顶层 URL）。
+             * 这里按"文档型请求"拦截：站外文档一律返回 403 空响应，脚本无从执行。
+             * 只拦文档/框架，不拦 XHR/图片（模型接口调用与图床不受影响）。 */
+            @Override
+            public android.webkit.WebResourceResponse shouldInterceptRequest(
+                    WebView view, android.webkit.WebResourceRequest request){
+                try {
+                    if (request == null) return null;
+                    android.net.Uri u = request.getUrl();
+                    String url = u == null ? "" : u.toString();
+                    if (url.startsWith("file:///android_asset/")) return null; /* 站内资产全放行 */
+                    java.util.Map<String, String> h = request.getRequestHeaders();
+                    String dest = h == null ? null : h.get("Sec-Fetch-Dest");
+                    String mode = h == null ? null : h.get("Sec-Fetch-Mode");
+                    String accept = h == null ? null : h.get("Accept");
+                    boolean frameDest = "iframe".equalsIgnoreCase(dest) || "frame".equalsIgnoreCase(dest)
+                            || "embed".equalsIgnoreCase(dest) || "object".equalsIgnoreCase(dest);
+                    boolean navigate = "navigate".equalsIgnoreCase(mode);
+                    /* 无 Sec-Fetch-* 头时回落到 Accept：文档导航要 text/html，XHR/图片不要 */
+                    boolean subDoc = !request.isForMainFrame()
+                            && accept != null && accept.contains("text/html");
+                    if (frameDest || navigate || subDoc) {
+                        android.util.Log.w("novelreader", "blocked document load: " + url
+                                + " dest=" + dest + " mode=" + mode);
+                        return new android.webkit.WebResourceResponse("text/html", "utf-8",
+                                403, "Forbidden", new java.util.HashMap<String, String>(),
+                                new java.io.ByteArrayInputStream(new byte[0]));
+                    }
+                } catch (Exception e) {
+                    android.util.Log.e("novelreader", "shouldInterceptRequest failed", e);
+                }
+                return null;
             }
         });
         web.addJavascriptInterface(new JsBridge(), "Android");
