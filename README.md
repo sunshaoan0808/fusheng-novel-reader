@@ -55,6 +55,26 @@ VCODE=31 VNAME=1.30 bash build.sh      # 缺任一变量时脚本会拒绝出包
 
 打包流程会先 zipalign 再 apksigner，并写入 `VCODE/VNAME` 对应的 versionCode/versionName。
 
+### 可调试包（只用于验收/排障）
+
+```bash
+DEBUG=1 VCODE=99 VNAME=accept bash build.sh   # 产出 novel-reader-v99-debug.apk
+```
+
+`DEBUG=1` 只做两件事：给清单加 `android:debuggable="true"`，并允许打开 WebView 远程调试。
+**正式包不要带这个开关**——代码里用 `FLAG_DEBUGGABLE` 做了守卫，release 包不会开出
+`webview_devtools` 套接字，第三方应用无法通过 `adb forward` 接管页面执行 JS。
+
+拿到可调试包后可以在模拟器/真机上跑端到端验收（通过 CDP 在真实 WebView 里执行断言）：
+
+```bash
+node tools/device_acceptance.js --adb "<adb 路径>" --serial 127.0.0.1:62001
+```
+
+它覆盖：资源加载、`jq()` 逃逸、ReDoS、渲染吞吐、原生文件桥、通知、清库、转屏重建、
+远程文档/iframe 拦截。没有设备时退出码为 2，不影响 CI。
+
+
 成品 APK 请走 GitHub Releases 分发，不要提交进仓库。
 
 ## 安全说明

@@ -37,6 +37,11 @@ function T(id, label, ok, detail) {
 }
 function W(id, label, detail) { warn++; rows.push({ id, label, ok: null, detail: String(detail || "") }); console.log("  WARN " + id + "  " + label + "  [" + detail + "]"); }
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+/* CDP 调用一律带超时：页面被切到后台/被导航走时，Runtime.evaluate 可能永不返回 */
+const withTimeout = (p, ms, label) => Promise.race([
+  p,
+  new Promise((_, rej) => setTimeout(() => rej(new Error("timeout: " + label)), ms)),
+]);
 
 function adb(...args) {
   const r = spawnSync(ADB, args, { encoding: "utf8", timeout: 30000 });
@@ -75,7 +80,7 @@ function connect(wsUrl) {
       }),
       send: (method, params) => new Promise((res, rej) => {
         const mid = ++id;
-        pending.set(mid, { res, rej });
+        pending.set(mid, { res, rej, raw: true });   /* 原始 result，供 Page/Network 等域使用 */
         ws.send(JSON.stringify({ id: mid, method, params: params || {} }));
       }),
       close: () => ws.close(),
@@ -89,6 +94,7 @@ function connect(wsUrl) {
       }
       const p = pending.get(m.id); pending.delete(m.id);
       if (m.error) return p.rej(new Error(m.error.message || "cdp error"));
+      if (p.raw) return p.res(m.result || {});
       const r = m.result || {};
       if (r.exceptionDetails) {
         return p.rej(new Error((r.exceptionDetails.exception && r.exceptionDetails.exception.description)
@@ -123,7 +129,7 @@ function connect(wsUrl) {
   T("D2", "WebView 调试端口可用", !!page, (page.url || "").replace(/^.*assets\//, "") + " / " + (page.title || ""));
 
   const c = await connect(page.webSocketDebuggerUrl);
-  const ev = async (expr) => c.eval(expr);
+  const ev = async (expr, awaitPromise) => withTimeout(c.eval(expr, awaitPromise), 20000, "eval");
   const evJSON = async (expr, awaitPromise) => {
     const v = await c.eval(expr, awaitPromise);
     try { return typeof v === "string" ? JSON.parse(v) : v; }
@@ -323,6 +329,18 @@ function connect(wsUrl) {
   T("D18", "对照组：<img> 的远程请求能被观测到（网络栈与 Network 域都正常）", imgReq.length > 0,
     "requestWillBeSent=" + imgReq.length);
 
+  /* 反向对照：图片请求不能被文档拦截误伤（相册/图床走的是 Sec-Fetch-Dest: image） */
+  const imgUrl = "https://example.com/?as=img&t=" + Date.now();
+  await ev(`(function(){var i=new Image();i.src=${JSON.stringify(imgUrl)};window.__accImg2=i;return 1})()`);
+  await sleep(3500);
+  const imgResp = c.events.filter(e => e.method === "Network.responseReceived" && e.params
+    && String(e.params.response && e.params.response.url).indexOf("as=img") >= 0)
+    .map(e => e.params.response.status);
+  const imgReqN = c.events.filter(e => e.method === "Network.requestWillBeSent" && e.params
+    && String(e.params.request && e.params.request.url).indexOf("as=img") >= 0).length;
+  T("D18b", "图片请求未被误拦（未返回我们注入的 403）",
+    imgResp.every(x => x !== 403), "请求=" + imgReqN + " 响应=" + (imgResp.join(",") || "未观测到"));
+
   /* 远程 iframe：真机实测发现 iframe 的 src 赋值不会走 shouldOverrideUrlLoading，
    * 所以判定标准不是"有没有发请求"，而是"远程文档有没有真的加载、桥有没有暴露进去"。 */
   await c.send("Runtime.enable");
@@ -333,7 +351,7 @@ function connect(wsUrl) {
     && /example\.com\/?$/.test(String(e.params.response && e.params.response.url))
     && e.params.type === "Document")
     .map(e => e.params.response.status);
-  const tree = (await c.send("Page.getFrameTree")).result.frameTree;
+  const tree = (await c.send("Page.getFrameTree")).frameTree;
   const kid = ((tree && tree.childFrames) || []).map(x => x.frame).find(f => /example\.com/.test(f.url || ""));
   let kidBridge = "no-frame";
   if (kid) {
@@ -344,14 +362,19 @@ function connect(wsUrl) {
         contextId: ctx.id, returnByValue: true,
         expression: `JSON.stringify({ bridge: typeof Android, body: (document.body ? document.body.innerHTML.length : -1) })`,
       });
-      const v = r.result && r.result.result ? r.result.result.value : null;
-      kidBridge = v ? (JSON.parse(v).bridge + "/bodyLen=" + JSON.parse(v).body) : "eval-failed";
+      if (r.exceptionDetails) kidBridge = "eval-threw: " + (r.exceptionDetails.text || "");
+      else {
+        const v = r.result ? r.result.value : null;
+        kidBridge = v ? (JSON.parse(v).bridge + "/bodyLen=" + JSON.parse(v).body) : "eval-failed";
+      }
     } else kidBridge = "no-context";
   }
-  T("D19", "远程 iframe 文档被拦截（没有 200 的 Document 响应）",
-    docResp.length === 0, "Document 状态=" + (docResp.join(",") || "无") + " 子框架=" + (kid ? "存在" : "无"));
-  T("D19b", "子框架执行上下文里读不到 Android 桥", kidBridge === "no-frame" || /^undefined\//.test(kidBridge),
-    kidBridge);
+  T("D19", "远程 iframe 文档被拦截（Document 响应为 403 / 未加载）",
+    docResp.every(x => x === 403), "Document 状态=" + (docResp.join(",") || "无") + " 子框架=" + (kid ? "存在" : "无"));
+  /* 桥对象本身是 addJavascriptInterface 注入到所有 frame 的（WebView 设计如此，无法按 frame 撤除），
+   * 能防的是"远程文档不加载"——403 空响应下子框架里没有任何攻击者代码可执行。 */
+  const kidEmpty = kidBridge === "no-frame" || /undefined\//.test(kidBridge) || /bodyLen=0$/.test(kidBridge);
+  T("D19b", "子框架里没有可执行的远程内容（403 空响应 / bodyLen=0）", kidEmpty, kidBridge);
   await ev(`(function(){var f=document.getElementById("acc_iframe");if(f)f.remove();return 1})()`);
 
   /* ---- D21 清库 ---- */
@@ -398,21 +421,25 @@ function connect(wsUrl) {
   }
 
   /* ---- D20 主框架远程导航（放最后：万一策略失效，页面会被导航走） ---- */
+  const fgAct = () => (adb("shell", "dumpsys", "activity", "activities").out
+    .match(/mResumedActivity: ActivityRecord\{\S+ u0 ([\w.\/]+)/) || [])[1] || "?";
   await liveConn.send("Network.enable");
-  const beforeUrl = await liveConn.eval("location.href");
+  const beforeUrl = await withTimeout(liveConn.eval("location.href"), 15000, "url before nav").catch(() => "?");
+  const beforeAct = fgAct();
   await liveConn.eval(`(function(){location.href="https://accept-nav.invalid/n.html";return 1})()`).catch(() => {});
   await sleep(3500);
+  const afterAct = fgAct();
   const navReq = netHits(liveConn, "accept-nav.invalid");
-  const afterUrl = await liveConn.eval("location.href").catch(() => "gone");
-  T("D20", "主框架远程导航没有被 WebView 加载",
-    navReq.length === 0 && afterUrl === beforeUrl,
-    "WebView 请求=" + navReq.length + " URL 未变=" + (afterUrl === beforeUrl));
-  if (afterUrl === beforeUrl && navReq.length === 0) {
-    /* 再确认一次：系统里没有浏览器时是"丢弃"，有浏览器时是"交给外部"，两者都不在 WebView 内 */
-    const ua = await liveConn.eval("navigator.userAgent");
-    T("D20b", "当前页面仍是资产页（未离开 file:///android_asset）", /android_asset/.test(String(beforeUrl)),
-      "UA含 wv=" + /; wv\)/.test(String(ua)));
-  }
+  const handedOff = afterAct !== beforeAct;
+  T("D20", "主框架远程导航没有被 WebView 自己加载（无 wv 请求）", navReq.length === 0,
+    "WebView 请求=" + navReq.length);
+  /* 把应用拉回前台再读 URL（导航交出去后 WebView 在后台，evaluate 可能不返回） */
+  adb("shell", "am", "start", "-n", PKG + "/.MainActivity");
+  await sleep(2500);
+  const afterUrl = await withTimeout(liveConn.eval("location.href"), 10000, "url after nav").catch(() => "gone");
+  T("D20b", "远程导航被交给外部应用（前台 Activity 已切走）或页面仍停在资产页",
+    handedOff || afterUrl === beforeUrl,
+    "前台: " + beforeAct + " → " + afterAct + " / URL 未变=" + (afterUrl === beforeUrl))
 
 
   /* ---- 汇总 ---- */
