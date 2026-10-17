@@ -38,7 +38,10 @@ if missing_cards:
     print("=" * 60, file=sys.stderr)
 with open(os.path.join(www, "data.js"), "w", encoding="utf-8") as f:
     f.write("window.__DATA__=")
-    json.dump({"index": index, "runs": runs, "rp_cards": rp_cards}, f, ensure_ascii=False, separators=(",", ":"))
+    payload = json.dumps({"index": index, "runs": runs, "rp_cards": rp_cards},
+                         ensure_ascii=False, separators=(",", ":"))
+    # 安全: 小说文本可能包含 "</script>"，直接内联会提前闭合 script 标签并执行注入内容
+    f.write(payload.replace("</", "<\\/"))
     f.write(";")
 print("data.js ok")
 EOF
@@ -68,17 +71,27 @@ echo "[4/6] d8"
 $BT/d8 --min-api 24 --lib $PJ --output $OUT/dex $(find $OUT/classes -name "*.class")
 
 echo "[5/6] apk 打包 assets+dex"
-cp $OUT/base.apk $OUT/unsigned.apk
-cd $OUT/dex && zip -q -j -0 ../unsigned.apk classes.dex && cd - > /dev/null
+cp "$OUT/base.apk" "$OUT/unsigned.apk"
+( cd "$OUT/dex" && zip -q -j -0 ../unsigned.apk classes.dex )
+# 对齐：未对齐的 APK 资源无法 mmap，加载更慢且部分渠道会拒收
+if [ -x "$BT/zipalign" ]; then
+  "$BT/zipalign" -p -f 4 "$OUT/unsigned.apk" "$OUT/aligned.apk"
+  mv "$OUT/aligned.apk" "$OUT/unsigned.apk"
+else
+  echo "WARN: zipalign 不可用，跳过对齐"
+fi
 
 echo "[6/6] 签名"
-KS=$APP/debug.keystore
-if [ ! -f $KS ]; then
-  keytool -genkeypair -noprompt -alias androiddebugkey -keyalg RSA -keysize 2048 \
-    -validity 10950 -keystore $KS -storepass android -keypass android \
-    -dname "CN=Android Debug,O=Android,C=US" 2>/dev/null
+# 安全: 不再用 debug keystore 签发布包（口令 android 是公开常识，任何人可签同名包覆盖安装）。
+# 通过环境变量提供正式签名，keystore 与口令都不进仓库。
+KS=${RELEASE_KEYSTORE:-}
+if [ -z "$KS" ] || [ ! -f "$KS" ]; then
+  echo "FATAL: 缺少发布签名。请设置 RELEASE_KEYSTORE（keystore 路径）与 RELEASE_KEY_ALIAS，"
+  echo "       口令通过 RELEASE_STOREPASS / RELEASE_KEYPASS 环境变量提供。"
+  exit 1
 fi
-$BT/apksigner sign --ks $KS --ks-pass pass:android --key-pass pass:android \
-  --out $APP/$APKNAME $OUT/unsigned.apk
-$BT/apksigner verify --print-certs $APP/$APKNAME | head -3
-ls -la $APP/$APKNAME
+"$BT/apksigner" sign --ks "$KS" --ks-key-alias "${RELEASE_KEY_ALIAS:-release}" \
+  --ks-pass "env:RELEASE_STOREPASS" --key-pass "env:RELEASE_KEYPASS" \
+  --out "$APP/$APKNAME" "$OUT/unsigned.apk"
+"$BT/apksigner" verify --print-certs "$APP/$APKNAME" | head -3
+ls -la "$APP/$APKNAME"

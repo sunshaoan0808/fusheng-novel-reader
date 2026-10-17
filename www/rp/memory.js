@@ -12,11 +12,25 @@ var memKey = function(r, n){ return "nd_mem2_" + r + "_" + n;};
 var SHORT_MAX = 30;
 
 function get(runId, name){
-try { return JSON.parse(localStorage.getItem(memKey(runId, name))) || null;}
+/* v37 性能: 解析缓存（挂在函数对象上，兼容按段抽取的测试）。
+ * 同一轮消息里 maybeAnalyze / renderBudgeted / retrieveApex 会各读一次，
+ * 原先每次都 JSON.parse 整份记忆；现在按原始串命中缓存。 */
+try {
+var raw = localStorage.getItem(memKey(runId, name));
+if(raw == null){ get.__raw = null; get.__data = null; return null; }
+if(get.__raw === raw) return get.__data;
+var v = JSON.parse(raw) || null;
+get.__raw = raw; get.__data = v;
+return v;
+}
 catch(e){ return null;}
 }
 function save(runId, name, m){
-try { localStorage.setItem(memKey(runId, name), JSON.stringify(m));}
+try {
+var s = JSON.stringify(m);
+localStorage.setItem(memKey(runId, name), s);
+get.__raw = s; get.__data = m;   /* 同步刷新缓存 */
+}
 catch(e){ typeof RP_WARN!=="undefined"&&RP_WARN.saveFail("长期记忆保存失败", e); }
 }
 function clear(runId, name){

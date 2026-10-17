@@ -19,7 +19,7 @@ ALIASES = {"贾宝玉":["宝玉"], "林黛玉":["黛玉"], "薛宝钗":["宝钗"
            "王熙凤":["凤姐"], "刘姥姥":["姥姥"]}
 
 def main():
-    secs = json.load(open(os.path.join(RUN, "sections.json")))
+    secs = json.load(open(os.path.join(RUN, "sections.json"), encoding="utf-8"))
     plots = {}
     for name in CHARS:
         keys = [name] + ALIASES.get(name, [])
@@ -40,9 +40,9 @@ def main():
         )
     # JS 文件: file:// 下无 fetch 风险, script 标签直接引入
     js = "// 自动生成: tools/gen_char_plots.py, 数据源 runs/%s/plot/sections.json\n" % RUN_ID
-    js += "window.CHAR_PLOTS = " + json.dumps({RUN_ID: plots}, ensure_ascii=False, indent=1) + ";\n"
+    js += "window.CHAR_PLOTS = " + json.dumps({RUN_ID: plots}, ensure_ascii=False, indent=1).replace("</", "<\\/") + ";\n"
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
-    open(OUT, "w").write(js)
+    open(OUT, "w", encoding="utf-8").write(js)
     for name in CHARS:
         print(f"{name}: {len(plots[name])}字")
     print("total bytes:", os.path.getsize(OUT))

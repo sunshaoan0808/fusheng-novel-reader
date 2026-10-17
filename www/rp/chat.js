@@ -268,6 +268,20 @@ function synthRunFor(runId, name){
   return {novel: _ic.novel || "", worldbook: _ic.worldbook || [], relations: []};
 }
 /* 声明式正则替换 (ST Regex 简化版: 只做 find/replace, 不执行代码) */
+/* v37: 辅助 LLM 调用（导演/连续性/apex）统一软超时。
+ * 这些调用不在主链路上，端点挂起时会无限阻塞整轮对话；超时后放弃等待继续主流程。 */
+function withSoftTimeout(promise, ms, label){
+  if(!promise || typeof promise.then !== "function") return promise;
+  return new Promise(function(resolve, reject){
+    var done = false;
+    var timer = setTimeout(function(){
+      if(done) return; done = true;
+      reject(new Error((label || "辅助调用") + "超时（" + ms + "ms）"));
+    }, ms);
+    promise.then(function(v){ if(done) return; done = true; clearTimeout(timer); resolve(v); },
+                 function(e){ if(done) return; done = true; clearTimeout(timer); reject(e); });
+  });
+}
 function getRegex(runId, name){
   try{ return JSON.parse(localStorage.getItem("nd_regex_" + runId + "_" + name)) || []; }
   catch(e){ return []; }
@@ -690,8 +704,8 @@ async function send(runId, name, text, opts){
   var dirText = "";
   try{
     if(typeof RP_DIRECTOR !== "undefined")
-      dirText = await RP_DIRECTOR.onUserMessage(wsId, {cfg: cfg, history: h, runId: runId,
-        hint: wsHint, cardBrief: cardBriefOf(card)});
+      dirText = await withSoftTimeout(RP_DIRECTOR.onUserMessage(wsId, {cfg: cfg, history: h, runId: runId,
+        hint: wsHint, cardBrief: cardBriefOf(card)}), 30000, "导演");
   }catch(e){}
   var temporal = await temporalFor(wsId, card, run.novel, h);
   var apex = await apexFor(runId, name, card, text, cfg,
@@ -801,8 +815,8 @@ async function send(runId, name, text, opts){
   /* Continuity Checker: LLM 检查逻辑矛盾，发现则自动修一次 */
   try{
     if(typeof AGENT_CONTINUITY !== "undefined" && AGENT_CONTINUITY.isEnabled()){
-      var contR = await AGENT_CONTINUITY.check(runId, name, reply, h,
-        function(c, ms, t){ return RP_NET.complete(c, ms, t); }, cfg);
+      var contR = await withSoftTimeout(AGENT_CONTINUITY.check(runId, name, reply, h,
+        function(c, ms, t){ return RP_NET.complete(c, ms, t); }, cfg), 20000, "连续性检查");
       if(contR.issues && contR.issues.length){
         console.log("[Continuity] 发现 " + contR.issues.length + " 处矛盾，尝试修复");
         var fixed = await AGENT_CONTINUITY.fix(runId, name, reply, contR.issues, h,
@@ -1025,8 +1039,8 @@ async function sendGroup(runId, members, speakers, text, opts){
   /* 导演系统：群聊每轮只跑一次导演（不是每位发言人一次），指令分发给各发言人 */
   try{
     if(typeof RP_DIRECTOR !== "undefined" && typeof groupKey !== "undefined")
-      opts._dirText = await RP_DIRECTOR.onUserMessage(groupKey(runId, members), {cfg: cfg, history: h, runId: runId,
-        hint: {novel: run.novel}, cardBrief: "群聊：" + members.join("、")});
+      opts._dirText = await withSoftTimeout(RP_DIRECTOR.onUserMessage(groupKey(runId, members), {cfg: cfg, history: h, runId: runId,
+        hint: {novel: run.novel}, cardBrief: "群聊：" + members.join("、")}), 30000, "导演");
   }catch(e){}
 
   var doneSpeakers = [], lastStats = null, aborted = false, failed = false;
@@ -1212,8 +1226,8 @@ async function sendTraverse(travId, text, opts){
   var dirTextT = "";
   try{
     if(typeof RP_DIRECTOR !== "undefined")
-      dirTextT = await RP_DIRECTOR.onUserMessage(wsIdT, {cfg: cfg, history: h,
-        hint: wsHintT, cardBrief: "穿越：" + (trav.worldName || "") + "·" + (trav.anchorTitle || "")});
+      dirTextT = await withSoftTimeout(RP_DIRECTOR.onUserMessage(wsIdT, {cfg: cfg, history: h,
+        hint: wsHintT, cardBrief: "穿越：" + (trav.worldName || "") + "·" + (trav.anchorTitle || "")}), 30000, "导演");
   }catch(e){}
 
   var cardHint = "穿越世界";

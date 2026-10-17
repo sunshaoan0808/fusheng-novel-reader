@@ -264,7 +264,15 @@ model: r.model, fallback: r.fallback};
 });
 });
 
-var results = await Promise.all(jobs);
+/* v37: 每个 soul 的失败必须隔离——原先 Promise.all 只要有一个 job reject
+ * （twoStageCall 是唯一可能 reject 的路径），整批并行作废、回退串行重跑，
+ * 等于双倍花费且丢掉其他 soul 已成功的回复。 */
+var results = await Promise.all(jobs.map(function(p, i){
+  return Promise.resolve(p).catch(function(e){
+    return {name: (souls[i] && souls[i].name) || "", ok: false,
+            error: (e && e.message) || "soul 调用失败"};
+  });
+}));
 return {results: results, turnId: turnId,
 stats: (typeof RP_SOUL_RT!== "undefined")? RP_SOUL_RT.getStats(turnId): {}};
 }
@@ -439,6 +447,19 @@ async function sendGroupSoul(runId, members, text, opts){
   if(woven.conflicts && woven.conflicts.length){
     outText += "\n\n[系统: 动作冲突 " +
       woven.conflicts.map(function(c){ return c.a + " vs " + c.b; }).join("; ") + "]";
+  }
+  /* v37: Soul 路径此前从不把用户消息写入历史——chat.js sendGroup 的 h.push 在
+   * soul 分支 return 之后才执行，导致用户消息丢失、后续轮次上下文缺一轮。
+   * 这里在 assistant 之前补写，字段与 chat.js newMsg/tagUserMsg 对齐。
+   * 放在 run() 之后：prompt 构建仍按原逻辑单独注入用户输入，不产生重复。 */
+  if(text){
+    h.push({
+      mid: (typeof nextMsgId === "function") ? nextMsgId()
+        : ("m" + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)),
+      role: "user", content: text, ts: Date.now(),
+      mtype: (opts && opts.userMtype) || "player",
+      speaker: (opts && opts.userSpeaker) || undefined
+    });
   }
   h.push({role: "assistant", content: outText,
     _soul: true, _speakers: woven.speakers, _turnId: turnId,

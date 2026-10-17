@@ -107,10 +107,12 @@ function getStats(turnId){
   return tokenStats[turnId || currentTurn] || {};
 }
 
-/* 超时包装 */
-function withTimeout(promise, ms, soulName){
+/* 超时包装。v37: 超时同时 abort 底层请求（传 controller），
+ * 否则 fetch 仍会跑完继续消耗配额。 */
+function withTimeout(promise, ms, soulName, controller){
   return new Promise(function(resolve, reject){
     var timer = setTimeout(function(){
+      try{ if(controller && controller.abort) controller.abort(); }catch(_){}
       reject(new Error("soul 超时: " + soulName + " (" + ms + "ms)"));
     }, ms);
     promise.then(function(v){
@@ -188,12 +190,25 @@ async function doCall(opts){
   var lastErr = null;
   var startMs = Date.now();
   for(var i = 0; i < cfgs.length; i++){
+    /* v37: 每次尝试独立 AbortController，并桥接外部取消信号；
+     * 超时时 abort，避免端点挂起后请求继续跑完白耗配额。 */
+    var ctrl = null, sig = opts.signal;
+    if(typeof AbortController !== "undefined"){
+      ctrl = new AbortController();
+      if(sig){
+        try{
+          if(sig.aborted) ctrl.abort();
+          else if(typeof sig.addEventListener === "function") sig.addEventListener("abort", function(){ try{ ctrl.abort(); }catch(_){} });
+        }catch(_){}
+      }
+      sig = ctrl.signal;
+    }
     try{
       var c = cfgs[i].cfg;
       var p = (typeof RP_NET !== "undefined")
-        ? RP_NET.complete(c, opts.messages, opts.temperature, null, {maxTokens: opts.maxTokens, signal: opts.signal})
+        ? RP_NET.complete(c, opts.messages, opts.temperature, null, {maxTokens: opts.maxTokens, signal: sig})
         : Promise.reject(new Error("RP_NET 未加载"));
-      var r = await withTimeout(p, opts.timeoutMs || getTimeoutMs(), soulName);
+      var r = await withTimeout(p, opts.timeoutMs || getTimeoutMs(), soulName, ctrl);
 
       /* 竞态保护: 完成后验证 */
       if(opts.contextToken !== undefined && opts.contextToken !== tokenAtStart){

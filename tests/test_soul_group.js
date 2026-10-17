@@ -72,7 +72,7 @@ async function main(){
   t("群聊: mode=soul", r.mode === "soul");
   t("群聊: 有文本", r.text && r.text.length > 0);
   t("群聊: speakers", r.speakers.indexOf("黛玉") >= 0);
-  t("群聊: 历史 push", h.length === 1 && h[0]._soul === true);
+  t("群聊: 历史 push", h.length === 2 && h[0].role === "user" && h[0].content === "大家好" && h[1]._soul === true);
   t("群聊: stats", r.stats && typeof r.stats === "object");
 
   /* 5. trajectory 记录 */

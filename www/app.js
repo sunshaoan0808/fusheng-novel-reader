@@ -316,10 +316,19 @@ ops:`<button class="go" onclick="event.stopPropagation();chatWith('${jq(RUN.run_
 +`<button onclick="event.stopPropagation();openChar('${jq(p.name)}')">详情</button>`
 });}).join("") + `</div>`;
 }
-window.filterChars = (kw)=>{
+/* v37: 轻量防抖（角色过滤 / 场景文本）。搜索框保持同步：test_chatsearch 依赖同步语义。 */
+function debounce(fn, ms){
+  var t = 0;
+  return function(){
+    var args = arguments, self = this;
+    clearTimeout(t);
+    t = setTimeout(function(){ fn.apply(self, args); }, ms);
+  };
+}
+window.filterChars = debounce((kw)=>{
 const items = RUN.profiles.filter(p=>p.name.includes(kw));
 $("#clist").innerHTML = charList(items);
-};
+}, 150);
 window.openChar = (name)=>{
 __backAction = ()=>setTab("chars");
 const p = RUN.profiles.find(x=>x.name===name);
@@ -1051,7 +1060,7 @@ if(i==null) achvUnlock("lore_1");
 /* ================= 正则替换 ================= */
 const regexKey = (runId, name)=> `nd_regex_${runId}_${name}`;
 const getRegexUI = (runId, name)=>{ try{return JSON.parse(localStorage.getItem(regexKey(runId,name)))||[]}catch(e){return[]}};
-const saveRegexUI = (runId, name, arr)=> localStorage.setItem(regexKey(runId,name), JSON.stringify(arr));
+const saveRegexUI = (runId, name, arr)=>{ try{ localStorage.setItem(regexKey(runId,name), JSON.stringify(arr)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，正则替换未保存" : "正则替换保存失败"); }catch(_){} } };
 const regexBack = {to:null};
 window.regexEditor = (runId, name, backTo)=>{
 __backAction = ()=>regexGoBack();
@@ -1192,7 +1201,7 @@ saveRegexUI(runId, name, a); renderRegexList(runId, name);
 /* ================= 任务管理 ================= */
 const TASKS_KEY = "nd_tasks_v1";
 const getTasks = ()=>{ try{return JSON.parse(localStorage.getItem(TASKS_KEY))||[]}catch(e){return[]}};
-const saveTasks = (t)=> localStorage.setItem(TASKS_KEY, JSON.stringify(t));
+const saveTasks = (t)=>{ try{ localStorage.setItem(TASKS_KEY, JSON.stringify(t)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，任务未保存" : "任务保存失败"); }catch(_){} } };
 
 function showTasks(){
 __backAction = null;
@@ -1283,7 +1292,7 @@ document.body.removeChild(ta);
 const CFG_KEY = "nd_api_cfg_v1";
 const RPCFG_KEY = "nd_rp_cfg_v1";
 const getCfg = ()=>{ try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}};
-const saveCfg = (c)=> localStorage.setItem(CFG_KEY, JSON.stringify(c));
+const saveCfg = (c)=>{ try{ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，API 配置未保存" : "API 配置保存失败"); }catch(_){} } };
 const getRpCfg = ()=> Object.assign({maxContext:8192, respTokens:512, summaryModel:"",
   temperature:0.9, topP:1, ooc:true, preset:"classic", optCards:false, optCount:4, optMood:"none", ttsAuto:false, typewriter:true,
   worldsim:true, wsPerMsg:3, wsStepMin:30, wsWxAuto:true, wsWxEvery:5, temporal:true, leanmem:true,
@@ -1291,8 +1300,8 @@ const getRpCfg = ()=> Object.assign({maxContext:8192, respTokens:512, summaryMod
   memCycle:10, memPoolRatio:"50/30/20",
   memWindowN:60, /* Tier2 #12 新聊天记忆窗口, 默认 60 条 */
   ppaMode:"key", ppaModel:"",
-  director:true, directorTier:"sentinel", directorStyle:"slowburn", directorEvery:5, directorStale:8, directorModel:""}, JSON.parse(localStorage.getItem(RPCFG_KEY)||"{}"));
-const saveRpCfg = (c)=> localStorage.setItem(RPCFG_KEY, JSON.stringify(c));
+  director:true, directorTier:"sentinel", directorStyle:"slowburn", directorEvery:5, directorStale:8, directorModel:""}, (function(){ try{ return JSON.parse(localStorage.getItem(RPCFG_KEY)||"{}") || {}; }catch(e){ return {}; } })());
+const saveRpCfg = (c)=>{ try{ localStorage.setItem(RPCFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，RP 设置未保存" : "RP 设置保存失败"); }catch(_){} } };
 /* v37: 解析当前绑定的 ST 预设对象(未绑定返回 null); 传给 prompt 构建做预设组装 */
 function resolveStPreset(){
 try{
@@ -1359,6 +1368,8 @@ function rpToastOnce(msg){
   __toastOnceAt[msg] = now;
   try{ rpToast(msg); }catch(e){}
 }
+/* v37 说明: 配置类读写函数会被 tests 按源码段单独抽取执行，因此容错必须
+ * 内联在各自函数体内，不能依赖模块级 helper。 */
 /* 聊天记录最多保留条数（P1-10：超出丢最早的，截断必须可见）。
  * 常量放在 saveHist 内部：tests/test_gethist_fallback.js 按源码段提取执行，要求自包含；
  * 调用方需要上限时用返回值里的 max。 */
@@ -3627,7 +3638,7 @@ const plotKey = ()=> CHAT.mode==="group"
   ? `nd_plot_${CHAT.runId}_g_${(CHAT.members||[]).slice().sort().join("_")}`
   : `nd_plot_${CHAT.runId}_${CHAT.name}`;
 const getPlot = ()=>{ try{ return JSON.parse(localStorage.getItem(plotKey()))||null; }catch(e){ return null; } };
-const savePlot = (p)=> localStorage.setItem(plotKey(), JSON.stringify(p||{}));
+const savePlot = (p)=>{ try{ localStorage.setItem(plotKey(), JSON.stringify(p||{})); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，剧情线未保存" : "剧情线保存失败"); }catch(_){} } };
 /* 剧情线 v27: 原著剧情大纲(读者可编辑)。数据源自蒸馏管线(www/data/char_plots.js)。
    char_plots.js 按 runId 分层: CHAR_PLOTS[runId][角色名]。分层是必须的 —— 不同书里
    同名角色只按名字取会泄露别的书的剧情。旧版本 char_plots.js 是扁平的
@@ -4197,8 +4208,12 @@ el.innerHTML = `<div class="scenrow" data-xfade>` + SCENARIOS.map(s=>
 }
 /* S-7 高权重场景 (对标 Kindroid current_scene): 160 字符内, 按聊天存 */
 function sceneKey(){ try{ return "nd_scene_" + chatHistKey(); }catch(e){ return "nd_scene_misc"; } }
-function getSceneText(){ try{ return localStorage.getItem(sceneKey()) || ""; }catch(e){ return ""; } }
-function setSceneText(v){ try{ localStorage.setItem(sceneKey(), String(v == null ? "" : v).slice(0, 160)); }catch(e){} }
+/* v37 性能: 场景文本先写内存，落盘防抖 400ms——原先每个按键都同步 setItem。
+ * 读取优先内存值，保证"刚输入就发送"也能带上最新内容。 */
+const __sceneMem = {};   /* sceneKey -> 最新文本（按会话隔离，防止切角色串值） */
+function getSceneText(){ const k = sceneKey(); if(__sceneMem[k] != null) return __sceneMem[k]; try{ return localStorage.getItem(k) || ""; }catch(e){ return ""; } }
+const __sceneSave = debounce((k, s)=>{ try{ localStorage.setItem(k, s); }catch(e){} }, 400);
+function setSceneText(v){ const k = sceneKey(); __sceneMem[k] = String(v == null ? "" : v).slice(0, 160); __sceneSave(k, __sceneMem[k]); }
 window.toggleScenario = (id)=>{
 if(!id || CHAT.scenario===id){ CHAT.scenario = null; renderScenChips(); return; }
 CHAT.scenario = id;
