@@ -26,7 +26,9 @@ async function summarizeChunks(chunks, characters, aliasMap, opts){
     try{
       var r = await DISTILL_LLM.chat([
         {role: "system", content: "你是剧情梗概器。从小说片段提取结构化梗概。返回 JSON: {\"events\": [\"事件1\", ...], \"turning_points\": [\"转折点\", ...], \"hooks\": [{\"hook\": \"悬念描述\"}]}"},
-        {role: "user", content: JSON.stringify({chunk_id: ch.id, title: ch.title, characters: characters, excerpt: ch.text.slice(0, 6000)})}
+        {role: "user", content: JSON.stringify({chunk_id: ch.id, title: ch.title, characters: characters,
+          // 与分块上限一致, 否则每块尾部被截掉 (见 distill_chunk.MAX_CHARS)
+          excerpt: ch.text.slice(0, (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000)})}
       ]);
       var m = r.content.match(/\{[\s\S]*\}/);
       var obj = m ? JSON.parse(m[0]) : {events: [], turning_points: [], hooks: []};

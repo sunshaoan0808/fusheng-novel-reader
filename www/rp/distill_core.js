@@ -32,8 +32,11 @@ var SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文片段�
 `;
 
 async function distillOne(chunk, character, onProgress){
+  // 摘录上限与分块上限保持一致 (DISTILL_CHUNK.MAX_CHARS): 块长超过上限时
+  // 每块尾部会被永久丢弃, 且相邻块之间留下盲区——不报错, 只是"某情节没记住"。
+  var cap = (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000;
   var user = JSON.stringify({
-    excerpt: chunk.text.slice(0, 6000),
+    excerpt: chunk.text.slice(0, cap),
     chunk_id: chunk.id,
     character: character
   }, null, 1);
@@ -91,11 +94,37 @@ function mergeProfiles(profileList){
   return merged;
 }
 
+/* 命中判据: 正名 或 该正名的任一别名 出现在正文。
+ * 中文小说正文大量用简称("黛玉"而非"林黛玉"), 只按正名 indexOf 会整章跳过。
+ * 单字别名一律忽略——"玉""林"这类在全书中出现率太高, 会造成误命中。 */
+function buildAliasIndex(aliasMap){
+  var idx = {};
+  Object.keys(aliasMap || {}).forEach(function(alias){
+    var canon = aliasMap[alias];
+    if(!alias || !canon || alias === canon) return;
+    if(alias.length < 2) return;
+    if(!idx[canon]) idx[canon] = [];
+    if(idx[canon].indexOf(alias) < 0) idx[canon].push(alias);
+  });
+  return idx;
+}
+
+function appearsIn(text, charName, aliasIndex){
+  if(text.indexOf(charName) >= 0) return true;
+  var al = aliasIndex[charName];
+  if(!al) return false;
+  for(var i = 0; i < al.length; i++){
+    if(text.indexOf(al[i]) >= 0) return true;
+  }
+  return false;
+}
+
 async function distillNovel(chunks, characters, opts){
   opts = opts || {};
   var onProgress = opts.onProgress || function(){};
   var checkpoint = opts.checkpoint || {};
   var shouldPause = opts.shouldPause || function(){ return false; };
+  var aliasIndex = buildAliasIndex(opts.aliasMap);
   async function waitPause(){
     while(shouldPause()){
       onProgress(done, total, "已暂停…");
@@ -116,8 +145,8 @@ async function distillNovel(chunks, characters, opts){
         done++;
         continue;
       }
-      // 只蒸馏本块出现的人物 (简单: 名字在文本中)
-      if(chunk.text.indexOf(ch) < 0){
+      // 只蒸馏本块出现的人物 (正名或其别名出现在正文)
+      if(!appearsIn(chunk.text, ch, aliasIndex)){
         done++;
         onProgress(done, total, "跳过 " + ch + " @ " + chunk.id + " (未出现)");
         continue;
@@ -155,6 +184,8 @@ return {
   distillOne: distillOne,
   distillNovel: distillNovel,
   parseProfile: parseProfile,
+  buildAliasIndex: buildAliasIndex,
+  appearsIn: appearsIn,
   SYSTEM_PROMPT: SYSTEM_PROMPT
 };
 })();

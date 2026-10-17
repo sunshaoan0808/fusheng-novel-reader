@@ -542,6 +542,7 @@ async function onStartDistill(){
     setStage("profile", "run");
     var profiles = await DISTILL_CORE.distillNovel(S.chunks, chars, {
       checkpoint: checkpoint,
+      aliasMap: aliasMap,   // 上一段算出的 {别名: 正名}，缺了它正文用简称的章节会被整章跳过
       shouldPause: function(){ return S.paused; },
       onProgress: function(d, t, m){ prog("[画像] " + m, 20 + d / t * 30); },
       onCheckpoint: function(cp){ try{ localStorage.setItem(ckptKey, JSON.stringify(cp)); }catch(e){} }
@@ -657,7 +658,12 @@ function openPackage(id){
     if(typeof DISTILL_QUALITY !== "undefined"){
       qualityHtml = DISTILL_QUALITY.renderReport(DISTILL_QUALITY.check(id));
     }
-  }catch(e){}
+  }catch(e){
+    // 不再静默: 渲染挂了也要让用户看见, 否则质量门等于不存在
+    qualityHtml = '<div class="card" style="margin-bottom:12px">' +
+      '<div style="font-size:calc(12px * var(--fs));color:#e74c3c">质量门渲染失败: ' +
+      esc((e && e.message) || String(e)) + '</div></div>';
+  }
   var wb = DISTILL_PACKAGE.getData(id, "worldbook");
   var wbCount = wb ? (wb.rules || []).length + (wb.locations || []).length + (wb.factions || []).length : 0;
   // M1: Memory Usage (Character.AI)
@@ -1137,11 +1143,11 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
   useStyle: function(id){
     var c = DISTILL_STYLE.getCard(id);
     if(!c) return;
-    var prompt = DISTILL_STYLE.toPrompt(c);
+    var styleText = DISTILL_STYLE.toPrompt(c);
     var text = prompt("续写内容（会按【" + c.name + "】文风生成）：", "");
     if(!text) return;
     // 存待用，下次聊天/写卡时注入
-    try{ localStorage.setItem("distill_active_style", JSON.stringify({id: id, prompt: prompt})); }catch(e){}
+    try{ localStorage.setItem("distill_active_style", JSON.stringify({id: id, prompt: styleText})); }catch(e){}
     alert("已选用【" + c.name + "】文风，将在下次生成时应用");
     DISTILL_UI.showStyles();
   },
@@ -1157,7 +1163,7 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
       onProgress: function(msg){ console.log(msg); }
     });
     alert("抽取了 " + facts.length + " 条事实");
-    DISTILL_UI.showLibrary(pkgId, name);
+    DISTILL_UI.showProvenance(pkgId, name);
   },
   setAxis: function(el){
     var pkgId = el.getAttribute("data-pkg");
@@ -1233,7 +1239,7 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
     }else if(qid === "confirm"){
       if(val === "yes"){
         S.qaMode = false;
-        onPlan();  // 生成计划书
+        onGenPlan();  // 生成计划书 (原写 onPlan, 该函数不存在)
       }else{
         QA_STATE.step = 0;
         render();
@@ -1288,6 +1294,14 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
 /* 点击事件委托（XSS 修复 2026-10-13）：替代全部内联 onclick 字符串模板。
  * 动态值走 data-* 属性（escA 做 HTML 属性转义，含双引号）；dataset 读出即原文，
  * 不再经过 JS 字符串解析层，故反斜杠 / 引号 / 换行均无害。静态 onclick 保留。 */
+/* 委托层的 catch 之前只 console.warn：任何"函数不存在/被覆盖"的调用都表现成
+ * "点了没反应"，这是本模块 bug 长期潜伏的结构性原因。现在必须让用户看见。 */
+function failNotice(act, err){
+  var msg = (err && err.message) || String(err);
+  try{ console.error("[distill_ui] " + act + " failed:", err); }catch(e){}
+  try{ if(typeof alert === "function") alert("操作失败（" + act + "）：" + msg); }catch(e2){}
+}
+
 function onDelegatedClick(e){
   var el = null;
   try{ el = (e.target && e.target.closest) ? e.target.closest("[data-dact]") : null; }
@@ -1326,7 +1340,7 @@ function onDelegatedClick(e){
         if(confirm("删除？")){ DISTILL_STYLE.deleteCard(d.did); api.showStyles(); }
         break;
     }
-  }catch(err){ try{ console.warn("[distill_ui] dact failed:", act, err); }catch(e2){} }
+  }catch(err){ failNotice(act, err); }
 }
 if(typeof document !== "undefined" && document && typeof document.addEventListener === "function"){
   document.addEventListener("click", onDelegatedClick);

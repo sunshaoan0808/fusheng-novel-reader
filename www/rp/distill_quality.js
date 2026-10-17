@@ -58,7 +58,7 @@ function polishAiCliche(text){
   return {text: fixed, fixed: count};
 }
 
-function check(pkgId){
+function checkInner(pkgId){
   var checks = [];
   var pkg = DISTILL_PACKAGE.getPackage(pkgId);
   if(!pkg){
@@ -170,6 +170,9 @@ function check(pkgId){
     }
   }
 
+  // 关系数据 (下面 3.7 与 4 都要用, 必须在此处取, 不能留到 4 再声明)
+  var rels = DISTILL_PACKAGE.getData(pkgId, "relations") || [];
+
   // 3.7 孤证关系 (C2)
   var isolatedRels = rels.filter(function(e){ return e._isolated; });
   if(isolatedRels.length){
@@ -178,7 +181,6 @@ function check(pkgId){
   }
 
   // 4. 关系覆盖率
-  var rels = DISTILL_PACKAGE.getData(pkgId, "relations") || [];
   var relChars = {};
   rels.forEach(function(e){
     relChars[e.source_character] = 1;
@@ -234,6 +236,19 @@ function check(pkgId){
   else if(checks.some(function(c){ return c.level === "warn"; })) level = "warn";
 
   return {score: score, level: level, checks: checks};
+}
+
+/* 内部错误必须可见: 之前 UI 用 try{}catch{} 吞掉了 check() 的异常,
+ * 面板整块空白, 表现为"没有质量门"。现在异常变成一条 fail 检查项。 */
+function check(pkgId){
+  try{
+    return checkInner(pkgId);
+  }catch(e){
+    return {score: 0, level: "fail", checks: [{
+      id: "internal", level: "fail",
+      msg: "质量门内部错误: " + ((e && e.message) || String(e))
+    }]};
+  }
 }
 
 var LEVEL_ICON = {pass: "✅", warn: "⚠️", fail: "❌"};

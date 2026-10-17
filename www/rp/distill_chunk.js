@@ -7,6 +7,12 @@ var DISTILL_CHUNK = (function(){
 
 var SCENE_PAT = /^(却说|话说|且说|诗曰|词曰|正是|话分两头)/;
 
+/* 单块上限必须与"送入 LLM 的摘录上限"一致 (distill_core/distill_plot 的 slice)。
+ * 原来 块长 8000 + 摘录 6000 → 每块尾部 2000 字永久丢失, 相邻块之间留下盲区,
+ * 实测 20 万字只有 84% 进入模型。6000/600 时摘录不再截断, 覆盖率 100%。 */
+var MAX_CHARS = 6000;
+var DEFAULT_OVERLAP = 600;
+
 function splitChapters(text, chapterPattern){
   var pat = new RegExp(chapterPattern);
   var chapters = [], curTitle = null, curLines = [];
@@ -82,8 +88,8 @@ function chunkText(text, maxChars, overlap){
 
 function chunkNovel(text, opts){
   opts = opts || {};
-  var maxChars = opts.maxChars || 8000;
-  var overlap = opts.overlap || 800;
+  var maxChars = opts.maxChars || MAX_CHARS;
+  var overlap = opts.overlap || DEFAULT_OVERLAP;
   var chapterPattern = opts.chapterPattern || "^第[一二三四五六七八九十百千零0-9]+[回章].*";
   var out = [];
   var chapters = splitChapters(text, chapterPattern);
@@ -112,5 +118,6 @@ function stageLabel(s){
   return s === "early" ? "前期" : s === "mid" ? "中期" : "后期";
 }
 
-return {chunkNovel: chunkNovel, stageLabel: stageLabel, splitChapters: splitChapters, chunkText: chunkText};
+return {chunkNovel: chunkNovel, stageLabel: stageLabel, splitChapters: splitChapters, chunkText: chunkText,
+  MAX_CHARS: MAX_CHARS, DEFAULT_OVERLAP: DEFAULT_OVERLAP};
 })();
