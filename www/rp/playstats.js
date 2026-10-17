@@ -29,6 +29,13 @@ function estTokens(text){
   return Math.max(1, Math.round(cjk / 1.5 + asc / 4));
 }
 function touch(st){ var n = Date.now(); st.last = n; if(!st.first) st.first = n; return st; }
+/* v37 性能: 允许直接传消息数组（逐条估算后累加），调用方不必先 join 出一份完整 prompt 副本 */
+function tokensOf(t){
+  if(!Array.isArray(t)) return estTokens(t);
+  var n = 0;
+  for(var i = 0; i < t.length; i++) n += estTokens(t[i]);
+  return n;
+}
 /* 开局：空历史进入聊天记一次 */
 function recordSession(runId, name){
   var d = load(), k = kk(runId, name), st = d[k] || blank();
@@ -38,7 +45,7 @@ function recordSession(runId, name){
 function recordTurn(runId, name, promptText, replyText, swipe){
   var d = load(), k = kk(runId, name), st = d[k] || blank();
   if(!swipe) st.t++;
-  st.pi += estTokens(promptText);
+  st.pi += tokensOf(promptText);
   st.po += estTokens(replyText);
   touch(st); d[k] = st; save(d); return st;
 }

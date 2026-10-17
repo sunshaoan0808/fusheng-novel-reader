@@ -891,10 +891,13 @@ async function send(runId, name, text, opts){
   /* 游玩统计：记一轮 + prompt/回复 token 估算（纯本地，RP_STATS） */
   try{
     if(typeof RP_STATS !== "undefined"){
-      var _pc = b.messages.map(function(m){
-        var c = m && m.content;
-        return (typeof c === "string") ? c : (c ? JSON.stringify(c) : "");
-      }).join("\n");
+      /* v37 性能: 传消息数组而不是 join 成一整串——统计只需要 token 估算,
+       * join 会为每次发送多复制一份完整 prompt(几十 KB)。recordTurn 支持数组逐条累加。 */
+      var _pc = [];
+      for(var _pi = 0; _pi < b.messages.length; _pi++){
+        var _pm = b.messages[_pi], _pcc = _pm && _pm.content;
+        _pc.push((typeof _pcc === "string") ? _pcc : (_pcc ? JSON.stringify(_pcc) : ""));
+      }
       RP_STATS.recordTurn(runId, name, _pc, reply, false);
     }
   }catch(e){}

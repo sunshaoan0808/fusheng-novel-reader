@@ -381,7 +381,14 @@ var hit = null;
 latest.forEach(function(e){ if(e && e.id == id) hit = e; });
 if(!hit) return false;
 if(!!hit.perm === !!perm) return true;
-if(perm && eventPermCount(runId, name) >= PERM_MAX) return "limit";
+/* v37: 上限判定直接用本次已解析的 st 统计，不再走 eventPermCount() 二次全量解析+遍历 */
+if(perm){
+var ids = {}, cnt = 0;
+(st.event3 || []).forEach(function(e){
+if(e && e.perm && !ids[e.id]){ ids[e.id] = 1; cnt++; }
+});
+if(cnt >= PERM_MAX) return "limit";
+}
 if(apexW){
 var base = {};
 for(var k in hit) base[k] = hit[k];

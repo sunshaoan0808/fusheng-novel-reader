@@ -2910,7 +2910,8 @@ window.switchChat = (v)=>{
 abortStreaming();
 const [runId, name] = v.split("|");
 CHAT = {mode:"single", runId, name, members:[], forcedSpeaker:null};
-localStorage.setItem("nd_chat_last", v);
+/* P2-14: 指针写失败（配额满）不应中断切换，最坏只是下次冷启动回不到这个会话 */
+try{ localStorage.setItem("nd_chat_last", v); }catch(e){}
 showChat();
 };
 /* P0-1: 抽屉"切换角色"按钮改事件委托 —— runId/name 经 data-* 属性传递（esc 转义引号），
@@ -2935,7 +2936,7 @@ function startChat(runId, name){
 CHAT = {mode:"single", runId, name, members:[], forcedSpeaker:null};
 loadPov();
 LAST_STATS = null;
-localStorage.setItem("nd_chat_last", `${runId}|${name}`);
+try{ localStorage.setItem("nd_chat_last", `${runId}|${name}`); }catch(e){}
 setNav("chat");
 }
 /* ============ P1-6: 轻量本地成就 ============ */
@@ -5137,13 +5138,16 @@ if(!s) return;
 const name = prompt("存档名称", s.name||"");
 if(name === null) return;
 s.name = (name||"").trim() || s.name;
-localStorage.setItem(savesKey(), JSON.stringify(ss));
+/* P2-14: 存档重命名写失败必须让用户知道，否则以为改了其实没改 */
+try{ localStorage.setItem(savesKey(), JSON.stringify(ss)); }
+catch(e){ rpToastOnce(isQuotaErr(e) ? "存储空间已满，存档名未保存" : "存档名保存失败"); return; }
 renderSaves();
 };
 window.delSaveSlot = (id)=>{
 const s = getSaves().find(x=>x.id==id);
 if(!confirm(`删除存档「${s?s.name:""}」？`)) return;
-localStorage.setItem(savesKey(), JSON.stringify(getSaves().filter(x=>x.id!=id)));
+try{ localStorage.setItem(savesKey(), JSON.stringify(getSaves().filter(x=>x.id!=id))); }
+catch(e){ rpToastOnce(isQuotaErr(e) ? "存储空间已满，存档未删除" : "存档删除失败"); return; }
 /* P1-5: 删掉的是当前分支源 -> 清掉, 避免新存档挂到悬空节点 */
 const k = chatHistKey();
 if(getBranchSrc()[k]==id){ const m = getBranchSrc(); delete m[k]; try{localStorage.setItem(BRANCH_KEY, JSON.stringify(m));}catch(e){} }
@@ -6158,7 +6162,9 @@ const NOTIFY_KEY = "nd_notify_cfg";
 const getNotifyCfg = ()=> Object.assign(
 {on:false, hours:6, template:"{{npc_name}}：你回来了，{{username}}！", lastFired:0},
 JSON.parse(localStorage.getItem(NOTIFY_KEY)||"{}"));
-const saveNotifyCfg = (c)=> localStorage.setItem(NOTIFY_KEY, JSON.stringify(c));
+/* P2-14: 写入失败不能让"保存设置"流程抛异常跑到一半（配额满很常见） */
+const saveNotifyCfg = (c)=>{ try{ localStorage.setItem(NOTIFY_KEY, JSON.stringify(c)); }
+catch(e){ rpToastOnce(isQuotaErr(e) ? "存储空间已满，通知设置未保存" : "通知设置保存失败"); } };
 /* 模板渲染：{{npc_name}} / {{username}}（参考 Talkie：{{npc_name}}: You're back, {{username}}!） */
 function renderNotifyText(tpl, npcName, username){
 return String(tpl||"")
@@ -6465,7 +6471,7 @@ ${fontScaleCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("image",15)}
 <div class="field"><label>API 地址</label>
 <input id="c_base" placeholder="https://api.openai.com/v1" value="${esc(c.base||"")}"></div>
 <div class="field"><label>API Key</label>
-<input id="c_key" type="password" placeholder="sk-…" value="${esc(c.key||"")}"></div>
+<input id="c_key" type="password" placeholder="${c.key?"已保存（留空 = 不修改）":"sk-…"}" value=""></div>
 <div class="btnrow">
 <button class="btn" onclick="fetchModels()">拉取模型列表</button>
 <button class="btn ghost" onclick="testConn()">测试连接</button>
@@ -6715,9 +6721,19 @@ window.saveCfgUI = ()=>{
 const base = $("#c_base").value.trim();
 /* v37 安全: http:// 会明文传输 API Key，保存前必须让用户明确知晓 */
 if(/^http:\/\//i.test(base) && !confirm("当前接口地址是 http://，API Key 将以明文在网络上传输，存在被窃听风险。\n建议改用 https://。仍要保存吗？")) return;
+/* v37 安全(P2-S1): Key 不再回显到页面 DOM。输入框留空表示"沿用已保存的 Key"，
+ * 避免任何同源脚本/开发者工具直接读到明文口令。 */
+const typed = $("#c_key").value.trim();
+const prev = getCfg();
+const key = typed || (prev.key || "");
+if(typed && typed !== prev.key && /^[a-z]+:\/\//i.test(base) && !/^https:\/\//i.test(base)){
+  if(!confirm("接口地址不是 https://，Key 会以明文形式发送。仍要保存吗？")) return;
+}
 const m = $("#c_model").value.trim() || $("#c_model_sel").value;
-saveCfg({base:base, key:$("#c_key").value.trim(), model:m,
+saveCfg({base:base, key:key, model:m,
 imgModel:$("#c_img").value.trim(), ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
+$("#c_key").value = "";
+$("#c_key").placeholder = "已保存（留空 = 不修改）";
 alert("已保存");
 };
 async function _api(path, cfg, method, body){
@@ -6732,7 +6748,9 @@ if(!r.ok) throw new Error(`HTTP ${r.status}`);
 return r.json();
 }
 function _cfgFromUI(){
-return {base:$("#c_base").value.trim(), key:$("#c_key").value.trim(),
+/* Key 输入框留空 = 沿用已保存的 Key（页面不再回显明文） */
+const typed = $("#c_key").value.trim();
+return {base:$("#c_base").value.trim(), key:typed || (getCfg().key || ""),
 model:$("#c_model").value.trim()||$("#c_model_sel").value};
 }
 /* Tier2 #18: 模型能力标签 (对标 Janitor 模型目录过滤器：推理 / 视觉 / 长上下文)。
@@ -6779,7 +6797,8 @@ const cur = cfg.model;
 sel.innerHTML = ids.map(id=>`<option value="${esc(id)}" ${id===cur?"selected":""}>${esc(id)}</option>`).join("")
 || `<option value="">(无可用模型)</option>`;
 if(cur && ids.includes(cur)) sel.value = cur;
-localStorage.setItem("nd_models", JSON.stringify(ids));
+/* 模型列表只是缓存，写不进去不影响本次拉取结果 */
+try{ localStorage.setItem("nd_models", JSON.stringify(ids)); }catch(e){}
 if(box && !silent) box.innerHTML = `<span class="conn-ok">${icon("check",14)} 拉到 ${ids.length} 个模型</span>`;
 return ids;
 }catch(e){
@@ -8737,7 +8756,9 @@ window.travWorldCompleteSave = ()=>{
   d.bg = $("#wbBg").value.trim();
   d.anchors = $("#wbAnchors").value.split("\n").map(s=>s.trim()).filter(Boolean).slice(0,5);
   d.updatedAt = Date.now();
-  localStorage.setItem("nd_wb2_"+d.kind+"_"+d.id, JSON.stringify(d));
+  /* P2-14: 世界设定是用户手输内容，写失败必须明确提示，不能静默丢 */
+  try{ localStorage.setItem("nd_wb2_"+d.kind+"_"+d.id, JSON.stringify(d)); }
+  catch(e){ rpToastOnce(isQuotaErr(e) ? "存储空间已满，世界设定未保存" : "世界设定保存失败"); return; }
   travWorldComplete(d.kind, d.id);
 };
 

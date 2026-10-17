@@ -384,26 +384,42 @@ function getIdbOnly(key){
 /* 启动时预热：把已复制到 IDB/文件层的大键读回内存镜像（异步，不阻塞 UI）。 */
 function warmCache(){
   if(!SUPPORTED() && !fileOK()) return Promise.resolve(0);
-  var chain = Promise.resolve(), n = 0;
+  /* v37: 原来是逐键串行 await（N 个键 = N 个来回），冷启动会把后台队列拖很长。
+   * 改成固定并发 6 的分批并行：仍是后台任务，不占首屏，但总时长降到约原来的 1/6。 */
+  var PAR = 6, n = 0;
+  function runPool(jobs){
+    if(!jobs.length) return Promise.resolve();
+    var i = 0;
+    function worker(){
+      if(i >= jobs.length) return Promise.resolve();
+      var job = jobs[i++];
+      return job().then(function(ok){ if(ok) n++; }, function(){})
+        .then(worker);
+    }
+    var ws = [];
+    for(var w = 0; w < Math.min(PAR, jobs.length); w++) ws.push(worker());
+    return Promise.all(ws);
+  }
+  var jobs = [];
   if(SUPPORTED()){
-    var keys = _lsKeys().filter(function(k){ return k.indexOf(COPY_PREFIX) === 0; })
-      .map(function(k){ return k.slice(COPY_PREFIX.length); });
-    keys.forEach(function(k){
-      chain = chain.then(function(){
-        return getIdbOnly(k).then(function(v){ if(v != null){ memSet(k, v); n++; } }, function(){});
+    _lsKeys().filter(function(k){ return k.indexOf(COPY_PREFIX) === 0; })
+      .map(function(k){ return k.slice(COPY_PREFIX.length); })
+      .forEach(function(k){
+        jobs.push(function(){
+          return getIdbOnly(k).then(function(v){ if(v != null){ memSet(k, v); return true; } return false; });
+        });
       });
-    });
   }
   if(fileOK()){
-    var fkeys = _lsKeys().filter(function(k){ return k.indexOf(FILE_PREFIX) === 0; })
-      .map(function(k){ return k.slice(FILE_PREFIX.length); });
-    fkeys.forEach(function(k){
-      chain = chain.then(function(){
-        return NDFILE.getItem(k).then(function(v){ if(v != null){ memSet(k, v); n++; } }, function(){});
+    _lsKeys().filter(function(k){ return k.indexOf(FILE_PREFIX) === 0; })
+      .map(function(k){ return k.slice(FILE_PREFIX.length); })
+      .forEach(function(k){
+        jobs.push(function(){
+          return NDFILE.getItem(k).then(function(v){ if(v != null){ memSet(k, v); return true; } return false; });
+        });
       });
-    });
   }
-  return chain.then(function(){ return n; });
+  return runPool(jobs).then(function(){ return n; });
 }
 /* 手动释放：删除 localStorage 里已确认落盘 IDB 的大键副本（返回释放字节数）。内存镜像保留，同步读取不受影响。 */
 function cleanupCopied(){
