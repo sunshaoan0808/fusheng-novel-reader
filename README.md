@@ -42,9 +42,26 @@ cd android
 VCODE=31 VNAME=1.30 bash build.sh
 ```
 
-签名用自动生成的 debug keystore（发布请换正式签名）。
+签名**不再使用脚本内置的 debug keystore**（旧版本把口令 `android` 硬编码在脚本里，任何人都能伪造同名包）。
+正式包需要自己准备 keystore 并用环境变量传入：
+
+```bash
+export RELEASE_KEYSTORE=/abs/path/release.jks
+export RELEASE_KEY_ALIAS=novelreader
+export RELEASE_STOREPASS='...'
+export RELEASE_KEYPASS='...'
+VCODE=31 VNAME=1.30 bash build.sh      # 缺任一变量时脚本会拒绝出包
+```
+
+打包流程会先 zipalign 再 apksigner，并写入 `VCODE/VNAME` 对应的 versionCode/versionName。
 
 成品 APK 请走 GitHub Releases 分发，不要提交进仓库。
+
+## 安全说明
+
+- **API Key**：只存本机 localStorage，设置页不再把 Key 回显到页面 DOM（输入框留空表示沿用已保存的 Key）；导出/分享不包含 Key。请优先使用 `https://` 接口，填 `http://` 时保存前会二次确认并提示明文传输风险。
+- **导入角色卡视为不可信输入**：字段有长度上限，世界书触发键里的正则做灾难性回溯（ReDoS）静态拦截并对匹配文本截断；`<small>`/世界书等所有渲染路径走统一转义。
+- **清除数据**走 `RP_STORE.wipeAll()`，同时清 localStorage / IndexedDB / App 私有目录文件，不会留下可恢复的副本。
 
 ## 数据来源
 

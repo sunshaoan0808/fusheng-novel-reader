@@ -3255,6 +3255,10 @@ window.twFinish = ()=>{ if(!TW.timer) return; twStop(); renderChat(); };
 function twStart(idx, bodyText, cardHTML, mid){
 const log = $("#chatlog"); if(!log) return;
 const frames = (typeof RP_TYPEWRITER!=="undefined") ? RP_TYPEWRITER.progressFrames(bodyText) : [bodyText];
+/* P1-P2: 长回复的每帧都 md() 全文等于把 markdown 解析跑了 ~110 遍（O(n²) 主因）。
+ * 超过 1200 字时动画阶段改用 textContent 纯文本推进，播完（done）再一次性 md 出成品；
+ * 视觉上只差动画期间的粗体/斜体，换来的是常数级帧成本。搜索高亮态保持原路径。 */
+const twPlain = String(bodyText||"").length > 1200;
 let fi = 0;
 TW.idx = idx;
 TW.mid = mid || "";
@@ -3271,7 +3275,12 @@ if(!el || (TW.mid && el.dataset && el.dataset.mid !== TW.mid)){ twStop(); render
 const bub = el.querySelector(".bubble");
 if(bub){
 const partial = frames[Math.min(fi, frames.length-1)];
+if(twPlain && !done && !SEARCH.active){
+  bub.textContent = partial;
+  bub.insertAdjacentHTML("beforeend", `<span class="twcur"></span>`);
+}else{
 bub.innerHTML = hlRestore(md(hlSearchRaw(partial))) + (done?cardHTML:`<span class="twcur"></span>`);
+}
 }
 if(chatNearBottom()){ markProgScroll(); log.scrollTop = log.scrollHeight; }
 if(done){ twStop(); renderChat(); /* M4: 播完重渲染，长消息挂上折叠结构 */ }
