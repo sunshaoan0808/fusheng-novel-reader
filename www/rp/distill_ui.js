@@ -319,11 +319,18 @@ async function onGenPlan(){
   }
 
   // 预估
+  /* 调用量估算 (2026-10-18 之后的口径):
+   * 画像按块批量 → 每块 1 次（原来 块×角色 次）；剧情梗概每块 1 次；
+   * 关系丰富 + 开场白 + 各种合并约 60 + 角色数 次。
+   * 耗时按 3 路并发估：批量画像单次输出长，按 30s；其余按 6s。 */
   var nChunks = S.chunks.length;
   var nChars = chars.length;
-  var estCalls = nChunks * nChars + nChars * 3 + 20; // 画像 + 合并 + 其他
-  if(S.depth === "full") estCalls += nChunks + 20;
-  var estMin = Math.round(estCalls * 0.25);
+  var profileCalls = nChunks;
+  var plotCalls = (S.depth === "full") ? nChunks : 0;
+  var otherCalls = 60 + nChars;
+  var estCalls = profileCalls + plotCalls + otherCalls;
+  var estSec = profileCalls * 30 + (plotCalls + otherCalls) * 6;
+  var estMin = Math.max(1, Math.round(estSec / 3 / 60));
 
   var unselected = S.discovered.filter(function(d){ return !S.selected[d.name]; }).length;
 

@@ -83,10 +83,15 @@ async function chat(messages, opts){
       var ctrl = (typeof AbortController !== "undefined") ? new AbortController() : null;
       var timer = ctrl ? setTimeout(function(){ try{ ctrl.abort(); }catch(_){} }, timeoutMs) : null;
       try{
+        // 批量画像一次要产出多个角色的档案，输出会明显变长；不显式给上限时
+        // 部分网关按 4096 截断，JSON 会断在半途 → 解析失败 → 回退逐人（很慢）。
+        var body = {model: models[mi], messages: messages, temperature: opts.temp || 0.7};
+        var maxTok = parseInt(opts.maxTokens, 10);
+        if(maxTok > 0) body.max_tokens = maxTok;
         var r = await fetch(url, {
           method: "POST",
           headers: {"Content-Type": "application/json", "Authorization": "Bearer " + c.key},
-          body: JSON.stringify({model: models[mi], messages: messages, temperature: opts.temp || 0.7}),
+          body: JSON.stringify(body),
           signal: ctrl ? ctrl.signal : undefined
         });
         if(!r.ok) throw mkHttpError(r.status);

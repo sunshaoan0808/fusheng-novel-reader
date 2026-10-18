@@ -130,7 +130,7 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
       { id: "ch002", text: "黛玉又哭了半日。".repeat(20), stage: "mid" },
       { id: "ch003", text: "黛玉葬花。".repeat(20), stage: "late" }
     ];
-    const res = await C.distillNovel(chunks, ["林黛玉"], { aliasMap: { "黛玉": "林黛玉" } });
+    const res = await C.distillNovel(chunks, ["林黛玉"], { aliasMap: { "黛玉": "林黛玉" }, batchProfiles: false });
     t("D2 别名-only 正文三块全部蒸馏（原为 0 次调用）", calls === 3 && res["林黛玉"] && res["林黛玉"].chunks === 3);
   }
 
@@ -158,6 +158,31 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     });
     if (curE > 0) covered += curE - curS;
     t("D3 正文覆盖率 100%（原为 84%）", covered >= text.length);
+  }
+
+  /* ── 章节打包：块数下降但一个字都不能丢 ─────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_chunk.js"]);
+    const C = sb.DISTILL_CHUNK;
+    const paras = [];
+    for (let c = 1; c <= 60; c++) {
+      const body = ("风雪夜里，他站在桥头看着远处的灯火，想起第" + c + "次分别。".repeat(60)).slice(0, 1500);
+      paras.push(body);
+    }
+    const text = paras.map((b, i) => "第" + (i + 1) + "章　风雪夜\n" + b).join("\n");
+    const chunks = C.chunkNovel(text);
+    const chapters = C.splitChapters(text, "^第[一二三四五六七八九十百千零0-9]+[回章].*");
+    t("打包后块数远少于章节数", chapters.length === 60 && chunks.length < 30);
+    t("打包后每块不超过上限", chunks.every(c => c.chars <= C.MAX_CHARS));
+    // 每章正文必须完整落在某个块里（块由整章拼接而来，所以应能整段命中）
+    const joined = chunks.map(c => c.text).join("\n");
+    const lost = chapters.filter(ch => {
+      const body = ch.body.trim();
+      return body && joined.indexOf(body) < 0;
+    });
+    t("打包不丢正文（每章原文都能在块里找到）", lost.length === 0);
+    t("块 id 全书唯一", new Set(chunks.map(c => c.id)).size === chunks.length);
   }
 
   /* ── D15 chunkText 参数离谱也不能死循环 ─────────────────────── */
@@ -188,24 +213,24 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
       { id: "ch002", text: "林黛玉走了。".repeat(20), stage: "late" }
     ];
     const ck = {};
-    await C.distillNovel(chunks, ["林黛玉"], { checkpoint: ck });
+    await C.distillNovel(chunks, ["林黛玉"], { checkpoint: ck, batchProfiles: false });
     t("D4 checkpoint 存的是结果对象而不是 true",
       typeof ck["ch001|林黛玉"] === "object" && !!ck["ch001|林黛玉"].fields);
     const first = calls;
-    const res2 = await C.distillNovel(chunks, ["林黛玉"], { checkpoint: ck });
+    const res2 = await C.distillNovel(chunks, ["林黛玉"], { checkpoint: ck, batchProfiles: false });
     t("D4 续跑 0 次调用", calls - first === 0);
     t("D4 续跑后档案完整（原为 0 张卡）", !!res2["林黛玉"] && res2["林黛玉"].chunks === 2);
 
     // 旧格式断点（值为 true）无法还原内容，应按未完成重算
     const legacy = { "ch001|林黛玉": true, "ch002|林黛玉": true };
     const before = calls;
-    const res3 = await C.distillNovel(chunks, ["林黛玉"], { checkpoint: legacy });
+    const res3 = await C.distillNovel(chunks, ["林黛玉"], { checkpoint: legacy, batchProfiles: false });
     t("D4 旧布尔断点按未完成重算", calls - before === 2 && res3["林黛玉"].chunks === 2);
 
     let n = 0;
     sb.DISTILL_LLM.chat = () => { n++; return Promise.resolve({ content: "- **core_identity**: x" }); };
     const five = [1, 2, 3, 4, 5].map(i => ({ id: "c" + i, text: "甲出现了。".repeat(5), stage: "mid" }));
-    const ra = await C.distillNovel(five, ["甲"], { checkpoint: {}, shouldAbort: () => n >= 2 });
+    const ra = await C.distillNovel(five, ["甲"], { checkpoint: {}, batchProfiles: false, shouldAbort: () => n >= 2 });
     t("D11 中止后立即停止调用", n === 2);
     t("D11 中止保留已完成部分", ra["甲"] && ra["甲"].chunks === 2);
   }
@@ -389,6 +414,114 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     }, {});
     t("D21 分层对象不拼成 [object Object]", sent.indexOf("[object Object]") < 0);
     t("D21 字符串字段仍然进 prompt", sent.indexOf("书生") >= 0);
+  }
+
+  /* ── A 批量画像：一块一次调用，产出全部角色 ─────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const chunks = [
+      { id: "c1", text: "甲与乙同行。".repeat(20), stage: "early" },
+      { id: "c2", text: "甲与乙争执。".repeat(20), stage: "mid" },
+      { id: "c3", text: "甲与乙告别。".repeat(20), stage: "late" }
+    ];
+    let calls = 0, batchCalls = 0;
+    sb.DISTILL_LLM.chat = function (msgs) {
+      calls++;
+      const sys = msgs[0].content || "";
+      const u = JSON.parse(msgs[1].content);
+      if (sys.indexOf("严格 JSON") >= 0) {
+        batchCalls++;
+        const map = {};
+        u.characters.forEach(n => { map[n] = { core_identity: n + "@" + u.chunk_id, core_traits: "冷静", background: "背景够十个字以上的描述" }; });
+        return Promise.resolve({ content: "```json\n" + JSON.stringify({ characters: map }) + "\n```" });
+      }
+      return Promise.resolve({ content: "- **core_identity**: " + u.character });
+    };
+    const res = await C.distillNovel(chunks, ["甲", "乙"], { checkpoint: {} });
+    t("A1 批量模式每块只调用一次（3 块 2 人 → 3 次）", batchCalls === 3 && calls === 3);
+    t("A1 两人都有 3 块档案", res["甲"] && res["甲"].chunks === 3 && res["乙"] && res["乙"].chunks === 3);
+    t("A1 代码块围栏内的 JSON 能解析", /@c[123]/.test(res["甲"].fields.core_identity));
+
+    // 续跑: 全部命中后不应再调用
+    const before = calls;
+    const res2 = await C.distillNovel(chunks, ["甲", "乙"], { checkpoint: {} });
+    t("A2 无断点时重跑仍会调用", calls > before);
+    const ck = {};
+    await C.distillNovel(chunks, ["甲"], { checkpoint: ck });
+    const before2 = calls;
+    const res3 = await C.distillNovel(chunks, ["甲"], { checkpoint: ck });
+    t("A2 断点命中后批量不复跑", calls === before2 && res3["甲"].chunks === 3);
+  }
+
+  /* ── A 批量失败/漏角色的兜底 ─────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const chunks = [{ id: "c1", text: "甲与乙同行。".repeat(20), stage: "mid" }];
+
+    // 整批返回非 JSON → 回退逐人
+    let calls = 0, singles = 0;
+    sb.DISTILL_LLM.chat = function (msgs) {
+      calls++;
+      const sys = msgs[0].content || "";
+      if (sys.indexOf("严格 JSON") >= 0) return Promise.resolve({ content: "抱歉，我无法完成" });
+      singles++;
+      return Promise.resolve({ content: "- **core_identity**: 单人结果" });
+    };
+    const r = await C.distillNovel(chunks, ["甲", "乙"], { checkpoint: {} });
+    t("A3 批量解析失败回退逐人", calls === 3 && singles === 2);
+    t("A3 回退后仍产出档案", r["甲"] && r["乙"]);
+
+    // 批量只返回一个角色 → 缺的那个单人补跑
+    let calls2 = 0, singles2 = 0;
+    sb.DISTILL_LLM.chat = function (msgs) {
+      calls2++;
+      const sys = msgs[0].content || "";
+      const u = JSON.parse(msgs[1].content);
+      if (sys.indexOf("严格 JSON") >= 0) {
+        return Promise.resolve({ content: JSON.stringify({ characters: { "甲": { core_identity: "只有甲" } } }) });
+      }
+      singles2++;
+      return Promise.resolve({ content: "- **core_identity**: 补跑" });
+    };
+    const r2 = await C.distillNovel(chunks, ["甲", "乙"], { checkpoint: {} });
+    t("A4 批量漏角色时单人补跑", calls2 === 2 && singles2 === 1);
+    t("A4 补跑的角色也有档案", !!r2["乙"]);
+  }
+
+  /* ── C 并发 ─────────────────────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const chunks = [];
+    for (let i = 0; i < 12; i++) chunks.push({ id: "c" + i, text: "甲出现了。".repeat(5), stage: "mid" });
+    let inflight = 0, peak = 0;
+    sb.DISTILL_LLM.chat = async () => {
+      inflight++; peak = Math.max(peak, inflight);
+      await new Promise(r => setTimeout(r, 20));
+      inflight--;
+      return { content: "- **core_identity**: x" };
+    };
+    const t0 = Date.now();
+    await C.distillNovel(chunks, ["甲"], { checkpoint: {}, batchProfiles: false, concurrency: 1 });
+    const serialMs = Date.now() - t0;
+    peak = 0;
+    const t1 = Date.now();
+    await C.distillNovel(chunks, ["甲"], { checkpoint: {}, batchProfiles: false, concurrency: 3 });
+    const parMs = Date.now() - t1;
+    t("C1 3 路并发时同时在飞 3 个请求", peak === 3);
+    t("C1 并发确实更快", parMs < serialMs * 0.6);
+
+    peak = 0;
+    await C.distillNovel(chunks, ["甲"], { checkpoint: {}, batchProfiles: false, concurrency: 1 });
+    t("C2 concurrency=1 退回串行", peak === 1);
+    peak = 0;
+    await C.distillNovel(chunks, ["甲"], { checkpoint: {}, batchProfiles: false, concurrency: 99 });
+    t("C2 并发上限被夹到 8", peak <= 8);
   }
 
   console.log(`distill_pipeline: ${pass} pass, ${fail} fail`);
