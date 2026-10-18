@@ -712,6 +712,15 @@ window.wcClearSearch = ()=>{
 };
 
 function showMore(){
+/* 伏笔二级拆包（data.js 拆包之二）：foreshadowing 不在 run 文件里，
+   未就绪先拉再渲染；下面 RUN.foreshadowing.length 不容 undefined。 */
+if(RUN && RUN.run_id && RUN.foreshadowing === undefined && typeof RP_LAZY !== "undefined"){
+  var _rid = RUN.run_id;
+  view.innerHTML = `<div class="empty">正在加载伏笔数据…</div>`;
+  RP_LAZY.ensureRunFs(_rid).then(function(){ if(TAB === "more") showMore(); })
+    .catch(function(e){ runLoadingFailed(e, function(){ showMore(); }); });
+  return;
+}
 const wb = RUN.worldbook;
 let wbHtml = "";
 if(wb && wb.length){

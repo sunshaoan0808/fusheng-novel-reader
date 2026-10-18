@@ -33,6 +33,25 @@ function deepEq(a, b) {
 }
 
 (async () => {
+  /* git HEAD 的数据集（一级拆包后的完整形态：瘦身 data.js + run 文件，foreshadowing
+   * 还在 run 里）作为「拆包前」基准；_fs 文件是本次新增，HEAD 没有，跳过。
+   * 多组断言共用，先提取。 */
+  let orig = null;
+  try {
+    const headSrcs = {};
+    const names = ["www/data.js", ...fs.readdirSync(path.join(WWW, "data"))
+      .filter(f => /^run_.*\.js$/.test(f) && !/_foreshadowing\.js$/.test(f))
+      .sort().map(f => "www/data/" + f)];
+    for (const n of names) {
+      try { headSrcs[n] = execSync("git show HEAD:" + n, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); } catch (e) {}
+    }
+    const sb = { console };
+    sb.window = sb;
+    const ctx = vm.createContext(sb);
+    for (const n of Object.keys(headSrcs)) vm.runInContext(headSrcs[n], ctx, { filename: n });
+    orig = sb.__DATA__;
+  } catch (e) { /* git 不可用时跳过等价校验 */ }
+
   /* ---- 1) 瘦身 data.js ---- */
   const slimSize = fs.statSync(path.join(WWW, "data.js")).size;
   t("D1 data.js 瘦到 5KB 以下", slimSize < 5120);
@@ -43,22 +62,33 @@ function deepEq(a, b) {
   t("D5 index 字段完好（characters/has_worldcard）",
     D.index.every(r => Array.isArray(r.characters) && typeof r.has_worldcard === "boolean"));
 
-  /* ---- 2) run 文件齐全 ---- */
+  /* ---- 2) run 文件齐全（核心 + foreshadowing 二级） ---- */
   const runFiles = fs.readdirSync(path.join(WWW, "data")).filter(f => /^run_.*\.js$/.test(f)).sort();
-  t("D6 run 文件数与 index 一致", runFiles.length === D.index.length);
+  const coreFiles = runFiles.filter(f => !/_foreshadowing\.js$/.test(f));
+  const fsFiles = runFiles.filter(f => /_foreshadowing\.js$/.test(f));
+  t("D6 核心 run 文件数与 index 一致", coreFiles.length === D.index.length);
   for (const r of D.index) {
-    t("D7 " + r.run_id + " 有 run 文件", runFiles.includes("run_" + r.run_id + ".js"));
+    t("D7 " + r.run_id + " 有核心 run 文件", coreFiles.includes("run_" + r.run_id + ".js"));
+  }
+  /* 二级拆不变量：原版有 foreshadowing 字段的 run 必有 _fs 文件，
+   * 且核心 run 文件执行后该字段为 undefined（foretell 里的 foreshadowing_links
+   * 是同名不同义的下级字段，不能靠字符串匹配，必须跑一遍看真字段）。 */
+  if (orig) {
+    const withFs = Object.keys(orig.runs).filter(id => "foreshadowing" in orig.runs[id]);
+    t("D6b 每个含 foreshadowing 的 run 都有 _fs 文件",
+      withFs.every(id => fsFiles.includes("run_" + id + "_foreshadowing.js")));
+    for (const f of coreFiles) {
+      const sb = { console, __DATA__: { index: [], runs: {}, rp_cards: {} } };
+      sb.window = sb;
+      const ctx = vm.createContext(sb);
+      vm.runInContext(fs.readFileSync(path.join(WWW, "data", f), "utf8"), ctx, { filename: f });
+      const rid = f.replace(/^run_/, "").replace(/\.js$/, "");
+      t("D6c " + f + " 执行后 foreshadowing 为 undefined",
+        sb.__DATA__.runs[rid].foreshadowing === undefined);
+    }
   }
 
   /* ---- 3) 拼回与 git HEAD 原版深度相等 ---- */
-  let orig = null;
-  try {
-    const src = execSync("git show HEAD:www/data.js", { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-    const sb = { console };
-    sb.window = sb;
-    vm.runInContext(src, vm.createContext(sb), { filename: "data.js@HEAD" });
-    orig = sb.__DATA__;
-  } catch (e) { /* git 不可用时跳过等价校验 */ }
   if (orig) {
     const merged = loadData(["data.js", ...runFiles.map(f => "data/" + f)]);
     t("D8 拼回 index 与原版相等", deepEq(merged.index, orig.index));
@@ -88,23 +118,24 @@ function deepEq(a, b) {
     sb.window = sb; sb.globalThis = sb;
     const ctx = vm.createContext(sb);
     vm.runInContext(fs.readFileSync(path.join(WWW, "rp", "lazy.js"), "utf8"), ctx, { filename: "lazy.js" });
-    /* run 文件加载即填数据：模拟真实 data/run_*.js 的行为 */
-    const runData = {};
-    for (const r of D.index) runData["data/run_" + r.run_id + ".js"] = r.run_id;
-    const origCreate = sb.document.createElement;
-    sb.document.createElement = function() {
-      const el = origCreate();
-      const src = runData[el.src || ""];
-      const realOnload = el.onload;
-      return el;
-    };
-    /* 简化：直接在 appendChild 成功后写数据（onload 之前） */
+    /* script 加载即填数据：模拟真实 data/run_*.js / run_*_fs.js 的行为。
+       清安录的伏笔 mock 成 []——空数组也是数据，必须判「已就绪」。 */
+    const runData = {}, fsData = {};
+    for (const r of D.index) {
+      runData["data/run_" + r.run_id + ".js"] = r.run_id;
+      fsData["data/run_" + r.run_id + "_foreshadowing.js"] = r.run_id;
+    }
     sb.document.head.appendChild = function(el) {
       appended.push(el.src);
       setTimeout(() => {
-        const rid = runData[el.src];
         if (failSet && failSet.has(el.src)) { if (el.onerror) el.onerror(); return; }
-        if (rid) { sb.__DATA__ = sb.__DATA__ || {}; sb.__DATA__.runs = sb.__DATA__.runs || {}; sb.__DATA__.runs[rid] = { run_id: rid, novel: rid }; }
+        var rid = runData[el.src], frid = fsData[el.src];
+        sb.__DATA__ = sb.__DATA__ || {}; sb.__DATA__.runs = sb.__DATA__.runs || {};
+        if (rid) sb.__DATA__.runs[rid] = { run_id: rid, novel: rid };
+        if (frid) {
+          if (!sb.__DATA__.runs[frid]) sb.__DATA__.runs[frid] = { run_id: frid };
+          sb.__DATA__.runs[frid].foreshadowing = frid === "qinganlu" ? [] : [{ hook: "m" }];
+        }
         if (el.onload) el.onload();
       }, 0);
     };
@@ -143,6 +174,38 @@ function deepEq(a, b) {
   let err2 = null;
   try { await C.lazy.ensureRun("no_such_run"); } catch (e) { err2 = e; }
   t("D21 不存在的 run 会 reject", !!err2);
+
+  /* ---- 5) RP_LAZY.ensureRunFs（foreshadowing 二级拆） ---- */
+  const F = bootLazy();
+  F.sb.__DATA__ = { index: D.index, runs: { honglou_full: { run_id: "honglou_full" } }, rp_cards: {} };
+  t("D22 ensureRunFs 前 foreshadowing 是 undefined", F.sb.__DATA__.runs.honglou_full.foreshadowing === undefined);
+  const fp1 = F.lazy.ensureRunFs("honglou_full");
+  const fp2 = F.lazy.ensureRunFs("honglou_full");
+  t("D23 并发 ensureRunFs 返回同一 Promise", fp1 === fp2);
+  await fp1;
+  t("D24 ensureRunFs 后字段就绪", Array.isArray(F.sb.__DATA__.runs.honglou_full.foreshadowing));
+  t("D25 加载路径是 data/run_<id>_foreshadowing.js", F.appended[0] === "data/run_honglou_full_foreshadowing.js");
+  const fsBefore = F.appended.length;
+  await F.lazy.ensureRunFs("honglou_full");
+  t("D26 已就绪再 ensureRunFs 不发请求", F.appended.length === fsBefore);
+
+  /* 空数组 [] 也是数据：ensureRun 完（字段未拆进来时是 undefined）后 ensureRunFs 到 [] 即就绪 */
+  const Q = bootLazy();
+  Q.sb.__DATA__ = { index: D.index, runs: {}, rp_cards: {} };
+  await Q.lazy.ensureRun("qinganlu");
+  t("D27 ensureRun 后空伏笔字段仍 undefined（等二级）", Q.sb.__DATA__.runs.qinganlu.foreshadowing === undefined);
+  await Q.lazy.ensureRunFs("qinganlu");
+  t("D28 ensureRunFs 后空数组 [] 判已就绪", Array.isArray(Q.sb.__DATA__.runs.qinganlu.foreshadowing)
+    && Q.sb.__DATA__.runs.qinganlu.foreshadowing.length === 0);
+
+  const FB = bootLazy(new Set(["data/run_shuihu_full_foreshadowing.js"]));
+  FB.sb.__DATA__ = { index: D.index, runs: { shuihu_full: { run_id: "shuihu_full" } }, rp_cards: {} };
+  let ferr = null;
+  try { await FB.lazy.ensureRunFs("shuihu_full"); } catch (e) { ferr = e; }
+  t("D29 ensureRunFs 失败会 reject", !!ferr && /shuihu_full/.test(ferr.message));
+  const fsAfterFail = FB.appended.length;
+  await FB.lazy.ensureRunFs("shuihu_full").catch(() => {});
+  t("D30 失败后重试重新发请求", FB.appended.length > fsAfterFail);
 
   console.log(`data_split: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);

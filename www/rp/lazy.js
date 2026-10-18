@@ -97,6 +97,31 @@ function ensureRuns(ids){
   return Promise.all((ids || []).map(ensureRun));
 }
 
+/* ---------- run 二级字段按需加载（data/run_<id>_<field>.js）----------
+ * foreshadowing 全仓只有 showMore()（更多 tab）一个消费点，从 run 文件再拆一级：
+ * 进书/进聊天不为它付流量，点「更多」时 ensureRunFs 补拉。
+ * 就绪判定用「字段已定义」：空数组 [] 也是数据（清安录），与「没加载」区分。 */
+var runFsState = {};   // runId -> Promise
+
+function ensureRunFs(runId, field){
+  field = field || "foreshadowing";
+  if(!runId || typeof runId !== "string") return Promise.resolve();
+  var runs = window.__DATA__ && window.__DATA__.runs;
+  if(runs && runs[runId] && runs[runId][field] !== undefined) return Promise.resolve();
+  var key = runId + "|" + field;
+  if(runFsState[key]) return runFsState[key];
+  runFsState[key] = loadOne("data/run_" + encodeURIComponent(runId) + "_" + field + ".js")
+    .then(function(){
+      var r = (window.__DATA__ && window.__DATA__.runs || {})[runId];
+      if(!r || r[field] === undefined) throw new Error("二级字段加载后仍缺失: " + key);
+    })
+    .catch(function(e){
+      runFsState[key] = null;
+      throw e;
+    });
+  return runFsState[key];
+}
+
 /* index 里所有 run 全量确保 */
 function ensureAllRuns(){
   var idx = (window.__DATA__ && window.__DATA__.index) || [];
@@ -104,5 +129,6 @@ function ensureAllRuns(){
 }
 
 window.RP_LAZY = { ensureGroup: ensureGroup, groupReady: groupReady, groups: GROUPS,
-                   ensureRun: ensureRun, ensureRuns: ensureRuns, ensureAllRuns: ensureAllRuns };
+                   ensureRun: ensureRun, ensureRuns: ensureRuns, ensureAllRuns: ensureAllRuns,
+                   ensureRunFs: ensureRunFs };
 })();

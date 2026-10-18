@@ -49,7 +49,18 @@ async def main():
             await asyncio.sleep(2.5)
             fails = []
             # 进红楼 run 的 more 页 (showMore)
-            ok = await c.ev("(function(){var d=window.__DATA__;var r=d.runs['honglou_full'];if(!r)return 'no-run';RUN=r;showMore();return 'ok';})()")
+            # data.js 拆包后 runs/foreshadowing 均按需加载：先触发再轮询等两级就绪
+            await c.ev("(function(){RP_LAZY.ensureRun('honglou_full')"
+                       ".then(function(){return RP_LAZY.ensureRunFs('honglou_full');})"
+                       ".catch(function(e){window.__lzErr=String(e&&e.message||e);});return 1;})()")
+            for _ in range(60):
+                st = await c.ev("(function(){try{if(window.__lzErr)return 'err';"
+                                "var r=window.__DATA__.runs['honglou_full'];"
+                                "return (r&&r.foreshadowing!==undefined)?'ready':'wait';}catch(e){return 'err';}})()")
+                if st != "wait": break
+                await asyncio.sleep(0.25)
+            if st != "ready": fails.append("honglou_full 数据未就绪: " + str(st))
+            ok = await c.ev("(function(){var r=window.__DATA__.runs['honglou_full'];if(!r)return 'no-run';RUN=r;showMore();return 'ok';})()")
             if ok != "ok": fails.append("honglou_full run 缺失: " + str(ok))
             await asyncio.sleep(1)
             sw = await c.ev("document.documentElement.scrollWidth")
