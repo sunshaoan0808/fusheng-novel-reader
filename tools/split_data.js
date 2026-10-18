@@ -1,5 +1,5 @@
 /* 把 www/data.js 的首屏大 JSON 按 run 拆成 data/run_<id>.js，并把 foreshadowing
- * 二级拆到 data/run_<id>_fs.js（2026-10-18）。
+ * 二级拆到 data/run_<id>_foreshadowing.js（2026-10-18）。
  *
  * 背景：data.js 曾把 3 个 run 的 profiles/worldbook/foreshadowing/rp_cards
  * 全量塞进首屏（2.9MB），而书架只需要 index。拆包后首屏只留 index，
@@ -11,7 +11,7 @@
  * 行为：
  *   1) 大会版 data.js（含 runs）→ 直接拆；
  *   2) 已是瘦身版（runs 为空）→ 从现有 data/run_*.js 重组后再拆（可重入）。
- * 输出：data/run_<id>.js（无 foreshadowing）+ data/run_<id>_fs.js（仅 foreshadowing）
+ * 输出：data/run_<id>.js（无 foreshadowing）+ data/run_<id>_foreshadowing.js（仅 foreshadowing）
  *       + 瘦身重写 www/data.js。幂等；拼回后与源数据逐字段等价。
  * 注意：外部 snapshot.py 若重新生成大会版 data.js，需再跑一次本脚本。
  */
@@ -71,7 +71,7 @@ for (const id of runIds) {
   for (const f of SPLIT_FIELDS) delete runOut[f];
   const body =
 `/* 《${novel}》蒸馏数据 · ${today} 从 data.js 拆出（tools/split_data.js）。
- * 由 RP_LAZY.ensureRun("${id}") 按需加载；伏笔字段在同目录 run_${id}_fs.js。
+ * 由 RP_LAZY.ensureRun("${id}") 按需加载；伏笔字段在同目录 run_${id}_foreshadowing.js。
  * data.js 重新生成不会覆盖本文件。 */
 window.__DATA__.runs[${JSON.stringify(id)}]=${JSON.stringify(runOut)};
 window.__DATA__.rp_cards[${JSON.stringify(id)}]=${JSON.stringify(cards)};
@@ -95,7 +95,7 @@ window.__DATA__.runs[${JSON.stringify(id)}].${f}=${JSON.stringify(run[f])};
 /* 瘦身 data.js：只留 index；runs/rp_cards 留空壳防止无兜底调用炸 TypeError */
 const slim =
 `/* 首屏索引（${today} 拆包）：runs/rp_cards 已移至 data/run_<id>.js 按需加载，
- * 入口 RP_LAZY.ensureRun(runId)（rp/lazy.js）；foreshadowing 二级拆至 run_<id>_fs.js
+ * 入口 RP_LAZY.ensureRun(runId)（rp/lazy.js）；foreshadowing 二级拆至 run_<id>_foreshadowing.js
  * （RP_LAZY.ensureRunFs）。本文件由 tools/split_data.js 生成，
  * 外部 snapshot.py 若重新生成大会版，请再跑 node tools/split_data.js。 */
 window.__DATA__={"index":${JSON.stringify(D.index)},"runs":{},"rp_cards":{}};

@@ -20,7 +20,7 @@ window.__onBackPressed = ()=>{
 /* P2-11: 转义收敛到 rp/escutil.js 的 escH()（index.html 最先加载 escutil；测试 vm 里同样先加载）。
    独立加载场景无 escH 时回退同款实现。不用 jq()：那是"HTML属性+JS字符串"双上下文，
    会把正文换行变成字面 \n、反斜杠加倍，只适用于 onclick 模板。 */
-const esc = (typeof escH !== "undefined") ? escH : function(s){return String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));};
+const esc = (typeof escH !== "undefined") ? escH : function(s){return String(s??"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");};
 
 /* ---------- 极简 markdown ---------- */
 function md(src){
@@ -1638,7 +1638,7 @@ ${cur ? `<div class="field"><label>暗度 <span id="wall_dim_v">${dim}%</span></
 ${cur ? `<button class="btn ghost" onclick="clearWallpaperUI()">恢复默认</button>` : ""}
 </div>
 <input type="file" id="wall_file" accept="image/*" style="display:none" onchange="uploadWallpaperUI(this)">
-<div class="hint">${S.hint}</div>
+<div class="hint">${escH(S.hint)}</div>
 <div style="height:40px"></div>`;
 window.scrollTo(0,0);
 };

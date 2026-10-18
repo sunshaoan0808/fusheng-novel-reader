@@ -4,13 +4,20 @@
 var RP_SOUL_WARM = (function(){
 "use strict";
 
-function esc(s){ return String(s == null ? "" : s); }
-function escH(s){
-  return esc(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-function jq(s){
-  return esc(s).replace(/\\/g, "\\\\").replace(/'/g, "\\'").replace(/"/g, "&quot;");
-}
+/* 2026-10-18 转义收敛：三件套不再私复制，统一走全局 escutil.js（escH/jq）。
+   原私有 jq 漏转 & < > 与 \n \r——角色名/卡片字段含换行时拼进 onclick 的
+   JS 字符串会语法错误（2026-10-18 收敛时发现）。测试沙盒未加载 escutil.js
+   时退到同语义私有实现，保证沙盒与浏览器行为一致、无分叉。 */
+var toStr = function(s){ return String(s == null ? "" : s); };
+var escH = (typeof window!=="undefined" && window.escH) || function(s){
+  return toStr(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;").replace(/'/g,"&#39;");
+};
+var jq = (typeof window!=="undefined" && window.jq) || function(s){
+  return toStr(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;")
+    .replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/"/g,"&quot;")
+    .replace(/\n/g,"\\n").replace(/\r/g,"\\r");
+};
 
 function getCard(runId, name){
   try{

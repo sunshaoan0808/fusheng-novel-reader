@@ -1,12 +1,12 @@
 /* data.js 拆包回归（2026-10-18）
  * 1) 瘦身 data.js 只剩 index；2) 每个 index run 都有 run 文件；
- * 3) 拼回后与 git HEAD 的原版 data.js 深度相等（拆包无损）；
+ * 3) 拼回后与「二级拆包前」的数据集深度相等（拆包无损）；
  * 4) RP_LAZY.ensureRun 单飞/幂等/失败重试/就绪判定。
  */
 const fs = require("fs");
 const vm = require("vm");
 const path = require("path");
-const { execSync } = require("child_process");
+const { execFileSync } = require("child_process");
 
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
 let pass = 0, fail = 0;
@@ -33,17 +33,30 @@ function deepEq(a, b) {
 }
 
 (async () => {
-  /* git HEAD 的数据集（一级拆包后的完整形态：瘦身 data.js + run 文件，foreshadowing
-   * 还在 run 里）作为「拆包前」基准；_fs 文件是本次新增，HEAD 没有，跳过。
+  /* 「拆包前」基准 = 引入 run_<id>_foreshadowing.js 那个提交的父提交
+   * （foreshadowing 还在核心 run 文件里的完整形态）。不能直接用 HEAD：
+   * HEAD 自己就是已二级拆包的状态，核心 run 文件里没有 foreshadowing，
+   * 而拼回结果含 _fs 恢复的 foreshadowing，两边反而对不上（时序地雷：
+   * 6607530 提交时 HEAD 还是拆包前，能过；提交后 HEAD 语义变了就炸）。
    * 多组断言共用，先提取。 */
   let orig = null;
   try {
+    let base = "HEAD";
+    try {
+      const addCommit = execFileSync("git",
+        ["log", "--diff-filter=A", "--format=%H", "--",
+          "www/data/run_honglou_full_foreshadowing.js"],
+        { encoding: "utf8" }).trim().split("\n")[0];
+      if (addCommit) base = addCommit + "~1";
+    } catch (e) { /* 没有 _fs 文件的历史（未二级拆）：用 HEAD */ }
     const headSrcs = {};
     const names = ["www/data.js", ...fs.readdirSync(path.join(WWW, "data"))
       .filter(f => /^run_.*\.js$/.test(f) && !/_foreshadowing\.js$/.test(f))
       .sort().map(f => "www/data/" + f)];
     for (const n of names) {
-      try { headSrcs[n] = execSync("git show HEAD:" + n, { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); } catch (e) {}
+      /* execFileSync 不走 shell：cmd.exe 会把 <rev>^:<path> 的 ^ 当转义符吃掉，
+       * 静默加载错提交的版本（曾导致 D9 假失败） */
+      try { headSrcs[n] = execFileSync("git", ["show", base + ":" + n], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 }); } catch (e) {}
     }
     const sb = { console };
     sb.window = sb;
