@@ -720,6 +720,20 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
       Object.keys(U.selectionMatch(d, ["湘云"])).filter(k => U.selectionMatch(d, ["湘云"])[k]).length === 1);
     t("U9 无匹配时全不选", Object.keys(U.selectionMatch(d, ["不存在"]))
       .every(k => U.selectionMatch(d, ["不存在"])[k] === false));
+
+    // 记住上次选择：数量夹取 + 同一本书精确还原
+    t("U10 默认数量沿用上次（5 → 5）", U.defaultPickCount(12, "5", 12) === 5);
+    t("U11 上次数量超过总人数时夹到总数", U.defaultPickCount(6, "20", 12) === 6);
+    t("U12 没有记录时用兜底 12", U.defaultPickCount(30, null, 12) === 12);
+    t("U13 非法记录按兜底并夹取", U.defaultPickCount(8, "abc", 12) === 8);
+    t("U14 总人数 0 时不崩", U.defaultPickCount(0, "5", 12) === 0);
+
+    const restored = U.selectionRestore(d, { "林黛玉": true, "史湘云": true }, 3);
+    t("U15 同书还原上次勾选", restored["林黛玉"] === true && restored["史湘云"] === true &&
+      restored["贾宝玉"] === false);
+    const stale = U.selectionRestore(d, { "已删除的角色": true }, 2);
+    t("U16 角色表变了就退回取前 N", stale["林黛玉"] === true && stale["贾宝玉"] === true &&
+      stale["薛宝钗"] === false);
   }
 
   console.log(`distill_pipeline: ${pass} pass, ${fail} fail`);

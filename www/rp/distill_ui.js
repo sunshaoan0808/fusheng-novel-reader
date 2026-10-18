@@ -143,6 +143,53 @@ function selectionMatch(discovered, terms){
   return out;
 }
 
+/* ── 记住上次的选择 ───────────────────────────────────────────
+ * 两层：①上次选了几个（跨书通用）②这本书上次具体选了谁（同名书重跑时精确还原）。
+ * 存的都是名字，不存索引——角色列表顺序会随发现结果变。 */
+var PICK_N_KEY = "nd_distill_pick_n";
+
+function savedPickCount(){
+  try{
+    var n = parseInt(localStorage.getItem(PICK_N_KEY), 10);
+    return n > 0 ? n : 0;
+  }catch(e){ return 0; }
+}
+
+function pickKeyFor(fileName){
+  var s = String(fileName || "");
+  var h = 5381;
+  for(var i = 0; i < s.length; i++){ h = ((h << 5) + h + s.charCodeAt(i)) | 0; }
+  return "nd_distill_pick_" + (h >>> 0).toString(36);
+}
+
+/* 默认选几个：优上次的数量，夹在 [0, 总数] 之间；没有记录就 12 个 */
+function defaultPickCount(total, saved, fallback){
+  var n = parseInt(saved, 10);
+  if(!(n > 0)) n = parseInt(fallback, 10);
+  if(!(n > 0)) n = 12;
+  return Math.max(0, Math.min(n, total || 0));
+}
+
+/* 还原这本书上次的选择；一条都对不上（角色表大变）就退回"取前 N 个" */
+function selectionRestore(discovered, savedSel, fallbackN){
+  if(!savedSel || typeof savedSel !== "object") return selectionTop(discovered, fallbackN);
+  var out = {}, any = false;
+  (discovered || []).forEach(function(c){
+    var v = savedSel[c.name] === true;
+    out[c.name] = v;
+    if(v) any = true;
+  });
+  return any ? out : selectionTop(discovered, fallbackN);
+}
+
+function rememberPick(){
+  try{
+    var n = selCount();
+    if(n > 0) localStorage.setItem(PICK_N_KEY, String(n));
+    localStorage.setItem(pickKeyFor(S.fileName), JSON.stringify(S.selected));
+  }catch(e){}
+}
+
 /* 把 S.selected 同步到勾选框与"已选 N"计数，不重渲染（保留滚动位置和筛选词） */
 function syncSelection(){
   document.querySelectorAll("[data-char]").forEach(function(cb){
@@ -150,6 +197,7 @@ function syncSelection(){
   });
   var el = document.getElementById("d_sel_count");
   if(el) el.textContent = selCount();
+  rememberPick();
 }
 
 function charFilterTerms(){
@@ -179,7 +227,7 @@ function renderDiscover(){
   }
   var total = S.discovered.length;
   var picked = selCount();
-  var defN = Math.min(12, total);
+  var defN = defaultPickCount(total, savedPickCount(), 12);
   var inpStyle = "padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg)";
   return `<div class="card">
     ${warnHtml}
@@ -491,6 +539,7 @@ function onImportChange(e){
     S.selected[e.target.getAttribute("data-char")] = !!e.target.checked;
     var el = document.getElementById("d_sel_count");
     if(el) el.textContent = selCount();
+    rememberPick();
   }
 }
 function wire(){
@@ -550,6 +599,7 @@ function wire(){
     document.querySelectorAll("[data-char]").forEach(function(cb){
       S.selected[cb.getAttribute("data-char")] = cb.checked;
     });
+    rememberPick();
     onGenPlan();
   });
   var cf = document.getElementById("d_confirm");
@@ -596,8 +646,12 @@ async function runDiscover(){
         var be = barEl(); if(be && be.firstElementChild) be.firstElementChild.style.width = (d / t * 100) + "%";
       }
     });
-    // 默认选中 Top 12
-    S.discovered.forEach(function(c, i){ S.selected[c.name] = i < 12; });
+    /* 默认选择：这本书上次选过就原样还原，否则按上次用的数量取前 N 个（默认 12）。
+     * 别用固定 12 覆盖——用户上次只选了 5 个，这次不该又变回 12。 */
+    var savedSel = null;
+    try{ savedSel = JSON.parse(localStorage.getItem(pickKeyFor(S.fileName)) || "null"); }catch(e){}
+    S.selected = selectionRestore(S.discovered,
+      savedSel, defaultPickCount(S.discovered.length, savedPickCount(), 12));
     // 创建剧本包
     S.pkg = DISTILL_PACKAGE.createPackage(S.fileName);
     S.pkg.characters = S.discovered;
@@ -1325,6 +1379,7 @@ async function regenOpenings(pkgId, charName){
 var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, showProvenance: showProvenance,
   // 纯函数，供 UI 与测试共用（不依赖 DOM）
   selectionTop: selectionTop, selectionMatch: selectionMatch,
+  defaultPickCount: defaultPickCount, selectionRestore: selectionRestore,
   requestChange: requestChange, confirmChange: confirmChange,
   editFact: editFact, saveFact: saveFact, deleteFact: deleteFact, addFact: addFact, recompileCard: recompileCard,
   showWorldbook: showWorldbook,
