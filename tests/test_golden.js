@@ -38,7 +38,10 @@ index: [
 ],
 runs: {r1: {run_id: "r1", novel: "红楼梦", worldbook: [], relations: [], profiles: [],
 characters: ["林黛玉", "贾宝玉"],
-openings: {"林黛玉": [{situation: "初见", text: "潇湘馆的竹影里，她抬眼看你。"}, {situation: "葬花", text: "花冢前，她抱着花锄轻叹。"}]}}},
+openings: {"林黛玉": [{situation: "初见", text: "潇湘馆的竹影里，她抬眼看你。"}, {situation: "葬花", text: "花冢前，她抱着花锄轻叹。"}]}},
+/* 真实数据不变量：index 里的 run 在 runs 里必有条目（data.js 拆包后 guardAllRuns 依赖它） */
+r2: {run_id: "r2", novel: "三国演义", worldbook: [], relations: [], profiles: [],
+characters: ["诸葛亮"], openings: {}}},
 rp_cards: {r1: [{name: "林黛玉", fields: {core_identity: "林如海之女"}}]},
 };
 const ctx = {localStorage: ls, document, console,
@@ -58,7 +61,7 @@ nodes: [
 {id: "n2", stageId: "s1", title: "初见", intent: "宝黛初见", execution: "foreground", conditions: [], dependsOn: ["n1"], constraints: [], actorIds: [], sourceRefs: []}],
 characters: [], coverage: {}}]};
 vm.createContext(ctx);
-for(const f of ["data.js", "icons.js", "data/covers.js", "data/char_plots.js", "rp/escutil.js", "rp/prompt.js", "rp/persona.js",
+for(const f of ["data.js", "icons.js", "data/covers.js", "data/char_plots.js", "rp/escutil.js", "rp/lazy.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js", "rp/aifill.js",
 "rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js",
 "rp/plotrun.js", "app.js"]){

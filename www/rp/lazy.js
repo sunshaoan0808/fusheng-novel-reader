@@ -1,7 +1,10 @@
-/* 按需加载的模块组 (2026-10-18)
- * 蒸馏的 23 个文件只在点"蒸馏"或用蒸馏包聊天时才需要，首屏不该下载/解析它们。
- * 顺序必须与原先 index.html 里一致：distill_quality 在模块初始化时就读
- * DISTILL_CORE.PROFILE_FIELDS，所以只能串行加载、不能并行。
+/* 按需加载 (2026-10-18)
+ * 两类按需：
+ * 1) 模块组 GROUPS：蒸馏的 23 个文件只在点"蒸馏"或用蒸馏包聊天时才需要，
+ *    首屏不该下载/解析它们。顺序必须与原先 index.html 里一致：distill_quality
+ *    在模块初始化时就读 DISTILL_CORE.PROFILE_FIELDS，所以只能串行加载、不能并行。
+ * 2) run 数据 data/run_<id>.js：data.js 拆包后只留 index，run 级
+ *    profiles/worldbook/rp_cards 在 openRun/chatWith/穿越等入口按需拉。
  */
 (function(){
 "use strict";
@@ -66,5 +69,40 @@ function ensureGroup(name){
 
 function groupReady(name){ return !!loaded[name]; }
 
-window.RP_LAZY = { ensureGroup: ensureGroup, groupReady: groupReady, groups: GROUPS };
+/* ---------- run 数据按需加载（data/run_<id>.js）----------
+ * data.js 只留 index；进某个 run（openRun/chatWith/穿越…）前先 ensureRun。
+ * 单飞幂等：重复调用复用同一 Promise；失败清缓存可重试。 */
+var runState = {};   // runId -> Promise
+
+function ensureRun(runId){
+  if(!runId || typeof runId !== "string") return Promise.resolve();
+  /* 已在 __DATA__.runs 里（首屏自带或已加载过）→ 直接就绪 */
+  if(window.__DATA__ && window.__DATA__.runs && window.__DATA__.runs[runId]) return Promise.resolve();
+  if(runState[runId]) return runState[runId];
+  runState[runId] = loadOne("data/run_" + encodeURIComponent(runId) + ".js")
+    .then(function(){
+      if(!(window.__DATA__ && window.__DATA__.runs && window.__DATA__.runs[runId])){
+        throw new Error("run 数据加载后仍缺失: " + runId);
+      }
+    })
+    .catch(function(e){
+      runState[runId] = null;
+      throw e;
+    });
+  return runState[runId];
+}
+
+/* 并发确保多个 run（聊天选择器/穿越页要全量角色列表） */
+function ensureRuns(ids){
+  return Promise.all((ids || []).map(ensureRun));
+}
+
+/* index 里所有 run 全量确保 */
+function ensureAllRuns(){
+  var idx = (window.__DATA__ && window.__DATA__.index) || [];
+  return ensureRuns(idx.map(function(r){ return r && r.run_id; }).filter(Boolean));
+}
+
+window.RP_LAZY = { ensureGroup: ensureGroup, groupReady: groupReady, groups: GROUPS,
+                   ensureRun: ensureRun, ensureRuns: ensureRuns, ensureAllRuns: ensureAllRuns };
 })();

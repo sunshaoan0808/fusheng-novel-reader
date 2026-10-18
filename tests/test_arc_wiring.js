@@ -6,6 +6,11 @@ const assert = require("assert");
 function load(p){ return fs.readFileSync("./" + p, "utf8");}
 var src = load("www/data.js");
 var D = JSON.parse(src.match(/window\.__DATA__=(\{.*\});?\s*$/s)[1]);
+/* data.js 拆包（2026-10-18）：rp_cards 移入 data/run_<id>.js，按行提取补回 */
+fs.readdirSync("www/data").filter(f=>/^run_.*\.js$/.test(f)).sort().forEach(function(f){
+  var m = load("www/data/" + f).match(/window\.__DATA__\.rp_cards\["([^"]+)"\]=(\[[\s\S]*?\]);\s*$/m);
+  if(m) D.rp_cards[m[1]] = JSON.parse(m[2]);
+});
 var cards = D.rp_cards.honglou_full;
 assert.strictEqual(cards.length, 10, "10 cards");
 var daiyu = cards.filter(c => c.name === "林黛玉")[0];

@@ -95,6 +95,13 @@ return;
 }
 INDEX = D.index;
 showRuns();
+/* data.js 拆包：空闲时预取第一个 run，最常见的「点第一本书」路径零等待 */
+var _first = INDEX[0] && INDEX[0].run_id;
+if(_first){
+  var _prefetch = function(){ try{ RP_LAZY.ensureRun(_first); }catch(e){} };
+  if(typeof requestIdleCallback === "function") requestIdleCallback(_prefetch);
+  else setTimeout(_prefetch, 300);
+}
 }
 
 /* ================= 产物浏览 (原有) ================= */
@@ -123,7 +130,11 @@ function openRun(runId){
 const D = window.__DATA__;
 if(!D || !D.runs){ view.innerHTML = `<div class="empty">数据未生成<br><span style="font-size:calc(12px * var(--fs))">请先运行 snapshot.py</span></div>`; return; }
 RUN = D.runs[runId];
-if(!RUN){ view.innerHTML = `<div class="empty">该任务数据缺失</div>`; return;}
+if(!RUN){
+  /* run 数据按需加载：占位 → ensureRun → 重放本函数；仍缺失才是真缺失 */
+  if(guardRun(runId, function(){ openRun(runId); })) return;
+  view.innerHTML = `<div class="empty">该任务数据缺失</div>`; return;
+}
 tabs.classList.remove("hidden");
 setTab("chars");
 }
@@ -561,6 +572,37 @@ window.retryWorldcard = ()=>{
 function getWorldcard(runId){
   if(!runId) return null;
   return _wcCache[runId] || window["__WORLDCARD_" + runId] || null;
+}
+/* ---------- run 数据按需加载门卫（2026-10-18 data.js 拆包）----------
+ * data.js 只留 index；run 级 profiles/worldbook/rp_cards 在 data/run_<id>.js，
+ * 由 RP_LAZY.ensureRun 按需拉（rp/lazy.js）。同步渲染入口（openRun/chatWith/
+ * 详情页…）在数据未就绪时先画占位、到手后原样重放；消费点本身都有 || {} 兜底，
+ * 最坏退空态，不会 TypeError 白屏。 */
+function isRealRun(id){
+  return typeof id === "string" && INDEX.some(r=>r.run_id===id);
+}
+function runReady(runId){
+  return !!(window.__DATA__ && window.__DATA__.runs && window.__DATA__.runs[runId]);
+}
+function runLoadingFailed(e, replay){
+  window.__retryAction = replay;
+  view.innerHTML = `<div class="empty">数据加载失败<br><span style="font-size:calc(12px * var(--fs))">${escH(e && e.message || e)}</span><br><button class="btn" style="margin-top:12px" onclick="window.__retryAction&&window.__retryAction()">重试</button></div>`;
+}
+/* 单个 run 未就绪 → 占位 + ensureRun + 重放；返回 true 表示调用方应 return */
+function guardRun(runId, replay, hint){
+  if(runReady(runId) || typeof RP_LAZY === "undefined") return false;
+  var r = INDEX.find(x=>x.run_id===runId);
+  view.innerHTML = `<div class="empty">${hint || ("正在加载" + (r ? "《" + esc(r.novel) + "》" : "") + "数据…")}</div>`;
+  RP_LAZY.ensureRun(runId).then(replay).catch(function(e){ runLoadingFailed(e, replay); });
+  return true;
+}
+/* 全量 run 未齐 → 占位 + ensureAllRuns + 重放（聊天选择器/穿越页要全量角色） */
+function guardAllRuns(replay, hint){
+  var idx = (window.__DATA__ && window.__DATA__.index) || [];
+  if(idx.every(r=>runReady(r.run_id)) || typeof RP_LAZY === "undefined") return false;
+  view.innerHTML = `<div class="empty">${hint || "正在加载角色数据…"}</div>`;
+  RP_LAZY.ensureAllRuns().then(replay).catch(function(e){ runLoadingFailed(e, replay); });
+  return true;
 }
 /* 导演"无蓝图"提示 (B14): 原著因果蓝图(worldcard)只随蒸馏剧本自带, 导入卡/自创卡没有。
    rp/director.js 的 worldcardBrief 此时返回空串, 导演照常按通用模式编排 —— 这不是故障,
@@ -1711,6 +1753,11 @@ function applySoulWarm(){
   }catch(e){}
 }
 async function showChat(){
+/* run 数据按需加载：setNav("chat") 直达 / 会话恢复时 CHAT.runId 的数据可能还没拉 */
+if(isRealRun(CHAT.runId) && !runReady(CHAT.runId) && typeof RP_LAZY !== "undefined"){
+  try{ await RP_LAZY.ensureRun(CHAT.runId); }
+  catch(e){ runLoadingFailed(e, function(){ showChat(); }); return; }
+}
 __backAction = ()=>exitChat();
 document.body.classList.add("chatmode");
 const cs = allChars();
@@ -1827,6 +1874,8 @@ saveHist(k, [{mid:(typeof nextMsgId==="function"?nextMsgId():"m"+Date.now().toSt
 
 /* ================= 群聊 ================= */
 async function showGroupChat(cfg){
+/* 群成员可能跨 run：开群前确保全量 run 数据就绪（失败有兜底，不阻断） */
+try{ await RP_LAZY.ensureAllRuns(); }catch(e){}
 __backAction = ()=>exitChat();
 try{ if(CHAT.runId) loadWorldcard(CHAT.runId); }catch(e){} /* 世界卡预热，fire-and-forget */
 const ms = CHAT.members;
@@ -1963,6 +2012,8 @@ RP_GROUP.delRel(CHAT.runId, gkey, i);
 renderGRelBox();
 };
 function showChatPicker(){
+/* allChars() 要全量 run 的角色列表：数据未齐先拉齐再渲染 */
+if(guardAllRuns(function(){ showChatPicker(); })) return;
 __backAction = null;
 document.body.classList.remove("chatmode","immersive"); /* P2-1: 切页同时清 immersive, 不留残 */
 titleEl.textContent = "选个角色开聊";
@@ -2922,6 +2973,10 @@ window.switchChat = (v)=>{
 /* P0-4: 切会话前先取消在飞的流，否则旧流的 token 会写进新会话（串台）且旧流不可取消 */
 abortStreaming();
 const [runId, name] = v.split("|");
+/* run 数据按需加载：冷启动从抽屉切到还没拉过的书，先补数据再渲染 */
+if(isRealRun(runId) && !runReady(runId)){
+  if(guardRun(runId, function(){ switchChat(v); })) return;
+}
 CHAT = {mode:"single", runId, name, members:[], forcedSpeaker:null};
 /* P2-14: 指针写失败（配额满）不应中断切换，最坏只是下次冷启动回不到这个会话 */
 try{ localStorage.setItem("nd_chat_last", v); }catch(e){}
@@ -2944,6 +2999,11 @@ if(typeof runId === "string" && runId.indexOf("distill_") === 0 && typeof DISTIL
   RP_LAZY.ensureGroup("distill").then(function(){ chatWith(runId, name); })
     .catch(function(e){ view.innerHTML = `<div class="empty">蒸馏模块加载失败<br><span style="font-size:calc(12px * var(--fs))">${escH(e.message)}</span></div>`; });
   return;
+}
+/* run 数据按需加载（data.js 拆包）：真蒸馏 run 未就绪时先拉数据再开聊。
+   imported/custom 没有 run 文件，isRealRun 排除，不会误发 404。 */
+if(isRealRun(runId) && !runReady(runId)){
+  if(guardRun(runId, function(){ chatWith(runId, name); })) return;
 }
 /* P1 开场选择器：多开场卡片且非指定开场进入时，先弹半屏选开场 */
 if(window.__pendingOpening == null){
@@ -5272,6 +5332,10 @@ window.scrollTo(0,0);
 /* ============ 角色详情多 Tab (对标 C.AI 角色详情页: 资料/记忆/最近聊天) ============ */
 let DETAIL = {runId:null, name:null, tab:"info", back:null};
 window.charDetail = (runId, name, back)=>{
+/* run 数据按需加载：详情页同步渲染，未就绪先拉再重放 */
+if(isRealRun(runId) && !runReady(runId)){
+  if(guardRun(runId, function(){ charDetail(runId, name, back); })) return;
+}
 DETAIL = {runId:runId, name:name, tab:"info", back:(back||null)};
 renderDetail();
 };
@@ -7727,7 +7791,9 @@ function travWorlds(){
   return out;
 }
 function showTraverse(){
-  __backAction = null;
+/* 穿越家族（魂穿/走原著线/黄金路径/组团）都会读 runs：进穿越页先拉全量 */
+if(guardAllRuns(function(){ showTraverse(); })) return;
+__backAction = null;
   document.body.classList.remove("chatmode","immersive"); /* P2-1: 切页同时清 immersive, 不留残 */
   titleEl.innerHTML = icon("book-open")+" 穿越"; subEl.textContent = "进入书里活";
   const hintTimeline = `<div class="hint" style="margin:0 0 10px">🕰️ 穿越是独立的时间线：这里发生的事，不会影响「聊天」里的对话和记忆。</div>`;

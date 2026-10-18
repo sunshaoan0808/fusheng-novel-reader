@@ -19,10 +19,13 @@ ok("CHARIMG 已定义", window.CHARIMG && typeof window.CHARIMG === "object");
 const keys = Object.keys(window.CHARIMG);
 ok("20 个人物全覆盖", keys.length === 20);
 
-// 2) data.js 里每个 run 的每个人物都有图
+// 2) 每个 run 的每个人物都有图（data.js 拆包后 run 数据按需加载，测试补加载全部 run 文件）
 const dataJs = fs.readFileSync(WWW + "/data.js", "utf8");
 const w2 = {};
 eval(dataJs.replace("window.__DATA__", "w2.__DATA__"));
+for(const f of fs.readdirSync(WWW + "/data").filter(f=>/^run_.*\.js$/.test(f)).sort()){
+  eval(fs.readFileSync(WWW + "/data/" + f, "utf8").replace(/window\.__DATA__/g, "w2.__DATA__"));
+}
 const runs = w2.__DATA__.runs;
 let missing = [];
 for(const rid of Object.keys(runs)){

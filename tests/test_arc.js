@@ -13,6 +13,9 @@ const ctx = {localStorage, console};
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(WWW + "/data.js", "utf8"), ctx, {filename: "data.js"});
+/* data.js 拆包（2026-10-18）：runs/rp_cards 移入 data/run_<id>.js 按需加载，
+   测试沙盒没有 RP_LAZY，直接补加载红楼梦的 run 文件。 */
+vm.runInContext(fs.readFileSync(WWW + "/data/run_honglou_full.js", "utf8"), ctx, {filename: "data/run_honglou_full.js"});
 vm.runInContext(fs.readFileSync(WWW + "/rp/arc.js", "utf8"), ctx, {filename: "rp/arc.js"});
 let pass = 0, fail = 0;
 const t = (n, c) => { c ? pass++ : (fail++, console.log("FAIL:", n)); };
