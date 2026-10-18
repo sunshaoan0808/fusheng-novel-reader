@@ -617,6 +617,79 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("S3 无角色的块仍产出梗概", calls2 === 1 && !!ck2["sum_c9"]);
   }
 
+  /* ── 开场白：分批 + 并发 ───────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_package.js", "distill_openings.js"]);
+    const P = sb.DISTILL_PACKAGE, O = sb.DISTILL_OPENINGS;
+    const pkg = P.createPackage("开场白书");
+    const names = ["甲", "乙", "丙", "丁", "戊", "己", "庚"];
+    pkg.characters = names.map(n => ({ name: n, importance: 5 }));
+    P.updatePackage(pkg);
+    names.forEach(n => P.saveCharacterCard(pkg.id, n, {
+      name: n, _distill: { core_identity: n + "是个书生", core_traits: "冷静" }
+    }));
+
+    let calls = 0, inflight = 0, peak = 0, batchCalls = 0;
+    sb.DISTILL_LLM.chat = async (msgs) => {
+      calls++; inflight++; peak = Math.max(peak, inflight);
+      await new Promise(r => setTimeout(r, 15));
+      inflight--;
+      const sys = msgs[0].content || "";
+      if (sys.indexOf("每个角色") >= 0) {
+        batchCalls++;
+        const u = JSON.parse(msgs[1].content);
+        const map = {};
+        u.characters.forEach(c => {
+          map[c.name] = [
+            { situation: "初见", text: c.name + "抬眼看你。" },
+            { situation: "日常", text: "嗯。" },
+            { situation: "冲突", text: "你错了。" }
+          ];
+        });
+        return Promise.resolve({ content: JSON.stringify({ openings: map }) });
+      }
+      return Promise.resolve({ content: JSON.stringify({ openings: [{ situation: "单人", text: "单人开场" }] }) });
+    };
+
+    const res = await O.generateAll(pkg.id, names, {});
+    t("O1 7 人按 3 人一批 → 3 次调用（3+3+1，末组单人；原来 7 次）", calls === 3 && batchCalls === 2);
+    t("O1 每人 3 条且内容对应本人", res["甲"].length === 3 && res["甲"][0].text.indexOf("甲") === 0);
+    t("O1 并发执行（同时在飞 ≥2）", peak >= 2);
+    t("O1 卡片的 first_mes 被写回",
+      P.getCharacterCard(pkg.id, "乙").first_mes === "乙抬眼看你。");
+    t("O1 输出里只有本人台词（无串味）",
+      res["丙"].every(o => o.text.indexOf("甲") < 0 && o.text.indexOf("丁") < 0));
+
+    // 批量漏人 → 单人补
+    let calls2 = 0, singles = 0;
+    sb.DISTILL_LLM.chat = (msgs) => {
+      calls2++;
+      const sys = msgs[0].content || "";
+      if (sys.indexOf("每个角色") >= 0) {
+        const u = JSON.parse(msgs[1].content);
+        const map = {};
+        u.characters.slice(0, 2).forEach(c => { map[c.name] = [{ situation: "初见", text: "批量" }]; });
+        return Promise.resolve({ content: JSON.stringify({ openings: map }) });
+      }
+      singles++;
+      return Promise.resolve({ content: JSON.stringify({ openings: [{ situation: "补", text: "补跑" }] }) });
+    };
+    const res2 = await O.generateAll(pkg.id, ["甲", "乙", "丙"], { concurrency: 1 });
+    t("O2 批量漏掉的角色单个补跑", singles === 1 && res2["丙"][0].text === "补跑");
+
+    // 整批解析失败 → 全部回退单人
+    let calls3 = 0, singles3 = 0;
+    sb.DISTILL_LLM.chat = (msgs) => {
+      calls3++;
+      if ((msgs[0].content || "").indexOf("每个角色") >= 0) return Promise.resolve({ content: "抱歉" });
+      singles3++;
+      return Promise.resolve({ content: JSON.stringify({ openings: [{ situation: "s", text: "兜底" }] }) });
+    };
+    const res3 = await O.generateAll(pkg.id, ["甲", "乙", "丁"], { concurrency: 1 });
+    t("O3 整批失败全部回退单人", calls3 === 4 && singles3 === 3 && res3["丁"][0].text === "兜底");
+  }
+
   console.log(`distill_pipeline: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);
 })();

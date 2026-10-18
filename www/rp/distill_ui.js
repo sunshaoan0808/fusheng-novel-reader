@@ -321,12 +321,12 @@ async function onGenPlan(){
   // 预估
   /* 调用量估算 (2026-10-18 之后的口径):
    * 画像按块批量 → 每块 1 次（原来 块×角色 次）；剧情梗概已并入同一次调用；
-   * 关系按批丰富(每批 8 条) + 开场白(每角色 1 次) + 各种合并，约 20 次上下。
+   * 关系按批丰富(每批 8 条)、开场白 3 人一批、加各种合并，约 20 次上下。
    * 耗时按 3 路并发估：批量画像单次输出长（12 人档案），按 40s；其余按 6s。 */
   var nChunks = S.chunks.length;
   var nChars = chars.length;
   var profileCalls = nChunks;
-  var otherCalls = 12 + nChars;
+  var otherCalls = 18 + Math.ceil(nChars / 3);
   var estCalls = profileCalls + otherCalls;
   var estSec = profileCalls * 40 + otherCalls * 6;
   var estMin = Math.max(1, Math.round(estSec / 3 / 60));
