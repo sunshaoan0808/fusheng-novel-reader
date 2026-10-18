@@ -99,11 +99,43 @@ function subMacros(text, charName, userName){
   return s;
 }
 
+/* P1-b 分阶段渲染: 同一字段可带阶段变体, 两种数据形态都认——
+ *  A. 平铺键 "<字段>__early|mid|late" (官方 run 手拆数据用这种)
+ *  B. 合并结构 fields.early[k] (蒸馏包 _distill 原生就长这样, mergeProfiles 产物)
+ * 有阶段变体时渲染成"外貌（前期）：…（后期）：…"的分阶段行, 让模型按当前剧情
+ * 自取; 没有就照旧渲染扁平值。阶段轴是 early/mid/late(蒸馏块序), 与
+ * RP_ARC 的命名阶段(大观园时期等)是两套东西, 不做映射 —— 全部列出让模型自己选。 */
+var STAGE_ORDER = ["early", "mid", "late"];
+var STAGE_LABEL = {early: "前期", mid: "中期", late: "后期"};
+function stagedVal(fields, n, st){
+  var v = val(fields[n + "__" + st]);
+  if(v) return v;
+  var layer = fields[st];
+  if(layer && typeof layer === "object") return val(layer[n]);
+  return "";
+}
+
 function renderFields(card, names){
   var out = [];
+  var fields = (card && card.fields) || {};
   names.forEach(function(n){
-    var v = val(card.fields[n]);
-    if(v) out.push("- " + (LABELS[n] || n) + "：" + v);
+    var label = LABELS[n] || n;
+    var staged = [];
+    for(var i = 0; i < STAGE_ORDER.length; i++){
+      var sv = stagedVal(fields, n, STAGE_ORDER[i]);
+      if(sv) staged.push({stage: STAGE_ORDER[i], text: sv});
+    }
+    if(staged.length){
+      /* 变体与扁平值相同(只蒸出一个阶段的常见情形)时不重复渲染 */
+      var flat = val(fields[n]);
+      if(staged.length === 1 && staged[0].text === flat) { out.push("- " + label + "：" + flat); return; }
+      staged.forEach(function(s){
+        out.push("- " + label + "（" + STAGE_LABEL[s.stage] + "）：" + s.text);
+      });
+      return;
+    }
+    var v = val(fields[n]);
+    if(v) out.push("- " + label + "：" + v);
   });
   return out.join("\n");
 }

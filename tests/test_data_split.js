@@ -102,11 +102,43 @@ function deepEq(a, b) {
   }
 
   /* ---- 3) 拼回与 git HEAD 原版深度相等 ---- */
+  /* P1-b: rp_cards 现有阶段变体键(<字段>__early/mid/late), 是二级拆包之后
+   * 人为补的派生数据, 不在「拆包前」的 git 基准里。本组断言比的是"拆分搬运"
+   * 有没有丢东西, 不是"数据能不能演进" —— 两边先剥掉阶段变体键再比;
+   * 变体键的在场与存活另立 D10b 钉住。 */
+  function stripStageKeys(cards) {
+    const out = {};
+    Object.keys(cards || {}).forEach(function (rid) {
+      out[rid] = (cards[rid] || []).map(function (c) {
+        const cc = {}; Object.keys(c).forEach(k => { cc[k] = c[k]; });
+        const f = {};
+        Object.keys(c.fields || {}).forEach(function (k) {
+          if (!/__(early|mid|late)$/.test(k)) f[k] = c.fields[k];
+        });
+        cc.fields = f;
+        return cc;
+      });
+    });
+    return out;
+  }
   if (orig) {
     const merged = loadData(["data.js", ...runFiles.map(f => "data/" + f)]);
     t("D8 拼回 index 与原版相等", deepEq(merged.index, orig.index));
     t("D9 拼回 runs 与原版相等", deepEq(merged.runs, orig.runs));
-    t("D10 拼回 rp_cards 与原版相等", deepEq(merged.rp_cards, orig.rp_cards));
+    t("D10 拼回 rp_cards 与原版相等(剥阶段变体键)",
+      deepEq(stripStageKeys(merged.rp_cards), stripStageKeys(orig.rp_cards)));
+    t("D10b 宝玉/黛玉阶段变体键在场且拆包不丢",
+      (function () {
+        const cs = (merged.rp_cards || {}).honglou_full || [];
+        function has(nm, k) {
+          const c = cs.filter(x => x.name === nm)[0];
+          return !!(c && c.fields && c.fields[k]);
+        }
+        return has("贾宝玉", "appearance_feature__early") && has("贾宝玉", "appearance_feature__late")
+          && has("贾宝玉", "visual_identity__early") && has("贾宝玉", "visual_identity__late")
+          && has("林黛玉", "appearance_feature__late") && has("林黛玉", "voice_dressing__early")
+          && has("林黛玉", "voice_dressing__late");
+      })());
     t("D11 run 数 = 原版 run 数", Object.keys(merged.runs).length === Object.keys(orig.runs).length);
   } else {
     t("D8-D11 git 不可用，跳过", true);
