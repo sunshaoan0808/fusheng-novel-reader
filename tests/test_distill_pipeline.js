@@ -690,6 +690,38 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("O3 整批失败全部回退单人", calls3 === 4 && singles3 === 3 && res3["丁"][0].text === "兜底");
   }
 
+  /* ── 角色选择：数量 / 指定 ─────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_ui.js"]);
+    const U = sb.DISTILL_UI;
+    const d = [
+      { name: "林黛玉", importance: 10, aliases: ["黛玉", "林妹妹"] },
+      { name: "贾宝玉", importance: 10, aliases: ["宝玉"] },
+      { name: "薛宝钗", importance: 9, aliases: ["宝钗"] },
+      { name: "王熙凤", importance: 8, aliases: ["凤姐"] },
+      { name: "史湘云", importance: 7, aliases: ["湘云"] }
+    ];
+    const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+
+    t("U1 取前 2 个", eq(U.selectionTop(d, 2),
+      { "林黛玉": true, "贾宝玉": true, "薛宝钗": false, "王熙凤": false, "史湘云": false }));
+    t("U2 数量超界按全部", Object.keys(U.selectionTop(d, 99)).every(k => U.selectionTop(d, 99)[k] === true));
+    t("U3 数量 0 时全不选", Object.keys(U.selectionTop(d, 0)).every(k => U.selectionTop(d, 0)[k] === false));
+    t("U4 数量非法按 0（不误选全部）", Object.keys(U.selectionTop(d, "abc")).every(k => U.selectionTop(d, "abc")[k] === false));
+
+    t("U5 按简称指定（黛玉 → 林黛玉）", eq(U.selectionMatch(d, ["黛玉"]),
+      { "林黛玉": true, "贾宝玉": false, "薛宝钗": false, "王熙凤": false, "史湘云": false }));
+    t("U6 按别名指定（凤姐 → 王熙凤）", eq(U.selectionMatch(d, ["凤姐"]),
+      { "林黛玉": false, "贾宝玉": false, "薛宝钗": false, "王熙凤": true, "史湘云": false }));
+    t("U7 多个名字一起指定", eq(U.selectionMatch(d, ["黛玉", "宝钗"]),
+      { "林黛玉": true, "贾宝玉": false, "薛宝钗": true, "王熙凤": false, "史湘云": false }));
+    t("U8 指定结果只含命中的（不会顺带选中别人）",
+      Object.keys(U.selectionMatch(d, ["湘云"])).filter(k => U.selectionMatch(d, ["湘云"])[k]).length === 1);
+    t("U9 无匹配时全不选", Object.keys(U.selectionMatch(d, ["不存在"]))
+      .every(k => U.selectionMatch(d, ["不存在"])[k] === false));
+  }
+
   console.log(`distill_pipeline: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);
 })();

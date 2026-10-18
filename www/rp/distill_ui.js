@@ -116,6 +116,57 @@ function renderUpload(){
     }).join("") : ""}`;
 }
 
+function selCount(){
+  return Object.keys(S.selected).filter(function(k){ return S.selected[k]; }).length;
+}
+
+/* 按戏份取前 n 个（S.discovered 已按 importance/count 排序）。
+ * 抽成纯函数是为了能脱离 DOM 测：返回新的选中表，不碰 S。 */
+function selectionTop(discovered, n){
+  var out = {};
+  n = Math.max(0, Math.min(parseInt(n, 10) || 0, (discovered || []).length));
+  (discovered || []).forEach(function(c, i){ out[c.name] = i < n; });
+  return out;
+}
+
+/* 按名字/别名指定：命中即选，其余取消。
+ * terms 支持简称（"黛玉" 命中 "林黛玉"）和别名（"宝玉" 命中 贾宝玉 的别名 宝玉）。 */
+function selectionMatch(discovered, terms){
+  var out = {};
+  terms = (terms || []).filter(Boolean);
+  (discovered || []).forEach(function(c){
+    out[c.name] = terms.some(function(t){
+      return c.name.indexOf(t) >= 0 ||
+        (c.aliases || []).some(function(a){ return String(a).indexOf(t) >= 0; });
+    });
+  });
+  return out;
+}
+
+/* 把 S.selected 同步到勾选框与"已选 N"计数，不重渲染（保留滚动位置和筛选词） */
+function syncSelection(){
+  document.querySelectorAll("[data-char]").forEach(function(cb){
+    cb.checked = S.selected[cb.getAttribute("data-char")] === true;
+  });
+  var el = document.getElementById("d_sel_count");
+  if(el) el.textContent = selCount();
+}
+
+function charFilterTerms(){
+  var inp = document.getElementById("d_sel_filter");
+  var q = inp ? String(inp.value || "").trim() : "";
+  return q ? q.split(/[,，、\s]+/).filter(Boolean) : [];
+}
+
+function applyCharFilter(){
+  var terms = charFilterTerms();
+  document.querySelectorAll("[data-row]").forEach(function(row){
+    var name = row.getAttribute("data-row");
+    var hit = !terms.length || terms.some(function(t){ return name.indexOf(t) >= 0; });
+    row.style.display = hit ? "" : "none";
+  });
+}
+
 function renderDiscover(){
   if(!S.discovered.length){
     return `<div class="card"><div id="d_disc_msg">正在发现角色...</div>
@@ -126,13 +177,29 @@ function renderDiscover(){
   if(S.discovered.warnings && S.discovered.warnings.length){
     warnHtml = `<div style="font-size:calc(12px * var(--fs));color:#f0ad4e;background:rgba(240,173,78,.1);border:1px solid #f0ad4e;border-radius:6px;padding:8px;margin-bottom:12px">⚠️ ${S.discovered.warnings.map(esc).join("<br>")}</div>`;
   }
+  var total = S.discovered.length;
+  var picked = selCount();
+  var defN = Math.min(12, total);
+  var inpStyle = "padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg)";
   return `<div class="card">
     ${warnHtml}
-    <div style="font-size:calc(13px * var(--fs));margin-bottom:12px">发现 <b>${S.discovered.length}</b> 个角色，勾选要蒸馏的：</div>
-    <div style="max-height:400px;overflow-y:auto">
+    <div style="font-size:calc(13px * var(--fs));margin-bottom:10px">
+      发现 <b>${total}</b> 个角色，已选 <b id="d_sel_count">${picked}</b> 个</div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+      <span style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">按戏份取前</span>
+      <input id="d_sel_n" type="number" min="1" max="${total}" value="${defN}" style="width:70px;${inpStyle}">
+      <button class="btn" id="d_sel_top">选择</button>
+      <button class="btn" id="d_sel_all">全选</button>
+      <button class="btn" id="d_sel_none">清空</button>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:10px">
+      <input id="d_sel_filter" placeholder="指定角色：输入名字筛选，多个用逗号分隔（如 黛玉,宝玉）" style="flex:1;${inpStyle}">
+      <button class="btn" id="d_sel_match">只选匹配</button>
+    </div>
+    <div style="max-height:380px;overflow-y:auto">
     ${S.discovered.map(function(c, i){
-      var checked = S.selected[c.name] !== false ? "checked" : "";
-      return `<label class="dchar">
+      var checked = S.selected[c.name] === true ? "checked" : "";
+      return `<label class="dchar" data-row="${esc(c.name)}">
         <input type="checkbox" data-char="${esc(c.name)}" ${checked}>
         <img class="dchar-avatar" src="bg/avatar_default.jpg" alt="">
         <div style="flex:1;min-width:0">
@@ -322,13 +389,13 @@ async function onGenPlan(){
   /* 调用量估算 (2026-10-18 之后的口径):
    * 画像按块批量 → 每块 1 次（原来 块×角色 次）；剧情梗概已并入同一次调用；
    * 关系按批丰富(每批 8 条)、开场白 3 人一批、加各种合并，约 20 次上下。
-   * 耗时按 3 路并发估：批量画像单次输出长（12 人档案），按 40s；其余按 6s。 */
+   * 单次画像的耗时随角色数增长（输出变长），所以按 20s + 1.7s×角色数 估。 */
   var nChunks = S.chunks.length;
   var nChars = chars.length;
   var profileCalls = nChunks;
   var otherCalls = 18 + Math.ceil(nChars / 3);
   var estCalls = profileCalls + otherCalls;
-  var estSec = profileCalls * 40 + otherCalls * 6;
+  var estSec = profileCalls * (20 + 1.7 * nChars) + otherCalls * 6;
   var estMin = Math.max(1, Math.round(estSec / 3 / 60));
 
   var unselected = S.discovered.filter(function(d){ return !S.selected[d.name]; }).length;
@@ -414,9 +481,16 @@ function onPauseClick(e){
   else if(e.target.id === "d_abort") abortDistill();
 }
 function onImportChange(e){
-  if(e.target && e.target.id === "d_import_pkg" && e.target.files[0]){
+  if(e.target && e.target.id === "d_import_pkg" && e.target.files && e.target.files[0]){
     importPkg(e.target.files[0]);
     e.target.value = "";
+    return;
+  }
+  // 角色勾选框：即时更新"已选 N 个"，不用等点生成计划书
+  if(e.target && e.target.hasAttribute && e.target.hasAttribute("data-char")){
+    S.selected[e.target.getAttribute("data-char")] = !!e.target.checked;
+    var el = document.getElementById("d_sel_count");
+    if(el) el.textContent = selCount();
   }
 }
 function wire(){
@@ -439,6 +513,37 @@ function wire(){
 
   var b1 = document.getElementById("d_back1");
   if(b1) b1.addEventListener("click", function(){ S.step = 1; render(); });
+
+  /* 角色选择：数量 / 全选 / 清空 / 按名字指定 */
+  var st = document.getElementById("d_sel_top");
+  if(st) st.addEventListener("click", function(){
+    var inp = document.getElementById("d_sel_n");
+    var n = parseInt(inp && inp.value, 10);
+    if(!(n > 0)) n = 12;
+    S.selected = selectionTop(S.discovered, n);
+    syncSelection();
+  });
+  var sa = document.getElementById("d_sel_all");
+  if(sa) sa.addEventListener("click", function(){
+    S.selected = selectionTop(S.discovered, S.discovered.length);
+    syncSelection();
+  });
+  var sn = document.getElementById("d_sel_none");
+  if(sn) sn.addEventListener("click", function(){
+    S.selected = selectionTop(S.discovered, 0);
+    syncSelection();
+  });
+  var sm = document.getElementById("d_sel_match");
+  if(sm) sm.addEventListener("click", function(){
+    var terms = charFilterTerms();
+    if(!terms.length){ alert("先在上面的输入框里输入要蒸馏的角色名（多个用逗号分隔）"); return; }
+    S.selected = selectionMatch(S.discovered, terms);
+    syncSelection();
+    applyCharFilter();
+  });
+  var sf = document.getElementById("d_sel_filter");
+  if(sf) sf.addEventListener("input", applyCharFilter);
+
   var pl = document.getElementById("d_plan");
   if(pl) pl.addEventListener("click", function(){
     // 收集选中
@@ -1218,6 +1323,8 @@ async function regenOpenings(pkgId, charName){
 }
 
 var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, showProvenance: showProvenance,
+  // 纯函数，供 UI 与测试共用（不依赖 DOM）
+  selectionTop: selectionTop, selectionMatch: selectionMatch,
   requestChange: requestChange, confirmChange: confirmChange,
   editFact: editFact, saveFact: saveFact, deleteFact: deleteFact, addFact: addFact, recompileCard: recompileCard,
   showWorldbook: showWorldbook,
