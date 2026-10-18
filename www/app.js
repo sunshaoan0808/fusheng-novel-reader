@@ -69,7 +69,20 @@ else if(n==="chat"){ tabs.classList.add("hidden"); (CHAT.name||CHAT.mode==="trav
 else if(n==="traverse"){ tabs.classList.add("hidden"); showTraverse(); }
 else if(n==="settings"){ tabs.classList.add("hidden"); showSettings();}
 else if(n==="writer"){ tabs.classList.add("hidden"); showWriter();}
-else if(n==="distill"){ tabs.classList.add("hidden"); titleEl.textContent="蒸馏"; subEl.textContent="手机端独立蒸馏"; DISTILL_UI.show(); }
+else if(n==="distill"){
+  tabs.classList.add("hidden"); titleEl.textContent="蒸馏"; subEl.textContent="手机端独立蒸馏";
+  /* 蒸馏模块按需加载（23 个文件）：首屏不再为它付下载与解析。
+     重复进入时 ensureGroup 复用同一个 Promise，不会重复请求。 */
+  if(typeof DISTILL_UI !== "undefined"){ DISTILL_UI.show(); }
+  else{
+    view.innerHTML = `<div class="empty">正在加载蒸馏模块…</div>`;
+    RP_LAZY.ensureGroup("distill").then(function(){
+      if(NAV === "distill") DISTILL_UI.show();
+    }).catch(function(e){
+      view.innerHTML = `<div class="empty">蒸馏模块加载失败<br><span style="font-size:calc(12px * var(--fs))">${escH(e.message)}</span><br><button class="btn" style="margin-top:12px" onclick="setNav('distill')">重试</button></div>`;
+    });
+  }
+}
 }
 mainnav.querySelectorAll("button").forEach(b=>
 b.addEventListener("click", ()=>setNav(b.dataset.nav)));
@@ -2924,6 +2937,14 @@ switchChat(b.dataset.swrun + "|" + b.dataset.swname);
 });
 }
 window.chatWith = (runId, name)=>{
+/* 蒸馏包的角色卡存在 distill_* 命名空间里，模块是按需加载的：
+   冷启动后直接开聊蒸馏包时先把它们拉起来，否则 findCard 找不到卡。 */
+if(typeof runId === "string" && runId.indexOf("distill_") === 0 && typeof DISTILL_PACKAGE === "undefined"){
+  view.innerHTML = `<div class="empty">正在加载蒸馏模块…</div>`;
+  RP_LAZY.ensureGroup("distill").then(function(){ chatWith(runId, name); })
+    .catch(function(e){ view.innerHTML = `<div class="empty">蒸馏模块加载失败<br><span style="font-size:calc(12px * var(--fs))">${escH(e.message)}</span></div>`; });
+  return;
+}
 /* P1 开场选择器：多开场卡片且非指定开场进入时，先弹半屏选开场 */
 if(window.__pendingOpening == null){
 let ops = [];
