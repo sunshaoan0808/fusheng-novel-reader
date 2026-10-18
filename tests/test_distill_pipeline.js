@@ -69,7 +69,19 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
         background: "母亲早逝,父亲病故,孤身寄居外祖母家中,常自伤身世",
         soul_goal: "在无依无靠的处境中求得一处安身立命之地",
         key_bonds: "贾宝玉(知己),薛宝钗(情敌),紫鹃(侍女)",
-        evidence: "黛玉葬花一节,以花自况,道尽寄人篱下之悲"
+        evidence: "黛玉葬花一节,以花自况,道尽寄人篱下之悲",
+        /* 外在集群 (2026-10): 提示词扩到 18 字段后, 完整度按 18 个算;
+         * 这张 fixture 代表"新口径蒸全了的卡", 少一个外在字段就到不了 80%。 */
+        appearance_feature: "两弯似蹙非蹙罥烟眉,一双似喜非喜含情目,态生两靥之愁",
+        visual_identity: "弱柳扶风、眉尖若蹙的书卷少女",
+        physical_marks: "素有不足之症,面薄腰纤",
+        voice_dressing: "嗓音清细,爱着素色旧衣衫",
+        signature_items: "花锄、诗稿、旧帕",
+        habit_action: "对镜泪透罗帕,春困发幽情",
+        carry_style: "小心含蓄,心事独咽",
+        others_impression: "宝玉见之倒像在哪里见过的 [canon:ch003]",
+        reputation: "嘴又刁钻,叫人爱也不是恨也不是",
+        action_pattern: "以诗酒花鸟自遣,闷时自叹"
       }
     });
     P.saveData(pkg.id, "relations", [{ source_character: "林黛玉", target_character: "贾宝玉" }]);

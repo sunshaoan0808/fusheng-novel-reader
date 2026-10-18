@@ -5,10 +5,14 @@
 var DISTILL_CHANGE = (function(){
 "use strict";
 
-// 可改动的字段
+// 可改动的字段 (旧档宽容名单 + 2026-10 外在集群: 新档 _distill 有这 10 个键,
+// 不登记的话用户在改动单里说"把她的外貌改瘦些"会被过滤器静默丢弃)
 var EDITABLE_FIELDS = ["core_identity", "brief_intro", "core_traits", "appearance", "speech_style",
   "background", "relationships_summary", "key_events", "arc_summary",
-  "age", "gender", "height", "ethnicity", "likes", "dislikes", "interests", "fears"];
+  "age", "gender", "height", "ethnicity", "likes", "dislikes", "interests", "fears",
+  "appearance_feature", "visual_identity", "physical_marks", "voice_dressing",
+  "signature_items", "habit_action", "carry_style", "others_impression",
+  "reputation", "action_pattern"];
 
 var FIELD_LABEL = {
   core_identity: "身份",
@@ -17,6 +21,11 @@ var FIELD_LABEL = {
   likes: "喜好", dislikes: "厌恶", interests: "兴趣", fears: "恐惧",
   core_traits: "性格",
   appearance: "外貌",
+  appearance_feature: "外貌", visual_identity: "视觉识别",
+  physical_marks: "身体印记", voice_dressing: "声音着装",
+  signature_items: "随身物品", habit_action: "习惯动作",
+  carry_style: "举止风度", others_impression: "他人印象",
+  reputation: "外界评价", action_pattern: "行动模式",
   speech_style: "说话风格",
   background: "背景",
   relationships_summary: "关系",

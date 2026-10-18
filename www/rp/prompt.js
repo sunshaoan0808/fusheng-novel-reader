@@ -24,7 +24,11 @@ var LABELS = {
   visual_identity:"视觉识别", voice_dressing:"声音着装",
   appearance_feature:"外貌", physical_marks:"身体印记",
   signature_items:"随身物品", reputation:"外界评价",
-  action_pattern:"行动模式", stress_response:"压力反应",
+  action_pattern:"行动模式",
+  /* 外在三件套收尾: 数据侧(蒸馏产物)一直有这三个键, 但从未登记进 LABELS/LAYERS,
+     renderFields 只渲染登记键 → 模型从未见过。P0-a 补登记, P1-a 随外貌集群拆独立分段。 */
+  habit_action:"习惯动作", carry_style:"举止风度", others_impression:"他人印象",
+  stress_response:"压力反应",
   fear_triggers:"恐惧触发", taboo_topics:"禁忌话题",
   /* P0-3 人物弧光 (B17)。这张表是卡片编辑器(app.js editCard/saveCardEdit)唯一的字段清单,
      arc_* 不登记就等于"字段无法表示" —— 用户手填了保存时也会被丢弃。
@@ -45,6 +49,7 @@ var LAYERS = {
   background: ["background","life_timeline","social_soil","socio_economics","key_bonds",
     "faction_position","visual_identity","voice_dressing","appearance_feature",
     "physical_marks","signature_items","reputation","action_pattern",
+    "habit_action","carry_style","others_impression",
     "stress_response","fear_triggers","taboo_topics"],
 };
 

@@ -6,9 +6,14 @@ var DISTILL_QUALITY = (function(){
 "use strict";
 
 /* 画像字段口径: 必须与 distill_core 的提示词同一份常量。
- * 早期这里手写了 17 个字段, 而提示词只产出 8 个 → 完整度上限 24%, 恒判"建议重蒸"。 */
+ * 早期这里手写了 17 个字段, 而提示词只产出 8 个 → 完整度上限 24%, 恒判"建议重蒸"。
+ * 现在 DISTILL_CORE 在场时整体取它的 PROFILE_FIELDS(18 个, 含外在集群);
+ * 这个兜底名单只在 DISTILL_CORE 没加载时生效, 仍须与 FIELD_SPEC 保持同序同集。 */
 var FALLBACK_FIELDS = ["core_identity", "core_traits", "speech_style", "typical_lines",
-  "background", "soul_goal", "key_bonds", "evidence"];
+  "background", "soul_goal", "key_bonds", "evidence",
+  "appearance_feature", "visual_identity", "physical_marks", "voice_dressing",
+  "signature_items", "habit_action", "carry_style", "others_impression",
+  "reputation", "action_pattern"];
 var PROFILE_FIELDS = (function(){
   try{
     if(typeof DISTILL_CORE !== "undefined" && DISTILL_CORE.PROFILE_FIELDS &&

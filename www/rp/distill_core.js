@@ -15,9 +15,26 @@ var FIELD_SPEC = [
   ["background", "背景经历摘要"],
   ["soul_goal", "核心追求"],
   ["key_bonds", "关键人物关系 (逗号分隔)"],
-  ["evidence", "关键证据原文引用 (最多3条)"]
+  ["evidence", "关键证据原文引用 (最多3条)"],
+  /* 外在集群: 官方 run 的 rp_cards 一直有这 10 个键(红楼梦/水浒/清安录都有),
+   * 但本提示词历史上只产 8 字段 → 新书蒸馏出来的人物"没有外在",
+   * 而 app 侧 prompt.js 早就登记渲染 —— 断层在这里, 不在渲染侧。
+   * 顺序即提示词列举序, 也是批量 JSON 模板的键序(BATCH_FIELD_JSON 派生)。 */
+  ["appearance_feature", "外貌特征 (长相/身形/年龄感; 随阶段有明显变化用分号分阶段列举)"],
+  ["visual_identity", "视觉识别 (最具辨识度的整体形象, 一眼能认出的特点)"],
+  ["physical_marks", "身体印记 (胎记/伤疤/纹印/残疾等, 没有就留空)"],
+  ["voice_dressing", "声音着装 (嗓音/口音/常穿衣着服饰)"],
+  ["signature_items", "随身物品 (标志性携带物, 如黛玉的花锄、宝钗的金锁)"],
+  ["habit_action", "习惯动作 (反复出现的小动作与癖好, 如对镜泪透罗帕)"],
+  ["carry_style", "举止风度 (体态/步态/待人接物的气度)"],
+  ["others_impression", "他人印象 (书中他人对其外貌气质的评价或反应, 附 chunk_id)"],
+  ["reputation", "外界评价 (名声/外号/口碑, 附 chunk_id)"],
+  ["action_pattern", "行动模式 (典型行为方式与处事套路)"]
 ];
 var PROFILE_FIELDS = FIELD_SPEC.map(function(f){ return f[0]; });
+/* 批量 JSON 模板的字符段从 FIELD_SPEC 派生: 历史上这里手抄了一遍 8 字段,
+ * 提示词加字段而模板不加 → 模型按新口径产出也会被 parseBatch 当噪声丢掉。 */
+var BATCH_FIELD_JSON = FIELD_SPEC.map(function(f){ return '"' + f[0] + '":""'; }).join(",");
 
 var SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文片段中提取指定人物的结构化档案。
 
@@ -47,10 +64,12 @@ async function distillOne(chunk, character, onProgress){
     chunk_id: chunk.id,
     character: character
   }, null, 1);
+  /* 单发模式同样显式给上限: 字段扩到 18 个后 md 产出可达 2~3K token,
+   * 不传 max_tokens 就跟着网关默认值(常见 1024/2048)被腰斩。 */
   var r = await DISTILL_LLM.chat([
     {role: "system", content: SYSTEM_PROMPT},
     {role: "user", content: user}
-  ]);
+  ], {maxTokens: 6000});
   return {md: r.content, chunkId: chunk.id, character: character, stage: chunk.stage || "mid"};
 }
 
@@ -61,7 +80,7 @@ async function distillOne(chunk, character, onProgress){
 var BATCH_SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文片段中提取**给定人物列表**中每个人物的结构化档案。
 
 ## 输出格式 (严格 JSON, 不要代码块, 不要解释)
-{"characters":{"人物名":{"core_identity":"","core_traits":"","speech_style":"","typical_lines":"","background":"","soul_goal":"","key_bonds":"","evidence":""}}}
+{"characters":{"人物名":{${BATCH_FIELD_JSON}}}}
 
 ## 规则
 1. 只输出给定列表里的人物，不新增、不改名
@@ -69,13 +88,14 @@ var BATCH_SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文�
 3. 每个事实后标注来源: [canon:chunk_id] 原文直证 / [ref:chunk_id] 旁证 / [inference:chunk_id] 合理推断 / [unknown] 无依据
 4. 禁止编造原文没有的情节、人名、对话
 5. core_traits 用逗号分隔最多 5 个词；typical_lines 最多 3 句且每句 40 字内
+6. 外在字段(appearance_feature 起)只写原文有据的外形气质描写；没有就留空，不写"未知"、不套模板形容
 `;
 
 var BATCH_SYSTEM_PROMPT_WITH_SUMMARY = `你是小说剧情与人物档案蒸馏器。从小说正文片段中同时提取「本块剧情梗概」和**给定人物列表**中每个人物的结构化档案。
 
 ## 输出格式 (严格 JSON, 不要代码块, 不要解释)
 {"summary":{"events":["事件"],"turning_points":["转折"],"hooks":[{"hook":"悬念"}]},
- "characters":{"人物名":{"core_identity":"","core_traits":"","speech_style":"","typical_lines":"","background":"","soul_goal":"","key_bonds":"","evidence":""}}}
+ "characters":{"人物名":{${BATCH_FIELD_JSON}}}}
 
 ## 规则
 1. events 按发生顺序，3-6 条；turning_points 没有就给空数组；hooks 没有就给空数组
@@ -84,6 +104,7 @@ var BATCH_SYSTEM_PROMPT_WITH_SUMMARY = `你是小说剧情与人物档案蒸馏�
 4. 每个事实后标注来源: [canon:chunk_id] 原文直证 / [ref:chunk_id] 旁证 / [inference:chunk_id] 合理推断
 5. 禁止编造原文没有的情节、人名、对话
 6. core_traits 用逗号分隔最多 5 个词；typical_lines 最多 3 句且每句 40 字内
+7. 外在字段(appearance_feature 起)只写原文有据的外形气质描写；没有就留空，不写"未知"、不套模板形容
 `;
 
 async function distillMany(chunk, names, opts){
@@ -97,7 +118,11 @@ async function distillMany(chunk, names, opts){
   var r = await DISTILL_LLM.chat([
     {role: "system", content: opts.withSummary ? BATCH_SYSTEM_PROMPT_WITH_SUMMARY : BATCH_SYSTEM_PROMPT},
     {role: "user", content: user}
-  ], {maxTokens: Math.min(8000, 800 + 500 * names.length)});
+  /* max_tokens: 字段从 8 扩到 18 (外在集群 10 个) 后按人头重算。
+   * 800+500n 是 8 字段时代的账: 18 字段 + evidence/others_impression 这类长文本字段,
+   * 单人约 1.5~2K token, 且 withSummary 还要再搭一份梗概 JSON。
+   * 8000 上限不变 (网关硬顶), 人数多时靠调用方分批, 不靠无限加 token。 */
+  ], {maxTokens: Math.min(8000, 1600 + 700 * names.length)});
   return {raw: r.content, chunkId: chunk.id, stage: chunk.stage || "mid"};
 }
 
@@ -404,7 +429,12 @@ return {
   parseProfile: parseProfile,
   buildAliasIndex: buildAliasIndex,
   appearsIn: appearsIn,
+  mergeProfiles: mergeProfiles,
+  parseBatch: parseBatch,
   PROFILE_FIELDS: PROFILE_FIELDS,
-  SYSTEM_PROMPT: SYSTEM_PROMPT
+  FIELD_SPEC: FIELD_SPEC,
+  SYSTEM_PROMPT: SYSTEM_PROMPT,
+  BATCH_SYSTEM_PROMPT: BATCH_SYSTEM_PROMPT,
+  BATCH_SYSTEM_PROMPT_WITH_SUMMARY: BATCH_SYSTEM_PROMPT_WITH_SUMMARY
 };
 })();
