@@ -124,33 +124,92 @@ function extractPairs(chunks, characters, aliasMap, opts){
   return edges;
 }
 
+var REL_SYS_ONE = "你是关系分析器。根据共现证据提炼人物关系。返回 JSON: {\"relation\": \"关系类型\", \"summary\": \"一句话总结\", \"affinity\": -10到10}";
+var REL_SYS_BATCH = "你是关系分析器。为给定的每一对人物分别提炼关系。返回 JSON: {\"edges\":[{\"a\":\"甲\",\"b\":\"乙\",\"relation\":\"关系类型\",\"summary\":\"一句话总结\",\"affinity\":-10到10}]}。必须为每一对都给出结果，不要合并、不要遗漏。";
+
+// 单条丰富（批量解析失败或只有一条时的兜底）
+async function enrichOne(e){
+  try{
+    var r = await DISTILL_LLM.chat([
+      {role: "system", content: REL_SYS_ONE},
+      {role: "user", content: JSON.stringify({a: e.source_character, b: e.target_character, evidence: e._evidence.slice(0, 3)})}
+    ]);
+    var m = r.content.match(/\{[\s\S]*\}/);
+    if(m){
+      var d = JSON.parse(m[0]);
+      e.relation = d.relation || "";
+      e.summary = d.summary || "";
+      e.affinity = d.affinity || 0;
+    }
+  }catch(err){}
+  return e;
+}
+
+/* 一批边一次调用。66 条边原来是 66 次请求，每条的输入才 300 字——
+ * 纯属把 RTT 和 system prompt 重复付了 66 遍。 */
+async function enrichGroup(group){
+  var payload = {pairs: group.map(function(e){
+    return {a: e.source_character, b: e.target_character, evidence: (e._evidence || []).slice(0, 3)};
+  })};
+  var r;
+  try{
+    r = await DISTILL_LLM.chat([
+      {role: "system", content: REL_SYS_BATCH},
+      {role: "user", content: JSON.stringify(payload)}
+    ], {maxTokens: Math.min(4000, 300 + 260 * group.length)});
+  }catch(e){ return false; }
+  var s = String(r.content || "");
+  var a = s.indexOf("{"), b = s.lastIndexOf("}");
+  if(a < 0 || b <= a) return false;
+  var obj = null;
+  try{ obj = JSON.parse(s.slice(a, b + 1)); }catch(e){ return false; }
+  var list = obj && obj.edges;
+  if(!Array.isArray(list)) return false;
+  var byKey = {};
+  list.forEach(function(it){
+    if(!it || !it.a || !it.b) return;
+    byKey[[it.a, it.b].sort().join("|")] = it;
+  });
+  var missing = 0;
+  group.forEach(function(e){
+    var k = [e.source_character, e.target_character].sort().join("|");
+    var d = byKey[k];
+    if(!d){ missing++; return; }
+    e.relation = d.relation || "";
+    e.summary = d.summary || "";
+    e.affinity = d.affinity || 0;
+  });
+  return missing === 0;
+}
+
 async function enrichEdges(edges, onProgress, opts){
   // LLM 丰富化核心角色对
   opts = opts || {};
   var shouldPause = opts.shouldPause || function(){ return false; };
   var shouldAbort = opts.shouldAbort || function(){ return false; };
-  var coreEdges = edges.filter(function(e){ return e._both_core; });
-  for(var i = 0; i < coreEdges.length; i++){
+  var batchSize = Math.max(1, Math.min(parseInt(opts.batchSize, 10) || 8, 20));
+  // 续跑时已丰富过的边不重复请求
+  var pending = edges.filter(function(e){ return e._both_core && !e.relation; });
+  var processed = 0;
+  for(var i = 0; i < pending.length; i += batchSize){
     while(shouldPause() && !shouldAbort()){
-      if(onProgress) onProgress(i, coreEdges.length, "已暂停…");
+      if(onProgress) onProgress(processed, pending.length, "已暂停…");
       await new Promise(function(r){ setTimeout(r, 500); });
     }
     if(shouldAbort()) break;
-    var e = coreEdges[i];
-    if(onProgress) onProgress(i + 1, coreEdges.length, "丰富关系 " + e.source_character + "-" + e.target_character);
-    try{
-      var r = await DISTILL_LLM.chat([
-        {role: "system", content: "你是关系分析器。根据共现证据提炼人物关系。返回 JSON: {\"relation\": \"关系类型\", \"summary\": \"一句话总结\", \"affinity\": -10到10}"},
-        {role: "user", content: JSON.stringify({a: e.source_character, b: e.target_character, evidence: e._evidence.slice(0, 3)})}
-      ]);
-      var m = r.content.match(/\{[^}]+\}/);
-      if(m){
-        var d = JSON.parse(m[0]);
-        e.relation = d.relation || "";
-        e.summary = d.summary || "";
-        e.affinity = d.affinity || 0;
+    var group = pending.slice(i, i + batchSize);
+    if(onProgress) onProgress(processed, pending.length,
+      "丰富关系 " + (i + 1) + "-" + (i + group.length) + "/" + pending.length);
+    if(group.length === 1){
+      await enrichOne(group[0]);
+    }else if(!(await enrichGroup(group))){
+      // 整批没解析出来（或漏了对），逐条兜底，宁可慢也不能留空
+      for(var k = 0; k < group.length; k++){
+        await enrichOne(group[k]);
+        if(shouldAbort()) break;
       }
-    }catch(err){}
+    }
+    processed += group.length;
   }
   return edges;
 }

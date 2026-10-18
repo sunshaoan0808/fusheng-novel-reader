@@ -320,16 +320,15 @@ async function onGenPlan(){
 
   // 预估
   /* 调用量估算 (2026-10-18 之后的口径):
-   * 画像按块批量 → 每块 1 次（原来 块×角色 次）；剧情梗概每块 1 次；
-   * 关系丰富 + 开场白 + 各种合并约 60 + 角色数 次。
-   * 耗时按 3 路并发估：批量画像单次输出长，按 30s；其余按 6s。 */
+   * 画像按块批量 → 每块 1 次（原来 块×角色 次）；剧情梗概已并入同一次调用；
+   * 关系按批丰富(每批 8 条) + 开场白(每角色 1 次) + 各种合并，约 20 次上下。
+   * 耗时按 3 路并发估：批量画像单次输出长（12 人档案），按 40s；其余按 6s。 */
   var nChunks = S.chunks.length;
   var nChars = chars.length;
   var profileCalls = nChunks;
-  var plotCalls = (S.depth === "full") ? nChunks : 0;
-  var otherCalls = 60 + nChars;
-  var estCalls = profileCalls + plotCalls + otherCalls;
-  var estSec = profileCalls * 30 + (plotCalls + otherCalls) * 6;
+  var otherCalls = 12 + nChars;
+  var estCalls = profileCalls + otherCalls;
+  var estSec = profileCalls * 40 + otherCalls * 6;
   var estMin = Math.max(1, Math.round(estSec / 3 / 60));
 
   var unselected = S.discovered.filter(function(d){ return !S.selected[d.name]; }).length;
@@ -604,6 +603,8 @@ async function onStartDistill(){
     var profiles = await DISTILL_CORE.distillNovel(S.chunks, chars, {
       checkpoint: checkpoint,
       aliasMap: aliasMap,   // 上一段算出的 {别名: 正名}，缺了它正文用简称的章节会被整章跳过
+      // 完整模式下顺带把每块梗概一起产出，剧情阶段的 summarizeChunks 直接复用这块缓存
+      withPlotSummary: depth === "full",
       shouldPause: function(){ return S.paused; },
       shouldAbort: function(){ return !!S.aborted; },
       onProgress: function(d, t, m){ prog("[画像] " + m, 20 + d / t * 30); },

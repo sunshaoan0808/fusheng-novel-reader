@@ -55,7 +55,9 @@ async function distillOne(chunk, character, onProgress){
 }
 
 /* 批量模式: 一次调用产出该块出现的所有角色。
- * 原来同一段正文要按角色重复发 N 遍（N=角色数），输入里 90%+ 是重复正文。 */
+ * 原来同一段正文要按角色重复发 N 遍（N=角色数），输入里 90%+ 是重复正文。
+ * withSummary=true 时同一次调用再顺带产出本块梗概，剧情阶段的 summarizeChunks
+ * 会因为 checkpoint 里已有 sum_<id> 而直接复用，省掉整整一遍「每块一次」的调用。 */
 var BATCH_SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文片段中提取**给定人物列表**中每个人物的结构化档案。
 
 ## 输出格式 (严格 JSON, 不要代码块, 不要解释)
@@ -69,7 +71,23 @@ var BATCH_SYSTEM_PROMPT = `你是小说人物档案蒸馏器。从小说正文�
 5. core_traits 用逗号分隔最多 5 个词；typical_lines 最多 3 句且每句 40 字内
 `;
 
-async function distillMany(chunk, names){
+var BATCH_SYSTEM_PROMPT_WITH_SUMMARY = `你是小说剧情与人物档案蒸馏器。从小说正文片段中同时提取「本块剧情梗概」和**给定人物列表**中每个人物的结构化档案。
+
+## 输出格式 (严格 JSON, 不要代码块, 不要解释)
+{"summary":{"events":["事件"],"turning_points":["转折"],"hooks":[{"hook":"悬念"}]},
+ "characters":{"人物名":{"core_identity":"","core_traits":"","speech_style":"","typical_lines":"","background":"","soul_goal":"","key_bonds":"","evidence":""}}}
+
+## 规则
+1. events 按发生顺序，3-6 条；turning_points 没有就给空数组；hooks 没有就给空数组
+2. 只输出给定列表里的人物，不新增、不改名；列表为空时 characters 给 {}
+3. 列表里每个人物都必须出现在 characters 里；正文没写的字段给空字符串
+4. 每个事实后标注来源: [canon:chunk_id] 原文直证 / [ref:chunk_id] 旁证 / [inference:chunk_id] 合理推断
+5. 禁止编造原文没有的情节、人名、对话
+6. core_traits 用逗号分隔最多 5 个词；typical_lines 最多 3 句且每句 40 字内
+`;
+
+async function distillMany(chunk, names, opts){
+  opts = opts || {};
   var cap = (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000;
   var user = JSON.stringify({
     excerpt: chunk.text.slice(0, cap),
@@ -77,13 +95,13 @@ async function distillMany(chunk, names){
     characters: names
   }, null, 1);
   var r = await DISTILL_LLM.chat([
-    {role: "system", content: BATCH_SYSTEM_PROMPT},
+    {role: "system", content: opts.withSummary ? BATCH_SYSTEM_PROMPT_WITH_SUMMARY : BATCH_SYSTEM_PROMPT},
     {role: "user", content: user}
-  ], {maxTokens: Math.min(8000, 600 + 500 * names.length)});
+  ], {maxTokens: Math.min(8000, 800 + 500 * names.length)});
   return {raw: r.content, chunkId: chunk.id, stage: chunk.stage || "mid"};
 }
 
-/* 从模型输出里抠 JSON 并归一成 {角色名: {字段: 字符串}}。
+/* 从模型输出里抠 JSON 并归一成 {characters: {角色名: {字段}}, summary: {...}|null}。
  * 解析失败返回 null，由调用方回退到逐人调用——宁可慢，也不能整块静默丢档案。 */
 function parseBatch(raw, names){
   var s = String(raw || "").replace(/```json/gi, "```").trim();
@@ -91,10 +109,10 @@ function parseBatch(raw, names){
   if(a < 0 || b <= a) return null;
   var obj = null;
   try{ obj = JSON.parse(s.slice(a, b + 1)); }catch(e){ return null; }
-  var map = obj && obj.characters ? obj.characters : null;
-  if(!map || typeof map !== "object") return null;
+  var map = obj && obj.characters;
+  if(!map || typeof map !== "object") map = {};
   var out = {};
-  names.forEach(function(name){
+  (names || []).forEach(function(name){
     var v = map[name];
     if(v == null && name.indexOf(" ") < 0){
       // 模型偶尔会加书名号/引号或空白，做一次宽松匹配
@@ -119,7 +137,26 @@ function parseBatch(raw, names){
     });
     if(Object.keys(fields).length) out[name] = fields;
   });
-  return out;
+  var sm = obj && obj.summary && typeof obj.summary === "object" ? obj.summary : null;
+  return {characters: out, summary: sm};
+}
+
+/* 归一化成 plot.summarizeChunks / buildOutline 期望的形状 */
+function normalizeSummary(chunk, obj){
+  obj = obj || {};
+  var ev = Array.isArray(obj.events) ? obj.events : [];
+  var tp = Array.isArray(obj.turning_points) ? obj.turning_points : [];
+  var hk = Array.isArray(obj.hooks) ? obj.hooks : [];
+  return {
+    chunk_id: chunk.id,
+    title: chunk.title || "",
+    events: ev.map(function(x){ return String(x == null ? "" : x).trim(); }).filter(Boolean),
+    turning_points: tp.map(function(x){ return String(x == null ? "" : x).trim(); }).filter(Boolean),
+    hooks: hk.map(function(h){
+      if(typeof h === "string") return {hook: h, setup_chunk: chunk.id};
+      return {hook: String((h && h.hook) || "").trim(), setup_chunk: chunk.id};
+    }).filter(function(h){ return h.hook; })
+  };
 }
 
 function parseProfile(md){
@@ -216,12 +253,16 @@ async function distillNovel(chunks, characters, opts){
 
   /* 任务摊平: 续跑命中 / 未出现 / 真正要调用 三种都变成任务，
    * 这样进度条依然是"一条一条往前走"，不会在开头一次性跳掉几百条。
-   * 批量模式下一块只排一个任务，一次产出该块的全部角色。 */
+   * 批量模式下一块只排一个任务，一次产出该块的全部角色。
+   * withSummary 时每块都要排一个任务（哪怕这块没有任何角色），
+   * 因为剧情梗概也搭这次调用产出，剧情阶段就能整段复用。 */
   var batch = opts.batchProfiles !== false;
+  var withSummary = batch && opts.withPlotSummary === true;
   var tasks = [];
   for(var ci = 0; ci < chunks.length; ci++){
     var chunk = chunks[ci];
     var workNames = [];
+    var needSummary = withSummary && !checkpoint["sum_" + chunk.id];
     for(var hi = 0; hi < characters.length; hi++){
       var ch = characters[hi];
       if(!ch || chunk.text == null) continue;
@@ -237,8 +278,15 @@ async function distillNovel(chunks, characters, opts){
         tasks.push({kind: "work", chunk: chunk, ch: ch, key: key});
       }
     }
-    if(workNames.length) tasks.push({kind: "batch", chunk: chunk, names: workNames});
+    if(workNames.length || needSummary){
+      tasks.push({kind: "batch", chunk: chunk, names: workNames, wantSummary: needSummary});
+    }
   }
+  /* 进度总量按任务重算：摘要-only 的任务也要算一格，否则进度条永远差一截到不了 100% */
+  total = 0;
+  tasks.forEach(function(t){
+    total += (t.kind === "batch") ? Math.max(1, t.names.length) : 1;
+  });
 
   function storeResult(chunk, ch, key, fields, stage){
     if(!results[ch]) results[ch] = [];
@@ -274,20 +322,29 @@ async function distillNovel(chunks, characters, opts){
     }
     if(t.kind === "batch"){
       var names = t.names;
-      onProgress(done, total, "蒸馏 " + names.join("、") + " @ " + t.chunk.id);
+      onProgress(done, total, names.length
+        ? "蒸馏 " + names.join("、") + " @ " + t.chunk.id
+        : "梗概 " + t.chunk.id);
       var got = null, err = null;
       try{
-        var br = await distillMany(t.chunk, names);
+        var br = await distillMany(t.chunk, names, {withSummary: !!t.wantSummary});
         got = parseBatch(br.raw, names);
       }catch(e){ err = e; }
+      // 梗概先落 checkpoint：即使角色部分要回退，剧情阶段也不用重跑这块
+      if(got && t.wantSummary && got.summary){
+        checkpoint["sum_" + t.chunk.id] = {summary: normalizeSummary(t.chunk, got.summary)};
+        if(opts.onCheckpoint) opts.onCheckpoint(checkpoint);
+      }else if(t.wantSummary && !got){
+        // 整批解析失败时，梗概交给剧情阶段自己补；这里不写脏数据
+      }
       var missing = [];
       if(got){
         batchOk++;
         names.forEach(function(ch){
-          if(got[ch]) storeResult(t.chunk, ch, t.chunk.id + "|" + ch, got[ch], t.chunk.stage || "mid");
+          if(got.characters[ch]) storeResult(t.chunk, ch, t.chunk.id + "|" + ch, got.characters[ch], t.chunk.stage || "mid");
           else missing.push(ch);
         });
-      }else{
+      }else if(names.length){
         missing = names.slice();
         batchFallback++;
         onProgress(done, total, "批量解析失败，回退逐人 @" + t.chunk.id + (err ? "：" + err.message : ""));
@@ -296,7 +353,7 @@ async function distillNovel(chunks, characters, opts){
         batchFallback++;
         await fallbackOne(t.chunk, missing[mi]);
       }
-      done += names.length;
+      done += Math.max(1, names.length);
       return;
     }
     onProgress(done, total, "蒸馏 " + t.ch + " @ " + t.chunk.id);

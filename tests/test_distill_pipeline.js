@@ -524,6 +524,99 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("C2 并发上限被夹到 8", peak <= 8);
   }
 
+  /* ── 关系丰富批量 ───────────────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_relations.js"]);
+    const R = sb.DISTILL_RELATIONS;
+    const mk = n => Array.from({ length: n }, (_, i) => ({
+      source_character: "甲" + i, target_character: "乙" + i,
+      _both_core: true, _evidence: ["他们在一处说话"]
+    }));
+
+    let calls = 0;
+    sb.DISTILL_LLM.chat = (msgs) => {
+      calls++;
+      const u = JSON.parse(msgs[1].content);
+      return Promise.resolve({
+        content: JSON.stringify({
+          edges: u.pairs.map(p => ({ a: p.a, b: p.b, relation: "朋友", summary: "常在一处", affinity: 3 }))
+        })
+      });
+    };
+    const e1 = mk(20);
+    await R.enrichEdges(e1, () => {}, {});
+    t("R1 20 条边 → 3 次调用（每批 8 条）", calls === 3);
+    t("R1 全部边都被丰富", e1.every(e => e.relation === "朋友" && e.affinity === 3));
+
+    // 整批返回非 JSON → 逐条兜底
+    let calls2 = 0, singles = 0;
+    sb.DISTILL_LLM.chat = (msgs) => {
+      calls2++;
+      const u = JSON.parse(msgs[1].content);
+      if (u.pairs && u.pairs.length > 1) return Promise.resolve({ content: "抱歉，无法处理" });
+      singles++;
+      return Promise.resolve({ content: JSON.stringify({ relation: "点头之交", summary: "x", affinity: 1 }) });
+    };
+    const e2 = mk(4);
+    await R.enrichEdges(e2, () => {}, {});
+    t("R2 批量失败逐条兜底", calls2 === 5 && singles === 4);
+    t("R2 兜底后每条都有关系", e2.every(e => e.relation === "点头之交"));
+
+    // 已丰富的边不重复请求（续跑）
+    let calls3 = 0;
+    sb.DISTILL_LLM.chat = () => { calls3++; return Promise.resolve({ content: "{}" }); };
+    await R.enrichEdges(e1, () => {}, {});
+    t("R3 已丰富的边不重复请求", calls3 === 0);
+  }
+
+  /* ── 画像与梗概同块产出 ─────────────────────────────────────── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_chunk.js", "distill_core.js", "distill_plot.js"]);
+    const C = sb.DISTILL_CORE, P = sb.DISTILL_PLOT;
+    const chunks = [
+      { id: "c1", title: "第一章", text: "甲进了院子。".repeat(30), stage: "early" },
+      { id: "c2", title: "第二章", text: "甲出了城。".repeat(30), stage: "late" }
+    ];
+    let calls = 0;
+    sb.DISTILL_LLM.chat = (msgs) => {
+      calls++;
+      const u = JSON.parse(msgs[1].content);
+      const map = {};
+      (u.characters || []).forEach(n => { map[n] = { core_identity: n + "@" + u.chunk_id }; });
+      return Promise.resolve({
+        content: JSON.stringify({
+          summary: { events: ["事件" + u.chunk_id], turning_points: [], hooks: ["悬念"] },
+          characters: map
+        })
+      });
+    };
+    const ck = {};
+    const prof = await C.distillNovel(chunks, ["甲"], { checkpoint: ck, withPlotSummary: true });
+    t("S1 梗概与画像同一次调用（2 块 → 2 次）", calls === 2);
+    t("S1 画像正常产出", prof["甲"] && prof["甲"].chunks === 2);
+    t("S1 梗概写进 checkpoint", !!ck["sum_c1"] && !!ck["sum_c2"]);
+
+    const before = calls;
+    const sums = await P.summarizeChunks(chunks, ["甲"], {}, { checkpoint: ck });
+    t("S2 剧情阶段直接复用，0 次调用", calls === before && sums.length === 2);
+    t("S2 梗概形状正确（chunk_id/hooks.setup_chunk）",
+      sums[0].chunk_id === "c1" && sums[0].events[0] === "事件c1" &&
+      sums[0].hooks[0].setup_chunk === "c1");
+
+    // 没有角色出现的块也要产梗概
+    const ck2 = {};
+    const only = [{ id: "c9", title: "第九章", text: "此处无人物只有风雪。".repeat(20), stage: "mid" }];
+    let calls2 = 0;
+    sb.DISTILL_LLM.chat = () => {
+      calls2++;
+      return Promise.resolve({ content: JSON.stringify({ summary: { events: ["风雪"] }, characters: {} }) });
+    };
+    await C.distillNovel(only, ["甲"], { checkpoint: ck2, withPlotSummary: true });
+    t("S3 无角色的块仍产出梗概", calls2 === 1 && !!ck2["sum_c9"]);
+  }
+
   console.log(`distill_pipeline: ${pass} pass, ${fail} fail`);
   process.exit(fail ? 1 : 0);
 })();
