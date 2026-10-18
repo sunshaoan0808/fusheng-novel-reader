@@ -256,6 +256,10 @@ var fl = P.flairInstr(card.flair);
 if(fl) segs.push({text: fl, pri: 6.5});
 var sp = P.renderFields(card, P.LAYERS.speech);
 if(sp) segs.push({text: sub("【说话方式】\n" + sp), pri: 7});
+/* P1-a: 外在从 background 拆出独立层后, 魂穿全量注入也要单独一份,
+ * 否则拆层等于把 traverse 路径的外在字段悄悄丢了。优先级贴说话方式之后。 */
+var ap = P.renderFields(card, P.LAYERS.appearance);
+if(ap) segs.push({text: sub("【外貌与举止】\n" + ap), pri: 7.5});
 var ex = P.buildExamples(card, cn, 600);
 if(ex) segs.push({text: sub(ex), pri: 65});
 var bgf = P.renderFields(card, P.LAYERS.background);
@@ -278,6 +282,9 @@ function sub(t){ return (t && P.subMacros) ? P.subMacros(t, cn, "") : t; }
 var core = P.renderFields(card, P.LAYERS.identity.concat(P.LAYERS.core));
 var desc = ["你是" + cn + "。", bible.bg, core ? "【核心人设】\n" + core : ""]
   .filter(Boolean).join("\n\n");
+/* P1-a: 外在集群折进 charDesc(与 prompt.js 的 ST 路径同一接法) */
+var ap = P.renderFields(card, P.LAYERS.appearance);
+if(ap) desc += "\n\n【外貌与举止】\n" + ap;
 var sysp = card.systemPrompt ? String(card.systemPrompt).trim() : "";
 if(card.creatorNotes) sysp += (sysp ? "\n" : "") + "【作者注】\n" + String(card.creatorNotes).trim();
 if(sysp) desc += "\n\n" + sysp;

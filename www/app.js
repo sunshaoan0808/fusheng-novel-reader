@@ -5583,7 +5583,7 @@ function cardLandingHTML(runId, nm, card, run){
   h += `<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="openCardArchive('${jq(runId)}','${jq(nm)}')">📁 卡片档案</button>`
     + `<button class="btn ghost srcbtn" onclick="viewCardSource('${jq(runId)}','${jq(nm)}')">📖 查看设定源码（只读学习）</button></div>`;
   /* 8. 档案（原有字段分组） */
-  const groups = [["identity","身份"],["core","内核"],["speech","说话方式"],["background","背景"]];
+  const groups = [["identity","身份"],["core","内核"],["speech","说话方式"],["appearance","外貌与举止"],["background","背景"]];
   const arch = groups.map(g=>{
     const txt = RP_PROMPT.renderFields(card, RP_PROMPT.LAYERS[g[0]]);
     return txt ? `<h2 class="sec">${g[1]}</h2><div class="card">`
@@ -5649,7 +5649,7 @@ window.openCardArchive = (runId, nm)=>{
   let h = `<button class="back" onclick="archiveBack()">${icon("back")} 返回</button>`;
 
   /* 1. 设定正文: 复用 RP_PROMPT.renderFields + LAYERS(与落地页「档案」同一套渲染器) */
-  const groups = [["identity","身份"],["core","内核"],["speech","说话方式"],["background","背景"]];
+  const groups = [["identity","身份"],["core","内核"],["speech","说话方式"],["appearance","外貌与举止"],["background","背景"]];
   const arch = groups.map(g=>{
     const txt = RP_PROMPT.renderFields(card, RP_PROMPT.LAYERS[g[0]]);
     return txt ? `<h2 class="sec">${g[1]}</h2><div class="card">`
@@ -6200,7 +6200,7 @@ hasWorldsim: !!(stats && stats.hasWorldsim), hasDirector: !!(stats && stats.hasD
 memPools: (stats && stats.memPools) || null};
 }
 const DIAG_SEG_LABELS = {identity:"身份", persona:"玩家人设", narrator:"叙事者模式", core:"核心人设",
-memory:"长期记忆", speech:"说话方式", examples:"对话示例", background:"背景", relations:"人物关系", lore:"世界书"};
+memory:"长期记忆", speech:"说话方式", appearance:"外貌与举止", examples:"对话示例", background:"背景", relations:"人物关系", lore:"世界书"};
 const DIAG_POOL_LABELS = {important:"重要池（铁律/置顶/画像库/心境）", recent:"近期池（事件库）", similar:"长远池（记录库/往事）"};
 /* 人设保真行 (Persistent Personas? 方法论落地): 只展示机制状态, 不编造偏离度分数。
  * 铁律/弧光 = 本轮 prompt 是否真实注入了对应段; 末尾纠偏恒为 ✓ (prompt 末位 system 必有);

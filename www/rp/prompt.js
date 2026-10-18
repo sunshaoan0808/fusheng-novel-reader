@@ -46,11 +46,14 @@ var LAYERS = {
     "shadow_side","big_five","ooc_redline"],
   speech: ["speech_style","cadence","signature_phrases","typical_lines",
     "subtext_style","sentence_openers","forbidden_fillers"],
+  /* P1-a: 外在集群从 background 拆出独立层。以前 10 个外在字段全塞在【背景】段里,
+   * 与出身/经历混排, 预算一紧先被整段丢; 且"外貌"混在"背景"里模型权重感低。
+   * 顺序 = prompt 里的行序: 先整体外貌, 再分项, 再举止, 最后他人视角。 */
+  appearance: ["appearance_feature","visual_identity","physical_marks",
+    "voice_dressing","signature_items","habit_action","carry_style",
+    "others_impression","reputation","action_pattern"],
   background: ["background","life_timeline","social_soil","socio_economics","key_bonds",
-    "faction_position","visual_identity","voice_dressing","appearance_feature",
-    "physical_marks","signature_items","reputation","action_pattern",
-    "habit_action","carry_style","others_impression",
-    "stress_response","fear_triggers","taboo_topics"],
+    "faction_position","stress_response","fear_triggers","taboo_topics"],
 };
 
 /* 蒸馏产出的四态来源标注 ([canon:ch003] / [ref:ch012] / [inference:ch007] / [unknown])
@@ -315,16 +318,16 @@ var NARRATOR_INSTR = "【叙事者模式】你同时承担叙事与扮演双重�
 /* P1-1 预设: 分段顺序/开关/预算比例可配置 (Risu 式预设, 不做 ST 拖拽) */
 var PRESETS = {
   classic: {name: "经典序", desc: "完整人设，适合长上下文",
-    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, core: 10, arc: 15, memory: 20, speech: 30, flair: 35, examples: 40, background: 50, relations: 60, lore: 70},
+    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, core: 10, arc: 15, memory: 20, speech: 30, appearance: 45, flair: 35, examples: 40, background: 50, relations: 60, lore: 70},
     loreRatio: 0.2},
   lite: {name: "精简序", desc: "去背景/示例，省 token，适合小上下文",
-    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, core: 10, arc: 15, memory: 15, speech: 20, flair: 35, relations: 30, lore: 40},
+    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, core: 10, arc: 15, memory: 15, speech: 20, appearance: 25, flair: 35, relations: 30, lore: 40},
     loreRatio: 0.12},
   immers: {name: "沉浸序", desc: "说话方式优先，代入感最强",
-    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, speech: 10, flair: 35, examples: 15, core: 20, arc: 22, memory: 25, background: 40, relations: 50, lore: 60},
+    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, speech: 10, flair: 35, examples: 15, core: 20, arc: 22, memory: 25, appearance: 36, background: 40, relations: 50, lore: 60},
     loreRatio: 0.15},
   narr: {name: "叙事者", desc: "双线叙事+角色主动推进剧情，适合跑剧情",
-    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, narrator: 8, core: 10, speech: 15, flair: 35, arc: 18, memory: 20, examples: 30, relations: 40, background: 50, lore: 60},
+    order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, narrator: 8, core: 10, speech: 15, flair: 35, arc: 18, memory: 20, examples: 30, relations: 40, appearance: 45, background: 50, lore: 60},
     loreRatio: 0.15},
 };
 
@@ -424,6 +427,9 @@ function buildMessages(card, ctx, budget){
   /* P0-3: 人物弧光段 (当前 timeline_stage, 无弧光卡为空) */
   add("arc", ctx.arc ? "【人物弧光】\n" + ctx.arc : "");
   add("speech", "【说话方式】\n" + renderFields(card, LAYERS.speech));
+  /* P1-a: 外在独立分段。原与出身经历混在【背景】里, 预算一紧整段丢;
+   * 外貌是角色扮演的第一辨识信息, 单独成段 + 独立优先级。 */
+  add("appearance", "【外貌与举止】\n" + renderFields(card, LAYERS.appearance));
   add("examples", buildExamples(card, name, 600) + lorePlacedText(loreRes, "examples"));
   add("background", "【背景】\n" + renderFields(card, LAYERS.background) +
     (card.scenario ? "\n世界设定：" + String(card.scenario).trim() : "") + lorePlacedText(loreRes, "background"));
@@ -451,8 +457,12 @@ function buildMessages(card, ctx, budget){
     stName = stP.name;
     var parts = {
       persona: ctx.persona ? "【玩家人设】\n" + ctx.persona : "",
+      /* ST 路径没有独立 appearance marker(MARKER_PARTS 是 ST 标准标识集),
+       * 拆出去的【外貌与举止】折进 charDesc —— 每个 ST 预设都有 charDescription,
+       * 不折的话 ST 模式下外在字段会被静默丢弃。放在核心人设之后、记忆之前。 */
       charDesc: ["你是" + name + "，《" + (ctx.novel || "") + "》中的人物。",
         "【核心人设】\n" + renderFields(card, LAYERS.identity.concat(LAYERS.core)) + lorePlacedText(loreRes, "core"),
+        "【外貌与举止】\n" + renderFields(card, LAYERS.appearance),
         memSeg ? "【长期记忆】\n" + memSeg : "",
         ctx.arc ? "【人物弧光】\n" + ctx.arc : "",
         rel ? "【人物关系】\n" + rel : ""].filter(Boolean).join("\n\n"),
