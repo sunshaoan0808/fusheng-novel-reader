@@ -19,6 +19,10 @@ function extract(src, name){
 }
 const ctx = {console, esc: (x)=>String(x)};
 vm.createContext(ctx);
+/* 浏览器里 index.html 最先加载 rp/escutil.js，jq/jqJ/escH 全局可用；
+   optCardHTML 的 onclick 模板走 jq()，沙盒必须同样加载（曾因只 stub esc
+   不加载 escutil 报 jq is not defined）。 */
+vm.runInContext(fs.readFileSync(WWW+"/rp/escutil.js", "utf8"), ctx);
 vm.runInContext(extract(appSrc, "parseOptCard"), ctx);
 vm.runInContext(extract(appSrc, "optCardHTML"), ctx);
 vm.runInContext(extract(appSrc, "stRegexToRule"), ctx);

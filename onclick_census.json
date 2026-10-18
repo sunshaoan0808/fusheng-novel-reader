@@ -1,0 +1,5676 @@
+{
+  "agg": {
+    "byEvent": {
+      "click": 463,
+      "error": 6,
+      "input": 29,
+      "change": 14,
+      "keydown": 3
+    },
+    "byKind": {
+      "static": 319,
+      "dyn": 196
+    },
+    "byShape": {
+      "singleCall": 379,
+      "usesThisOrEvent": 69,
+      "noCall": 6,
+      "complex": 61
+    },
+    "byEsc": {
+      "jq": 189,
+      "none": 7
+    },
+    "total": 515,
+    "static": 319,
+    "dynamic": 196,
+    "escOk": 189,
+    "escHtmlOnly": 0,
+    "escNone": 7
+  },
+  "items": [
+    {
+      "file": "app.js",
+      "line": 82,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setNav('distill')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 116,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.src='bg/book_cover_default.jpg'",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 119,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "openRun('${jq(r.run_id)}')",
+      "ivs": [
+        "jq(r.run_id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 164,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.closest('.runbanner').remove()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 215,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "noCall",
+      "code": "${o.oncard}",
+      "ivs": [
+        "o.oncard"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 218,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.src='bg/avatar_default.jpg'",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 248,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "filterChars(this.value)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 249,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "groupPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 269,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setTab('chars')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 274,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "startGroupChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 285,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChatPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 288,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setNav('writer')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 295,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChatPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 300,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "startGroupChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 339,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();chatWith('${jq(RUN.run_id)}','${jq(p.name)}')",
+      "ivs": [
+        "jq(RUN.run_id)",
+        "jq(p.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 340,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();openChar('${jq(p.name)}')",
+      "ivs": [
+        "jq(p.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 361,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setTab('chars')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 362,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.remove()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 363,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "genPortrait('${jq(RUN.run_id)}','${jq(p.name)}')",
+      "ivs": [
+        "jq(RUN.run_id)",
+        "jq(p.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 367,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWith('${jq(RUN.run_id)}','${jq(p.name)}')",
+      "ivs": [
+        "jq(RUN.run_id)",
+        "jq(p.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 419,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "var d=this.nextElementSibling;var h=d.classList.toggle('hidden');this.textContent=h?'展开全文':'收起';return false;",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 489,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showStoryline()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 589,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "window.__retryAction&&window.__retryAction()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 647,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "retryWorldcard()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 681,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wcSearch()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 706,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wcClearSearch()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 730,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "loreEditor(RUN.run_id,'more')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 797,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.closest('.viewer').remove()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 928,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();ttsMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 985,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "loreGoBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 986,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreForm('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 986,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "importStLore('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 986,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "exportStLore('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 996,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreMove('${jq(runId)}',${jq(i)},-1)\"${i===0?\" disabled\":\"\"}>↑</button> <button class=\"btn ghost",
+      "ivs": [
+        "jq(runId)",
+        "jq(i)",
+        "i===0?\" disabled\":\"\""
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 997,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreMove('${jq(runId)}',${jq(i)},1)\"${i===arr.length-1?\" disabled\":\"\"}>↓</button> <button class=\"btn ghost",
+      "ivs": [
+        "jq(runId)",
+        "jq(i)",
+        "i===arr.length-1?\" disabled\":\"\""
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 998,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreForm('${jq(runId)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 999,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreToggle('${jq(runId)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1000,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreDel('${jq(runId)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1001,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreForm('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1081,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "renderLoreList('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1084,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('l_content','l_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1104,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreSave('${jq(runId)}',${jq(i==null?\"null\":i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(i==null?\"null\":i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1158,
+      "ev": "change",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "renderRegexList('${jq(runId)}',this.value)",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1166,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "regexGoBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1168,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "importStRegex()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1168,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exportStRegex()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1168,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "regexForm('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1174,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "regexForm('${jq(runId)}','${jq(name)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1175,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "regexToggle('${jq(runId)}','${jq(name)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1176,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "regexDel('${jq(runId)}','${jq(name)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1257,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "renderRegexList('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1259,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('x_rep','x_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1261,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "regexSave('${jq(runId)}','${jq(name)}',${jq(i==null?\"null\":i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(i==null?\"null\":i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1285,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "taskForm()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1300,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "copyTask('${jq(t.id)}')",
+      "ivs": [
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1301,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "delTask('${jq(t.id)}')",
+      "ivs": [
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1315,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveTask()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1316,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTasks()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1627,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "__backAction()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1633,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wallOptUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1635,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wallOptUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1637,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "document.getElementById('wall_file').click()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1638,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "clearWallpaperUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1640,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "uploadWallpaperUI(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1796,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exitChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1799,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "chapterPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1799,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);openAlbum('${jq(CHAT.runId)}','${jq(CHAT.name)}')",
+      "ivs": [
+        "jq(CHAT.runId)",
+        "jq(CHAT.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1800,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleChatSearch()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1801,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(true)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1810,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(false)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1820,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);openAlbum('${jq(CHAT.runId)}','${jq(CHAT.name)}')",
+      "ivs": [
+        "jq(CHAT.runId)",
+        "jq(CHAT.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1821,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);wallpaperEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1822,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);openSaves()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1823,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);newChatSameRole()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1824,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);personaEditor('${jq(CHAT.runId)}','chat')",
+      "ivs": [
+        "jq(CHAT.runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1825,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);charDetail('${jq(CHAT.runId)}','${jq(CHAT.name)}')",
+      "ivs": [
+        "jq(CHAT.runId)",
+        "jq(CHAT.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1826,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showATasks()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1827,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);plotEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1829,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);loreEditor('${jq(CHAT.runId)}','chat')",
+      "ivs": [
+        "jq(CHAT.runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1830,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);regexEditor('${jq(CHAT.runId)}','${jq(CHAT.name)}','chat')",
+      "ivs": [
+        "jq(CHAT.runId)",
+        "jq(CHAT.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1831,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showSystem()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1832,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);promptDiag()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1834,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showRelManager()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1835,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showCardEvo()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1837,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showChatSettings()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1838,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1840,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChatTxt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1841,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChatJsonl()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1842,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);importStChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1843,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);importGouhua()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1844,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);clearChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1846,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exitChatTo('settings')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1899,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exitChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1901,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "chapterPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1902,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleChatSearch()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1903,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(true)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1912,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(false)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1916,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setGroupOrder('natural')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1917,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setGroupOrder('list')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1922,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "forceSpeaker('${jq(n)}')",
+      "ivs": [
+        "jq(n)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1925,
+      "ev": "input",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "setTalkVal('${jq(n)}',this.value)",
+      "ivs": [
+        "jq(n)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1931,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showSystem()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1932,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showATasks()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1933,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);plotEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1935,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);openSaves()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1936,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);wallpaperEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1937,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);personaEditor(null,'chat')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1938,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);loreEditor('${jq(CHAT.runId)}','chat')",
+      "ivs": [
+        "jq(CHAT.runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1939,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "toggleDrawer(false);regexEditor('${jq(CHAT.runId)}',null,'chat')",
+      "ivs": [
+        "jq(CHAT.runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 1940,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1942,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChatTxt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1943,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChatJsonl()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1944,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);clearChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 1946,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exitChatTo('settings')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2003,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "gRelDel(${jq(i)})",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2009,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "gRelAdd()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2033,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setNav('settings')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2035,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setNav('writer')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2051,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "importedGroupPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2057,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();showChatPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2072,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();chatWith('${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2073,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();charDetail('${jq(c.runId)}','${jq(c.name)}','picker')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2074,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pickTag('')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2083,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "albumCreate()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2084,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "document.getElementById('albumFile').click()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2085,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "albumImportFile(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2089,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumPage('${jq(a.id)}')",
+      "ivs": [
+        "jq(a.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2093,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "albumCreate()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2118,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();chatWith('${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2119,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();albumRemoveCard('${jq(id)}','${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(id)",
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2124,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChatPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2125,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumPick('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2126,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumExport('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2127,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumRename('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2128,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumDel('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2142,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumPage('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2151,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();albumAdd('${jq(id)}','${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(id)",
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2212,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWith('${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2232,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pickTag('')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2234,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "pickTag('${jq(x.tag)}')",
+      "ivs": [
+        "jq(x.tag)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2419,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showForeshadow()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2440,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "foreshadowChapter(${jq(e.ch)})",
+      "ivs": [
+        "jq(e.ch)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2447,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2449,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "fsTab('unresolved')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2450,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "fsTab('resolved')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2473,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderForeshadow()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2669,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2681,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "doStChatImport()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2739,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2747,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "doGouhuaImport()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2829,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2830,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 2830,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "editMsgSave(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2831,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "editMsgCancel(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 2914,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "noCall",
+      "code": "${fn}",
+      "ivs": [
+        "fn"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3067,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "setThemeUI('${jq(t.id)}')",
+      "ivs": [
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3092,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "setFontScale(${jq(o[0])})",
+      "ivs": [
+        "jq(o[0])"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3103,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "checkinQuick()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3104,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showAchv('picker')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3127,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "checkinMonth(-1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3128,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "checkinMonth(1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3137,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "checkinUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3153,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "noCall",
+      "code": "${backFn}",
+      "ivs": [
+        "backFn"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3231,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pinSet()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3235,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pinChangeUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3236,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pinRemoveUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3254,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "pinChangeDo()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3334,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "chatSearchInput(this.value)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3336,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "chatSearchGo(-1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3337,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "chatSearchGo(1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3338,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleChatSearch(false)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3431,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();rateMsg(${jq(idx)},1)",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3432,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();rateMsg(${jq(idx)},-1)",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3435,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();toggleMemHits(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3445,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3445,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "swipeMsg(${jq(idx)},-1)",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3447,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "swipeMsg(${jq(idx)},1)",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3451,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();repickOption()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3452,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();editMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3453,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();copyMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3454,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();regenMsg()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3455,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();delMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3459,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();editMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3460,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();copyMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3461,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();delMsg(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3474,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();foldToggle(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3479,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "toggleTools(event,${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3532,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "toggleCtxLore(event)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3612,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();portraitDebug()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3640,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "wsMoveTo('${jq(pl.name)}')",
+      "ivs": [
+        "jq(pl.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3652,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3656,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAdjustTime(30)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3657,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAdjustTime(120)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3658,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAdjustTime(1440)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3659,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAdjustTime(-60)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3664,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsSetWeather()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3669,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAddPlace()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3674,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsSetChapter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3738,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();pickOption(${jq(idx)},${jq(i)})",
+      "ivs": [
+        "jq(idx)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 3926,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "stopGen()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3931,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "setAsSpeaker(this.value)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3935,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "toggleAtMenu(event)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3937,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "togglePushStory(event)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3938,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleNarr()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3940,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "RP_AIFILL.fillChat(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3942,
+      "ev": "keydown",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "if(event.key==='Enter')sendChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3943,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "sendChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 3952,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "atMention('${jq(n)}')",
+      "ivs": [
+        "jq(n)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4218,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);chapterPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4227,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "setTab('chat');showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4234,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "setChapterIdx(-1);chapterPicker()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4241,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "setChapterIdx(${jq(i)});chapterPicker()",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4266,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "plotGoBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4268,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('p_outline','p_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4270,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "plotSave()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4271,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "plotRestore()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4272,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "plotClearOutline()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4315,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "toggleScenario('${jq(s.id)}')",
+      "ivs": [
+        "jq(s.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4316,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleScenario('')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4318,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "setSceneText(this.value)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4372,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "setPov('${jq(p.id)}')",
+      "ivs": [
+        "jq(p.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4374,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "setPerson('${jq(p.id)}')",
+      "ivs": [
+        "jq(p.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4443,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "retryMemAnalyze()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4451,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "memPin(${jq(id)})",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4452,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "memEditForm(${jq(id)})",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4453,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "memCopyCard(${jq(id)})",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4454,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "memDel(${jq(id)})",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4481,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "factForm(${jq(f.id)})",
+      "ivs": [
+        "jq(f.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4481,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "factDel(${jq(f.id)})",
+      "ivs": [
+        "jq(f.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4493,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "factForm()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4506,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "albumKindFilter('${jq(k)}')",
+      "ivs": [
+        "jq(k)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4514,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "toggleEventPerm(${jq(e.id)})",
+      "ivs": [
+        "jq(e.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4517,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "albumBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4538,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "albumBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4539,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "memoryNovel()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4539,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showNovel3()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4570,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderAlbum()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4575,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "memEditSave(${jq(id)})",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4629,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderAlbum()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4634,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "factSave(${jq(fid==null?\"null\":fid)})",
+      "ivs": [
+        "jq(fid==null?\"null\":fid)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4684,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderAlbum()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4691,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exportNovel()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4693,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "RP_APPEAR.setNovelStyle(this.value);memoryNovel()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4694,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "novelPolish()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4780,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "novelPlan()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4788,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "novelRewriteUI(${jq(i)})",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4789,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "novelRead()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4792,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "if(confirm('重新规划会清空现有章节, 继续?'))novelPlan(true)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4793,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "novelExportTxt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4794,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "if(confirm('删除这本小说?')){RP_NOVEL.delNovel(novelChatId());renderNovel3();}",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4797,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderAlbum()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4823,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "novelRewriteDo(${jq(i)})",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4862,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderNovel3()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4870,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "novelExportTxt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4926,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loadSaveSlot(${jq(s.id)})",
+      "ivs": [
+        "jq(s.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4927,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "renameSaveSlot(${jq(s.id)})",
+      "ivs": [
+        "jq(s.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4928,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "delSaveSlot(${jq(s.id)})",
+      "ivs": [
+        "jq(s.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 4933,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 4934,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "newSaveSlot()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5263,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "__backAction()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5265,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount(['p_name','p_called','p_desc','p_extra'],'p_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5267,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount(['p_name','p_called','p_desc','p_extra'],'p_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5269,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount(['p_name','p_called','p_desc','p_extra'],'p_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5271,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount(['p_name','p_called','p_desc','p_extra'],'p_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5273,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "savePersonaUI(${isOverride?`'${jq(scope)}`:\"null\"},'${jq(from)}')",
+      "ivs": [
+        "isOverride?`'${jq(scope)}`:\"null\"",
+        "jq(from)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5274,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "importStPersona()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5275,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exportStPersonaUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5276,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "RP_PERSONA.saveOverride('${jq(scope)}',null);__backAction()",
+      "ivs": [
+        "jq(scope)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5332,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showWriter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5334,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "copyText(document.getElementById('cardjson').value);alert('卡片 JSON 已复制')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5490,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "openSheet(false)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5495,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "pickOpening('${jq(runId)}','${jq(name)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5497,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "pickOpening('${jq(runId)}','${jq(name)}',-1)",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5529,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.src='bg/avatar_default.jpg'",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5533,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "singleCall",
+      "code": "badgeTip('${b}')",
+      "ivs": [
+        "b"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5541,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleFavUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5542,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleLikeUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5563,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWithOpening('${jq(runId)}','${jq(nm)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5583,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "openCardArchive('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5584,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "viewCardSource('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5595,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWith('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5643,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "archiveBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5649,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "archiveBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5660,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "editCard('${jq(runId === \"imported\" ? \"imported\" : \"custom\")}','${jq(card.id || \"\")}')",
+      "ivs": [
+        "jq(runId === \"imported\" ? \"imported\" : \"custom\")",
+        "jq(card.id || \"\")"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5671,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreEditor('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5679,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWithOpening('${jq(runId)}','${jq(nm)}',${jq(i)})",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5746,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "charDetail('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5753,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "charDetail('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5774,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "copyCardJson('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5818,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "ironlawCount()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5819,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveIronLawUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5822,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "chatsumCount()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5823,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveChatSumUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5826,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveConciseUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5829,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "detailOpenAlbum()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5840,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "chatWith('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5840,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "soulAnchors('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5842,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "detailBack()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5843,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "charTab('${jq(t[0])}')",
+      "ivs": [
+        "jq(t[0])"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5854,
+      "ev": "change",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "arcStageChange('${jq(runId)}','${jq(nm)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5911,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "AGENT_RELATIONS.setLock('${jq(runId)}','${jq(name)}','${jq(other)}',${!locked},'${jq(name)}');showRelManager();",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "jq(other)",
+        "!locked",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5915,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5934,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "acceptCardEvo(${jq(idx)})",
+      "ivs": [
+        "jq(idx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5935,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "AGENT_CARDEVO.reject('${jq(runId)}','${jq(name)}',${idx});showCardEvo();",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)",
+        "idx"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 5938,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5968,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "closeAssistant()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5974,
+      "ev": "keydown",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "if(event.key==='Enter')sendAssistant()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5975,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "sendAssistant()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 5998,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "asstChip('${jq(ch.text)}')",
+      "ivs": [
+        "jq(ch.text)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 6067,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsAdjustTimePrompt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6068,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wsSetPlacePrompt()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6085,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "togglePushStory(event);showChatSettings();",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6097,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveChatParams()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6109,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveChatSoulProfile()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6120,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showRelManager()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6121,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showCardEvo()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6122,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "loreEditor('${jq(CHAT.runId)}','chat')",
+      "ivs": [
+        "jq(CHAT.runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 6126,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6133,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "complex",
+      "code": "${fn}();showChatSettings();",
+      "ivs": [
+        "fn"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 6191,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6242,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6531,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "if(confirm('清空所有单聊/群聊/穿越聊天记录？\\n会清空记忆和关系，从头来过。'))clearChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6532,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "storeCleanup()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6533,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wipeAll()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6556,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "filterSettings(this.value)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6566,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "globalWallpaperEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6569,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showAchv()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6579,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "fetchModels()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6580,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "testConn()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6585,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "document.getElementById('c_model').value=this.value;renderModelTags()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6586,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "renderModelTags()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6592,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "modelTagAdd()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6601,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveCfgUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6605,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "personaEditor(null,'settings')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6613,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "document.getElementById('stpreset_file').click()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6614,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "stPresetEntries()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6615,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exportStPreset()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6616,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "delStPromptPreset()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6617,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "importStPromptPreset(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6659,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveRpCfgUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6659,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "importStPreset()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6678,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveRpCfgUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6695,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveRpCfgUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6706,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveNotifyUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6718,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "saveHbUI()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6718,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "hbCheckOnce()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6724,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showOnboard(1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 6725,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "wipeAll()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7077,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "setNav('settings')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7080,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetAddEntry('${jq(pid)}')",
+      "ivs": [
+        "jq(pid)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7088,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetEntryDetail('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7092,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();stPresetMoveEntry('${jq(pid)}',${jq(i)},-1)",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7093,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();stPresetMoveEntry('${jq(pid)}',${jq(i)},1)",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7094,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();stPresetToggleEntry('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7127,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "renderStPresetEntries('${jq(pid)}')",
+      "ivs": [
+        "jq(pid)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7132,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetToggleEntryDetail('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7137,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "renderStPresetEntries('${jq(pid)}')",
+      "ivs": [
+        "jq(pid)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7141,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetToggleEntryDetail('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7148,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "document.getElementById('pe_depthrow').style.display=this.value==='chat'?'':'none'",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7156,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetSaveEntry('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7157,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "stPresetDelEntry('${jq(pid)}',${jq(i)})",
+      "ivs": [
+        "jq(pid)",
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7269,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "viewAOut('${jq(nm)}','${jq(t.id)}')",
+      "ivs": [
+        "jq(nm)",
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7270,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "runATaskNow('${jq(nm)}','${jq(t.id)}')",
+      "ivs": [
+        "jq(nm)",
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7271,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "editATask('${jq(nm)}','${jq(t.id)}')",
+      "ivs": [
+        "jq(nm)",
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7272,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "delATask('${jq(nm)}','${jq(t.id)}')",
+      "ivs": [
+        "jq(nm)",
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7273,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "editATask('${jq(nm)}','')",
+      "ivs": [
+        "jq(nm)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7274,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7297,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "saveATask('${jq(name)}','${jq(t.id)}')",
+      "ivs": [
+        "jq(name)",
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7298,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "showATasks('${jq(name)}')",
+      "ivs": [
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7330,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "showATasks('${jq(name)}')",
+      "ivs": [
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7357,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "taCount('vibe_desc','vibe_desc_cnt',200)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7358,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "vibeGen()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7359,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "vibeToManual()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7365,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "taCount('qg_premise','qg_premise_cnt',200)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7366,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "quickGenCard()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7367,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "quickGenAbort()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7372,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "writerChat('${jq(x.id)}')",
+      "ivs": [
+        "jq(x.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7373,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "complex",
+      "code": "if(confirm('放弃这次写卡?')){RP_WRITER.delSession('${jq(x.id)}');showWriter();}",
+      "ivs": [
+        "jq(x.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7378,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();chatWith('custom','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7379,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();editCard('custom','${jq(c.id)}')",
+      "ivs": [
+        "jq(c.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7380,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();exportCard('${jq(c.id)}')",
+      "ivs": [
+        "jq(c.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7381,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();if(confirm('删除这张角色卡?')){RP_WRITER.delCustom('${jq(c.id)}');showWriter();}",
+      "ivs": [
+        "jq(c.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7383,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "newWriter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7424,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "vibeGen(true)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7425,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "vibeToManual()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7426,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "vibeSave()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7504,
+      "ev": "input",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "singleCall",
+      "code": "tokCount('cef_${k}','ce_tok')",
+      "ivs": [
+        "k"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7521,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "fillCardTemplate('${jq(t.id)}')",
+      "ivs": [
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7526,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_alt','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7528,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_exd','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7530,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_sysp','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7532,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_phi','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7534,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_cnote','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7536,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('ce_scen','ce_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7546,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "saveCardEdit('${jq(src)}','${jq(id)}')",
+      "ivs": [
+        "jq(src)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7547,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "__backAction()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7625,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "startWriter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7626,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showWriter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7644,
+      "ev": "keydown",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "if(event.key==='Enter')sendWriterMsg('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7644,
+      "ev": "input",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "tokCount('w_in','w_tok')",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7645,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "sendWriterMsg('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7648,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "finalizeStep('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7649,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "genCardUI('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7650,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "finishWriterUI('${jq(id)}')",
+      "ivs": [
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7651,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showWriter()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7752,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "none",
+      "shape": "noCall",
+      "code": "${b[1]}",
+      "ivs": [
+        "b[1]"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7753,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "onboardDone()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7818,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "goldenPickBook()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7825,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travMode('${jq(m.id)}')\"`:\"\"}> ${m.seal?`<div class=\"tm-seal\" aria-hidden=\"true\">${m.seal}</div>`:\"\"} <div class=\"tm-icon",
+      "ivs": [
+        "jq(m.id)",
+        "m.seal?`<div class=\"tm-seal\" aria-hidden=\"true\">${m.seal}</d"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7834,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travImport()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7835,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travVisionPick()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7840,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "travImportFile(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7841,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "travVisionFile(this)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7850,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();editCard('imported','${jq(c.id)}')",
+      "ivs": [
+        "jq(c.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7851,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();travDelImport('${jq(c.id)}')",
+      "ivs": [
+        "jq(c.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7856,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travResume('${jq(t.id)}')",
+      "ivs": [
+        "jq(t.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7873,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7874,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "plotlinePickStage('${jq(r.run_id)}')",
+      "ivs": [
+        "jq(r.run_id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7884,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "plotlinePickBook()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7886,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "plotlineStart('${jq(runId)}','${jq(s.id)}','${jq(s.plotrunId||\"\")}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(s.id)",
+        "jq(s.plotrunId||\"\")"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7912,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7916,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "goldenPickChar(${jq(i)})",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7917,
+      "ev": "error",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "this.remove()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7932,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "goldenPickBook()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7935,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "goldenSetChar(-1)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7936,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "goldenSetChar(${jq(ci)})",
+      "ivs": [
+        "jq(ci)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7940,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "goldenSetStyle(${jq(si)})",
+      "ivs": [
+        "jq(si)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7943,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "goldenOpening()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 7976,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "goldenPickChar(${jq(g.bookIdx)})",
+      "ivs": [
+        "jq(g.bookIdx)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7981,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "goldenSetOpening(${jq(oi)})",
+      "ivs": [
+        "jq(oi)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 7986,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "goldenStart()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8053,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8056,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "cardGapfillGen('${jq(cardId)}')",
+      "ivs": [
+        "jq(cardId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8057,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "cardGapfillNext([${(queue||[]).map(x=>\"'\"+jq(x)+\"'\").join(\",\")}])",
+      "ivs": [
+        "(queue||[]).map(x=>\"'\"+jq(x)+\"'\").join(\",\")"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8096,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "cardGapfillPrompt('${jq(d.cardId)}',Object.keys(window._gapfillDraft.fields),[])",
+      "ivs": [
+        "jq(d.cardId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8098,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "cardGapfillSave()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8158,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8167,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travVisionGen()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8193,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travVisionSetup(window._visionDataUrl)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8200,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travVisionImport()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8235,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8237,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "soulAnchors('${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8292,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "soulPickTarget()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8311,
+      "ev": "input",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travEventSearch('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8316,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "soulStart('${jq(runId)}','${jq(name)}')",
+      "ivs": [
+        "jq(runId)",
+        "jq(name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8346,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travEventPick(${jq(i)})",
+      "ivs": [
+        "jq(i)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8358,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travEventSearch('${jq(runId)}')",
+      "ivs": [
+        "jq(runId)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8420,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8422,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "bodyIdentity('${jq(w.kind)}','${jq(w.id)}')",
+      "ivs": [
+        "jq(w.kind)",
+        "jq(w.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8424,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "usesThisOrEvent",
+      "code": "event.stopPropagation();travWorldComplete('${jq(w.kind)}','${jq(w.id)}')",
+      "ivs": [
+        "jq(w.kind)",
+        "jq(w.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8439,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "bodyReroll('${jq(kind)}','${jq(id)}','${jq(key)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)",
+        "jq(key)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8449,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "bodyPickWorld()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8452,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "bodyAiGen('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8456,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "idNamePick()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8467,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "bodyStart('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8584,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "exitChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8588,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleChatSearch()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8589,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(true)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8594,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travWsEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8598,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "toggleDrawer(false)",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8601,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);travWsEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8602,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);travIdentityView()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8603,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);travPartyView()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8604,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);travRegexEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8605,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);wallpaperEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8606,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);showSystem()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8607,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);exportChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8608,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "toggleDrawer(false);travEnd()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8680,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8685,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travWsSave()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8688,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "simEditor()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8728,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travUseItem(${jq(ix)})",
+      "ivs": [
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8738,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8823,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8829,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travWorldCompleteGen('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8848,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travWorldComplete('${jq(d.kind)}','${jq(d.id)}')",
+      "ivs": [
+        "jq(d.kind)",
+        "jq(d.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8854,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "travWorldCompleteSave()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8876,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8879,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "isekaiPickDst('${jq(c.runId)}','${jq(c.name)}')",
+      "ivs": [
+        "jq(c.runId)",
+        "jq(c.name)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8890,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "isekaiPickSrc()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8893,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "isekaiFusion('${jq(srcRunId)}','${jq(srcName)}','${jq(w.key)}')",
+      "ivs": [
+        "jq(srcRunId)",
+        "jq(srcName)",
+        "jq(w.key)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8906,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "isekaiPickDst('${jq(srcRunId)}','${jq(srcName)}')",
+      "ivs": [
+        "jq(srcRunId)",
+        "jq(srcName)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8911,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "isekaiStart('${jq(srcRunId)}','${jq(srcName)}','${jq(dstKey)}')",
+      "ivs": [
+        "jq(srcRunId)",
+        "jq(srcName)",
+        "jq(dstKey)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8942,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showTraverse()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8945,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMain('${jq(w.kind)}','${jq(w.id)}')",
+      "ivs": [
+        "jq(w.kind)",
+        "jq(w.id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8955,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "partySetup()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 8958,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMainSoul('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8959,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMainBody('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8969,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMain('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8971,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMainSoulGo('${jq(kind)}','${jq(id)}',${jq(ix)})",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)",
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8985,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMain('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 8989,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyBodyNext('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9003,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyPickMain('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9006,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyToggleComp(${jq(ix)})",
+      "ivs": [
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9010,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "partyStart('${jq(kind)}','${jq(id)}')",
+      "ivs": [
+        "jq(kind)",
+        "jq(id)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9052,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "showChat()",
+      "ivs": []
+    },
+    {
+      "file": "app.js",
+      "line": 9057,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travPartyTalk(${jq(ix)},-10)",
+      "ivs": [
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9058,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travPartyTalk(${jq(ix)},10)",
+      "ivs": [
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "app.js",
+      "line": 9059,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "travPartyRemove(${jq(ix)})",
+      "ivs": [
+        "jq(ix)"
+      ]
+    },
+    {
+      "file": "rp/distill_backup.js",
+      "line": 67,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_BACKUP.dismiss()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_backup.js",
+      "line": 68,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_BACKUP.gotoSettings()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 322,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.qaMode(true)",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 343,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.qaMode(false)",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 926,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.showStyles()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 936,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.show()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 938,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "complex",
+      "code": "document.getElementById('d_import_pkg').click()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 963,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.show()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 1046,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "usesThisOrEvent",
+      "code": "DISTILL_UI.setAxis(this)",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 1051,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.show()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 1172,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.confirmChange()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 1401,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.show()",
+      "ivs": []
+    },
+    {
+      "file": "rp/distill_ui.js",
+      "line": 1427,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "singleCall",
+      "code": "DISTILL_UI.showStyles()",
+      "ivs": []
+    },
+    {
+      "file": "rp/escutil.js",
+      "line": 2,
+      "ev": "click",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "noCall",
+      "code": "...",
+      "ivs": []
+    },
+    {
+      "file": "rp/escutil.js",
+      "line": 2,
+      "ev": "change",
+      "dynamic": false,
+      "esc": "n/a",
+      "shape": "noCall",
+      "code": "...",
+      "ivs": []
+    },
+    {
+      "file": "rp/escutil.js",
+      "line": 9,
+      "ev": "click",
+      "dynamic": true,
+      "esc": "jq",
+      "shape": "singleCall",
+      "code": "f('${jq(x)}')",
+      "ivs": [
+        "jq(x)"
+      ]
+    }
+  ]
+}

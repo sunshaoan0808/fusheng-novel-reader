@@ -2000,7 +2000,7 @@ const rels = RP_GROUP.getRels(CHAT.runId, gkey);
 const ms = CHAT.members||[];
 const opt = (sel)=> ms.map(n=>`<option value="${esc(n)}"${n===sel?" selected":""}>${esc(n)}</option>`).join("");
 box.innerHTML = (rels.length
-? rels.map((r,i)=>`<div class="grelrow"><span>${esc(r.a)} 是 ${esc(r.b)} 的 ${esc(r.rel)}</span><button class="btn ghost" onclick="gRelDel(${i})">删</button></div>`).join("")
+? rels.map((r,i)=>`<div class="grelrow"><span>${esc(r.a)} 是 ${esc(r.b)} 的 ${esc(r.rel)}</span><button class="btn ghost" onclick="gRelDel(${jq(i)})">删</button></div>`).join("")
 /* B8: 导入卡群聊没有 run, 也就不存在"蒸馏出的静态人物关系"可继承。
    这时候编辑器不假装有关系表可读, 老实说明: 关系得自己写, 写什么就是什么, AI 不补。 */
 : `<div class="hint" style="margin:0 0 6px">${CHAT.runId === "imported"
@@ -3735,7 +3735,7 @@ function optCardHTML(card, active, idx){
   var nums = ["壹","贰","叁","肆","伍","陆"];
   var btns = card.options.map(function(o, i){
     return active
-      ? `<button class="optbtn" onclick="event.stopPropagation();pickOption(${idx},${i})"><span class="onum">${nums[i]||""}</span><span>${esc(o)}</span></button>`
+      ? `<button class="optbtn" onclick="event.stopPropagation();pickOption(${jq(idx)},${jq(i)})"><span class="onum">${nums[i]||""}</span><span>${esc(o)}</span></button>`
       : `<div class="optbtn off"><span class="onum">${nums[i]||""}</span><span>${esc(o)}</span></div>`;
   }).join("");
   return `<div class="optcard">`
@@ -7641,7 +7641,7 @@ const log = s.history.map(m=>`<div class="msg ${m.role==="user"?"me":"ai"}"><div
 view.innerHTML = `
 <div class="hint">第 ${s.step+1}/5 步 · ${esc(st.name)}: ${esc(st.desc)}</div>
 <div id="wlog">${log || `<div class="empty">Ruby 正在组织语言…</div>`}</div>
-<div class="chatbar"><input id="w_in" placeholder="和 Ruby 聊聊…" onkeydown="if(event.key==='Enter')sendWriterMsg('${id}')" oninput="tokCount('w_in','w_tok')">
+<div class="chatbar"><input id="w_in" placeholder="和 Ruby 聊聊…" onkeydown="if(event.key==='Enter')sendWriterMsg('${jq(id)}')" oninput="tokCount('w_in','w_tok')">
 <button onclick="sendWriterMsg('${jq(id)}')">发送</button></div>
 <div class="tokline" id="w_tok" style="padding:0 14px"></div>
 <div class="btnrow" style="margin-top:8px">
@@ -7933,7 +7933,7 @@ window.goldenPickChar = (i)=>{
   <h2 class="sec">魂穿成谁？《${esc(r.novel)}》</h2>
   <div class="gchars">
     <div class="gchip sel" data-ci="-1" onclick="goldenSetChar(-1)">路人</div>
-    ${chars.map((c,ci)=>`<div class="gchip" data-ci="${ci}" onclick="goldenSetChar(${ci})">${esc(c)}</div>`).join("")}
+    ${chars.map((c,ci)=>`<div class="gchip" data-ci="${ci}" onclick="goldenSetChar(${jq(ci)})">${esc(c)}</div>`).join("")}
   </div>
   <h2 class="sec">导演风格</h2>
   <div class="gstyles">${Object.keys(styles).map((k,si)=>`
