@@ -134,6 +134,10 @@ function openSoulProfile(runId, name){
     traits = String(F("core_traits")).split(/[,，、;；]/).map(function(x){ return x.trim(); }).filter(Boolean).slice(0, 8);
   }
   var style = F("temperament_type") || (soul && soul.soul_md ? String(soul.soul_md).slice(0, 90) : "");
+  /* P2: 外貌与举止节。档案是给人看的全量存档, 取扁平值(分阶段行是 prompt 的事);
+   * 主取 appearance_feature, 缺省 visual_identity; 举止/习惯动作作副行。 */
+  var appear = F("appearance_feature") || F("visual_identity") || "";
+  var bearing = [F("carry_style"), F("habit_action")].filter(Boolean).join("；");
   var facts = memFacts(runId, name);
   var novel = "";
   try{ novel = (((window.__DATA__ || {}).runs || {})[runId] || {}).novel || ""; }catch(e){}
@@ -159,6 +163,10 @@ function openSoulProfile(runId, name){
       "</div></div>" +
       (traits.length ? "<div class=\"sw-sec\"><div class=\"sw-sec-t\">🧬 性格特点</div><div class=\"sw-traits\">" +
         traits.map(function(x){ return "<span class=\"sw-trait\">" + escH(x) + "</span>"; }).join("") +
+      "</div></div>" : "") +
+      (appear ? "<div class=\"sw-sec\"><div class=\"sw-sec-t\">🪞 外貌与举止</div><div class=\"sw-para\">" +
+        escH(appear) +
+        (bearing ? "<div style=\"opacity:.65;margin-top:4px\">" + escH(bearing) + "</div>" : "") +
       "</div></div>" : "") +
       (style ? "<div class=\"sw-sec\"><div class=\"sw-sec-t\">💬 说话风格</div><div class=\"sw-para\">" + escH(style) + "</div></div>" : "") +
       "<div class=\"sw-sec\"><div class=\"sw-sec-t\">♡ 和我的关系</div>" +

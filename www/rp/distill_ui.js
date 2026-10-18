@@ -1001,6 +1001,12 @@ function openCharacter(pkgId, name, stage){
       ${(stageData.age || stageData.gender || stageData.height) ? `<div class="kvline"><b>人口</b>：${[stageData.age, stageData.gender, stageData.height].filter(Boolean).join(" · ")}</div>` : ""}
       ${(stageData.likes || stageData.dislikes) ? `<div class="kvline"><b>好恶</b>：${stageData.likes ? "喜 " + renderAnnotated(stageData.likes) : ""}${stageData.dislikes ? " / 厌 " + renderAnnotated(stageData.dislikes) : ""}</div>` : ""}
       ${(stageData.interests || stageData.fears) ? `<div class="kvline"><b>心理</b>：${stageData.interests ? "趣 " + renderAnnotated(stageData.interests) : ""}${stageData.fears ? " / 惧 " + renderAnnotated(stageData.fears) : ""}</div>` : ""}
+      ${/* P2: 外在集群行。新口径(18 字段)的包才有这些键; 旧包没有, 条件渲染自然跳过。
+            分阶段数据(d.early/mid/late)在此按当前查看阶段取, 与上面各行同一口径。 */
+        (stageData.appearance_feature || stageData.visual_identity) ? `<div class="kvline"><b>外貌</b>：${renderAnnotated(stageData.appearance_feature || stageData.visual_identity)}</div>` : ""}
+      ${(stageData.physical_marks || stageData.voice_dressing || stageData.signature_items) ? `<div class="kvline"><b>印记装束</b>：${[stageData.physical_marks ? "印记 " + renderAnnotated(stageData.physical_marks) : "", stageData.voice_dressing ? "装着 " + renderAnnotated(stageData.voice_dressing) : "", stageData.signature_items ? "随身 " + renderAnnotated(stageData.signature_items) : ""].filter(Boolean).join("；")}</div>` : ""}
+      ${(stageData.habit_action || stageData.carry_style) ? `<div class="kvline"><b>举止</b>：${[stageData.habit_action ? "习惯动作 " + renderAnnotated(stageData.habit_action) : "", stageData.carry_style ? "风度 " + renderAnnotated(stageData.carry_style) : ""].filter(Boolean).join("；")}</div>` : ""}
+      ${(stageData.others_impression || stageData.reputation || stageData.action_pattern) ? `<div class="kvline"><b>他人视角</b>：${[stageData.reputation ? "口碑 " + renderAnnotated(stageData.reputation) : "", stageData.others_impression ? "印象 " + renderAnnotated(stageData.others_impression) : "", stageData.action_pattern ? "行事 " + renderAnnotated(stageData.action_pattern) : ""].filter(Boolean).join("；")}</div>` : ""}
     </div>
     ${provStats ? `<div class="card" style="margin-top:12px">
       <div style="font-size:calc(13px * var(--fs));font-weight:600;margin-bottom:8px">出处统计</div>

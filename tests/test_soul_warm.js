@@ -8,10 +8,13 @@ const localStorage = {
   removeItem: k => { delete store[k]; },
 };
 const els = {};
+const created = [];
 function mkEl(){ return {innerHTML: "", style: {}, classList: {add(){}, remove(){}, toggle(){}},
   appendChild(){}, remove(){}, querySelector(){ return null; }, focus(){}}; }
+const bodyEl = mkEl();
+bodyEl.appendChild = function (c) { (this.children = this.children || []).push(c); };
 const document = {
-  body: mkEl(), createElement: () => mkEl(),
+  body: bodyEl, createElement: () => { const e = mkEl(); created.push(e); return e; },
   getElementById: id => els[id] || null,
   querySelector: () => null,
 };
@@ -20,7 +23,8 @@ ctx.window = ctx; ctx.globalThis = ctx;
 ctx.__DATA__ = {runs: {r1: {novel: "重获新生"}}};
 vm.createContext(ctx);
 /* mock 依赖 */
-ctx.RP = {findCard: (runId, name) => name === "夜" ? {name: "夜", fields: {core_identity: "故事主角", age_stage: "14岁左右"}} : null};
+ctx.RP = {findCard: (runId, name) => name === "夜" ? {name: "夜", fields: {core_identity: "故事主角", age_stage: "14岁左右",
+  appearance_feature: "眉眼冷淡的少年", carry_style: "行事利落", habit_action: "思考时轻叩桌角"}} : null};
 ctx.RP_SOUL = {
   getSoul: card => card ? {persona: {core_traits: [{trait: "冷静"}, {trait: "警惕"}]},
     soul_md: "说话简短", background: {},
@@ -52,6 +56,20 @@ t("好感: 有标签", typeof tr.label === "string" && tr.label.length > 0);
 
 W.openSoulProfile("r1", "夜");
 t("档案: root 已挂载", !!ctx.document.body || true); /* mock document 简化, 只验不抛错 */
+/* P2: 外貌与举止节 —— sheet 是 createElement 出来挂 body 的, 抓最后一个 created */
+function lastSheetHtml() {
+  return created.length ? (created[created.length - 1].innerHTML || "") : "";
+}
+const sheetHtml = lastSheetHtml();
+t("档案: 外貌节标题", sheetHtml.indexOf("外貌与举止") >= 0);
+t("档案: 外貌节正文(appearance_feature)", sheetHtml.indexOf("眉眼冷淡的少年") >= 0);
+t("档案: 外貌节副行(举止+习惯)", sheetHtml.indexOf("行事利落；思考时轻叩桌角") >= 0);
+t("档案: 无外貌字段的卡不出该节",
+  (() => { ctx.RP.findCard = (r, n) => n === "夜" ? {name: "夜", fields: {core_identity: "x"}} : null;
+    W.openSoulProfile("r1", "夜"); const h2 = lastSheetHtml();
+    W.closeSoulProfile(); return h2.indexOf("外貌与举止") < 0; })());
+ctx.RP.findCard = (r, n) => n === "夜" ? {name: "夜", fields: {core_identity: "故事主角", age_stage: "14岁左右",
+  appearance_feature: "眉眼冷淡的少年", carry_style: "行事利落", habit_action: "思考时轻叩桌角"}} : null;
 W.closeSoulProfile();
 
 /* CSS 存在且关键类齐 */

@@ -6,6 +6,12 @@
  *
  * 首次运行：node tests/test_xss_guard.js --update-baseline   （生成基线）
  * 之后运行：node tests/test_xss_guard.js                     （比对基线）
+ *
+ * 已知盲区（2026-10 记录，勿忘）: exprs() 把 ${} 里的反引号当字符串边界吞掉,
+ * 嵌套模板字面量（`${cond ? `<b>${x}</b>` : ""}`）内层的插值不计入。
+ * 两层含义: ① 计数是低估, 真实裸插值更多; ② 变异测试必须在外层模板上植,
+ * 往嵌套模板里植多少都不会触发闸门（已实测）。
+ * 补盲要重exprs递归+重钉全仓基线, 属独立任务, 不在本闸门范围里顺手做。
  */
 "use strict";
 const fs = require("fs");
@@ -73,8 +79,12 @@ function tplAt(src, from, opts) {
   }
   return null;
 }
-/* 已审安全出口：esc 系转义 + icon()（硬编码 SVG）+ md()（inline 首行 esc） */
-const SAFE = /(esc|jq\(|jqJ\(|icon\(|md\(|encodeURI|toFixed|Number\(|parseInt\()/;
+/* 已审安全出口：esc 系转义 + icon()（硬编码 SVG）+ md()（inline 首行 esc）
+ * + renderAnnotated()（distill_ui.js: esc(text) 全量转义后再做四态标注替换,
+ *   替换串的 label/color 来自固定映射或正则约束的 [a-z0-9_-]+, title 再过一道 esc）。
+ *   2026-10 P2 补外在行时新增 4 处 renderAnnotated 插值触发闸门 —— 包装器本身
+ *   可证明安全, 正确的修法是把出口登记进来, 不是抬基线(抬基线=闸门报废)。 */
+const SAFE = /(esc|jq\(|jqJ\(|icon\(|md\(|renderAnnotated\(|encodeURI|toFixed|Number\(|parseInt\()/;
 
 function scanP1() {
   let totalExpr = 0, safe = 0, numeric = 0, risky = 0;
