@@ -1,4 +1,4 @@
-/* XSS 防线回归闸门（2026-10-18，审计建议 4 的固化部分）
+/* XSS 防线回归闸门（2026-10-18，审计建议 4 的固化部分；2026-10-19 补盲）
  *
  * 不追求「零裸插值」（605 处里大量是 icon()/md() 等已审安全出口与硬编码），
  * 而是钉住基线防劣化：总数、逐文件数、onclick 未用 jq 数、私复制转义函数
@@ -7,11 +7,12 @@
  * 首次运行：node tests/test_xss_guard.js --update-baseline   （生成基线）
  * 之后运行：node tests/test_xss_guard.js                     （比对基线）
  *
- * 已知盲区（2026-10 记录，勿忘）: exprs() 把 ${} 里的反引号当字符串边界吞掉,
- * 嵌套模板字面量（`${cond ? `<b>${x}</b>` : ""}`）内层的插值不计入。
- * 两层含义: ① 计数是低估, 真实裸插值更多; ② 变异测试必须在外层模板上植,
- * 往嵌套模板里植多少都不会触发闸门（已实测）。
- * 补盲要重exprs递归+重钉全仓基线, 属独立任务, 不在本闸门范围里顺手做。
+ * 补盲记录（2026-10-19）: 旧 exprs() 把 ${} 内的反引号当普通字符串边界吞掉,
+ * 嵌套模板字面量（`${cond ? `<b>${x}</b>` : ""}`）内层插值不计入 —— 计数低估
+ * 且变异测试在嵌套里植入不触发。已修: skipTpl() 定位嵌套模板范围(自身递归),
+ * exprs() 遇反引号递归收集内层插值。修复后 risky 185→274(+89 纯可见性增量),
+ * 新增暴露的 70 处经逐条审计均为硬编码三元常量/数字/布尔/内部枚举/字段键,
+ * 无用户自由文本, 基线已按新扫描器重钉(基线是防劣化下限, 不是质量分)。
  */
 "use strict";
 const fs = require("fs");
@@ -36,6 +37,32 @@ const files = walk(WWW, []).filter(f => path.basename(f) !== "data.js");
 const read = f => fs.readFileSync(f, "utf8");
 const rel = f => path.relative(WWW, f).replace(/\\/g, "/");
 
+/* 嵌套模板字面量扫描: s[from]==='`' 时返回配对反引号下标, 尊重其中的 ${}
+ * (而 ${} 里又可含反引号 —— 所以自身也必须递归)。找不到返回 -1。
+ * 2026-10-19 补盲: 旧版 exprs() 把 ${} 内的反引号当普通字符串边界吞掉,
+ * 嵌套模板(`<b>${x}</b>` 形态)内层插值不计入 → 计数低估+变异测试失效。 */
+function skipTpl(s, from) {
+  let i = from + 1;
+  while (i < s.length) {
+    const ch = s[i];
+    if (ch === "\\") { i += 2; continue; }
+    if (ch === "`") return i;
+    if (ch === "$" && s[i + 1] === "{") {
+      let d = 1; i += 2;
+      while (i < s.length && d) {
+        const c = s[i];
+        if (c === "\\") { i += 2; continue; }
+        if (c === "`") { const e = skipTpl(s, i); if (e < 0) return -1; i = e + 1; continue; }
+        if (c === "{") d++;
+        else if (c === "}") d--;
+        i++;
+      }
+      continue;
+    }
+    i++;
+  }
+  return -1;
+}
 function exprs(tpl) {
   const res = [];
   let i = 0;
@@ -46,7 +73,16 @@ function exprs(tpl) {
     for (; j < tpl.length; j++) {
       const ch = tpl[j];
       if (str) { if (ch === "\\") { j++; continue; } if (ch === str) str = null; continue; }
-      if (ch === "'" || ch === '"' || ch === "`") { str = ch; continue; }
+      if (ch === "'" || ch === '"') { str = ch; continue; }
+      if (ch === "`") {
+        /* 嵌套模板: 整段算外层插值的一部分(已由 slice 收入), 但其内部插值
+         * 也要递归计入, 否则就是盲区。continue 时 j 停在嵌套段结束后。 */
+        const end = skipTpl(tpl, j);
+        if (end < 0) { j = tpl.length; break; }
+        exprs(tpl.slice(j + 1, end)).forEach(e => res.push(e));
+        j = end;
+        continue;
+      }
       if (ch === "{") depth++;
       else if (ch === "}") { depth--; if (!depth) break; }
     }
