@@ -118,7 +118,7 @@ t("开场点击带序号", html.includes("chatWithOpening('imported','白月光'
 let html2 = C("cardLandingHTML('builtin','林黛玉',RP.findCard('builtin','林黛玉'),{novel:'红楼梦'})");
 t("无开场显示提示", html2.includes("没有固定开场白"));
 t("内置卡官方徽章", html2.includes("官方"));
-t("底部CTA", (html2.match(/<button class="btn landcta"/g) || []).length === 2);
+t("底部CTA唯一(P1-19 双CTA已收成 sticky 单条, 防回退)", (html2.match(/<button class="btn landcta"/g) || []).length === 1);
 
 /* RP_STATS 缺失不崩 */
 const ctx2 = mkCtx({RP_STATS: undefined});

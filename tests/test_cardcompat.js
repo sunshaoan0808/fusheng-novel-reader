@@ -6,7 +6,11 @@ const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
 // 卡片世界书走 RP_LOREBOOK.importST (secondary_keys/selectiveLogic/constant/position/probability/depth 透传);
 // v3 depth_prompt/group_only_greetings; 导出 roundtrip 不丢字段;
 // 开场白固定用 first_mes (ST 语义), 不再从池随机抽
-const RPTEST = "/home/hatch/workspace/rp-test/misaka_card.json";
+// fixture 随仓库走: 原开发机外部路径(/home/hatch/...)不可移植, 2026-10-19 重建为
+// tests/fixtures/misaka_card.json (断言口径未变); 两处都没有时该段跳过而非崩溃
+const RPTEST = fs.existsSync("tests/fixtures/misaka_card.json")
+  ? "tests/fixtures/misaka_card.json"
+  : "/home/hatch/workspace/rp-test/misaka_card.json";
 const JXY = "/home/hatch/workspace/user/files/jiangxueying_1.2.0.png";
 
 function mkCtx(){
@@ -43,6 +47,8 @@ function loadCard(p){
 }
 
 /* ---- 美琴手写 ST v2 卡 ---- */
+if(!fs.existsSync(RPTEST)){ console.log("SKIP: 美琴 v2 卡 fixture 不存在"); }
+else {
 const misaka = loadCard(RPTEST);
 const misakaRaw = JSON.parse(fs.readFileSync(RPTEST, "utf8"));
 t("v2 system_prompt 保留为一等字段", !!misaka.systemPrompt);
@@ -58,6 +64,7 @@ t("v2 system_prompt 进入 system prompt", sysAll.includes(misakaRaw.system_prom
 t("v2 few-shot 无假 opener", !sysAll.includes("在园子里迎面碰见你"));
 t("v2 few-shot 用真实对话块", misaka.exampleBlocks.some(b =>
   (b.turns || []).some(x => x.who === "char" && sysAll.includes(x.text.slice(0, 12)))));
+}
 
 /* ---- 迟归人真实 PNG ---- */
 if(fs.existsSync(JXY)){

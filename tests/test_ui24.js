@@ -53,7 +53,8 @@ vm.runInContext(`RUN = __DATA__.runs.r1;`, ctx);
 const cl = vm.runInContext(`charList(RUN.profiles)`, ctx);
 t("人物网格", cl.includes("chargrid") && cl.includes("阿绫") && cl.includes("机灵俏皮"));
 const cl0 = vm.runInContext(`charList([])`, ctx);
-t("人物空状态", cl0.includes("empty") && cl0.includes("🎭"));
+/* icons.js 迁移后 🎭 emoji 换成 icon("masks",44) 内联 SVG, 钉 SVG+文案 */
+t("人物空状态", cl0.includes("empty") && cl0.includes('<svg class="ic" width="44"') && cl0.includes("暂无人物卡"));
 
 // 5) charSumFor: profile core_identity
 const sf = vm.runInContext(`charSumFor("r1","阿绫")`, ctx);
@@ -67,7 +68,7 @@ t("选角色网格", pk.includes("chargrid") && pk.includes("阿绫"));
 // 7) showWriter 自创卡网格 + 空状态
 vm.runInContext(`showWriter();`, ctx);
 const w0 = els["view"].innerHTML;
-t("写卡空状态", w0.includes("🎭") && w0.includes("新建写卡"));
+t("写卡空状态", w0.includes("还没有自创角色") && w0.includes("新建写卡") && w0.includes('<svg class="ic" width="44"'));
 vm.runInContext(`localStorage.setItem("nd_custom_chars", JSON.stringify([{id:"c1", name:"测试卡", novel:"自定义", fields:{core_identity:"冷面杀手"}, createdAt:1}]))`, ctx);
 vm.runInContext(`showWriter();`, ctx);
 const w1 = els["view"].innerHTML;

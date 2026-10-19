@@ -149,7 +149,9 @@ src.indexOf("showWho") >= 0 && src.indexOf('showWho?`<div class="who">') >= 0
 ok("S1 字号行高: 16px 基准/24px 行高", /font-size:calc\(16px \* var\(--fs\)\); line-height:24px/.test(css));
 ok("S2 圆角12px 无阴影", css.indexOf("border-radius:12px") >= 0 && /\.bubble\{[^}]*box-shadow:none/.test(css));
 ok("S3 内边距 10px 16px", css.indexOf("padding:10px 16px") >= 0);
-ok("S7/S8 纸感化: AI 白5% / 用户金13%", css.indexOf("rgba(255,255,255,.05)") >= 0 && css.indexOf("rgba(212,162,78,.13)") >= 0);
+/* P2-7: AI 气泡由冷白 rgba(255,255,255,.05) 改为暖墨 rgba(236,228,211,.05)
+   (浓度不变, 色相归暖灰家族); 用户侧金色 .13 不变 */
+ok("S7/S8 纸感化: AI 暖墨5% / 用户金13%", css.indexOf("rgba(236,228,211,.05)") >= 0 && css.indexOf("rgba(212,162,78,.13)") >= 0);
 ok("S9 流式渐隐: #live mask", css.indexOf("#live{") >= 0 && css.indexOf("mask-image:linear-gradient(to bottom,#000 55%,transparent 100%)") >= 0);
 
 /* ---------- L1: 打字机点按快进 ---------- */

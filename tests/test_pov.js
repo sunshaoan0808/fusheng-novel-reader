@@ -139,7 +139,7 @@ t("sendOpts has pov", /pov:\s*CHAT\.pov\s*\|\|\s*"player"/.test(src));
 t("sendOpts has person", /person:\s*CHAT\.person\s*\|\|\s*"second"/.test(src));
 t("sendOpts has onUserMsg", /onUserMsg:\s*\(\)=>\{\s*renderChat\(true\);\s*\}/.test(src));
 const cs = fs.readFileSync(WWW+"/rp/chat.js", "utf8");
-t("chat.js fires onUserMsg after push", /if\(opts\.onPush\) opts\.onPush\(\);\n  if\(opts\.onUserMsg\) opts\.onUserMsg\(\);/.test(cs));
+t("chat.js fires onUserMsg after push", /if\(opts\.onPush\) opts\.onPush\(\);\r?\n  if\(opts\.onUserMsg\) opts\.onUserMsg\(\);/.test(cs));
 t("chat.js ctx gets pov/person", (cs.match(/pov: opts\.pov, person: opts\.person,/g)||[]).length === 3);
 t("group post gets pov/person", cs.includes("groupPostInstructions(speaker, others, opts.pov, opts.person)"));
 const gs = fs.readFileSync(WWW+"/rp/group.js", "utf8");
