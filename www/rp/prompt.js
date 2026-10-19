@@ -105,8 +105,10 @@ function subMacros(text, charName, userName){
  * 有阶段变体时渲染成"外貌（前期）：…（后期）：…"的分阶段行, 让模型按当前剧情
  * 自取; 没有就照旧渲染扁平值。阶段轴是 early/mid/late(蒸馏块序), 与
  * RP_ARC 的命名阶段(大观园时期等)是两套东西, 不做映射 —— 全部列出让模型自己选。 */
-var STAGE_ORDER = ["early", "mid", "late"];
-var STAGE_LABEL = {early: "前期", mid: "中期", late: "后期"};
+/* 阶段轴: early/mid/late 是时间轴(蒸馏块序), pre/post 是生死轴(生前/身后)。
+ * 生死混装的字段(盖棺评价·身后事·临终镜头)按此拆; 与 RP_ARC 命名阶段不做映射。 */
+var STAGE_ORDER = ["early", "mid", "late", "pre", "post"];
+var STAGE_LABEL = {early: "前期", mid: "中期", late: "后期", pre: "生前", post: "身后"};
 function stagedVal(fields, n, st){
   var v = val(fields[n + "__" + st]);
   if(v) return v;
@@ -126,9 +128,13 @@ function renderFields(card, names){
       if(sv) staged.push({stage: STAGE_ORDER[i], text: sv});
     }
     if(staged.length){
-      /* 变体与扁平值相同(只蒸出一个阶段的常见情形)时不重复渲染 */
+      /* 变体与扁平值相同(只蒸出一个阶段的常见情形)时不重复渲染。
+       * 但 pre/post(生死轴)不适用: 贾母 appearance_feature 整字段即临终内容,
+       * post==flat, 去重会把(身后)标签吃掉 —— 模型就把临终病容当日常外貌。
+       * 生死轴的标签本身就是信息, 永不压成无标签行。 */
       var flat = val(fields[n]);
-      if(staged.length === 1 && staged[0].text === flat) { out.push("- " + label + "：" + flat); return; }
+      var lifeOnly = staged.length === 1 && (staged[0].stage === "pre" || staged[0].stage === "post");
+      if(!lifeOnly && staged.length === 1 && staged[0].text === flat) { out.push("- " + label + "：" + flat); return; }
       staged.forEach(function(s){
         out.push("- " + label + "（" + STAGE_LABEL[s.stage] + "）：" + s.text);
       });
@@ -584,5 +590,6 @@ return {
   buildLore: buildLore, LABELS: LABELS, buildExamples: buildExamples,
   CONCISE_INSTR: CONCISE_INSTR, subMacros: subMacros,
   FLAIR: FLAIR, flairInstr: flairInstr,
+  STAGE_ORDER: STAGE_ORDER, STAGE_LABEL: STAGE_LABEL,
 };
 })();

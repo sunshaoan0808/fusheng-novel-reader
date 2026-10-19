@@ -29,10 +29,11 @@ const SKIP_TESTS = ARGV.includes("--no-tests");
 const VERBOSE = ARGV.includes("--verbose");
 const BASELINE_COMMIT = "d156324";
 
-/* 已知基线失败：改动前就失败，与本次修复无关（用 git worktree 在 d156324 上实跑确认过） */
+/* 已知基线失败：改动前就失败，与本次修复无关（用 git worktree 在 d156324 上实跑确认过）。
+ * 2026-10-19: 原 6 个(cardcompat/cardlanding/charimg/immersive_ui/pov/ui24)已在
+ * 4281550+3a7ec80 全部修清(4 个断言过期+1 个外部 fixture 硬编码+1 个 CRLF 正则+
+ * 清安录补画像), 基线集清空 —— 此后任何失败都算新失败, 不再有豁免。 */
 const BASELINE_FAIL = new Set([
-  "test_cardcompat.js", "test_cardlanding.js", "test_charimg.js",
-  "test_immersive_ui.js", "test_pov.js", "test_ui24.js",
 ]);
 
 let pass = 0, fail = 0, warn = 0;

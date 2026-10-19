@@ -74,4 +74,47 @@ var sys2 = r2.messages.map(m => m.content).join("\n");
 assert.ok(sys2.indexOf("【外貌与举止】") >= 0, "ST 路径外貌段在位");
 assert.ok(sys2.indexOf("- 外貌（后期）：陵驿相见时光头赤脚") >= 0, "ST 路径分阶段行同在");
 
+/* ---- E2E 生死轴: 贾母 appearance_feature 整字段是临终内容(post-only),
+ *      标签必须保留(曾撞去重规则被吃); 鲁智深 signature_items 前后双行 ---- */
+var jiamu = D.rp_cards.honglou_full.filter(c => c.name === "贾母")[0];
+var rJ = P.buildMessages(jiamu, { novel: "红楼梦", history: [] }, { maxContext: 8192 });
+var sysJ = rJ.messages[0].content;
+var apSegJ = sysJ.slice(sysJ.indexOf("【外貌与举止】")).split("\n【")[0];
+assert.ok(apSegJ.indexOf("- 外貌（身后）：临终坐起") >= 0, "E2E 贾母身后标签保留");
+var luzhi = D.rp_cards.shuihu_full.filter(c => c.name === "鲁智深")[0];
+var rL = P.buildMessages(luzhi, { novel: "水浒传", history: [] }, { maxContext: 8192 });
+var sysL = rL.messages[0].content;
+assert.ok(sysL.indexOf("- 随身物品（生前）：铁禅杖（随身步战器械") >= 0, "E2E 鲁智深生前行");
+assert.ok(sysL.indexOf("- 随身物品（身后）：铁禅杖与皂布直裰：临终留六和寺供养") >= 0, "E2E 鲁智深身后行");
+
+/* ---- 生死轴: __pre/__post 平铺键 ---- */
+var cardE = { name: "测试", fields: {
+  reputation: "生前德高望重；死后立祠享祭",
+  reputation__pre: "生前德高望重",
+  reputation__post: "死后立祠享祭"
+} };
+var segE = P.renderFields(cardE, ["reputation"]);
+assert.ok(segE.indexOf("- 外界评价（生前）：生前德高望重") >= 0, "E: 生前行");
+assert.ok(segE.indexOf("- 外界评价（身后）：死后立祠享祭") >= 0, "E: 身后行");
+assert.ok(segE.indexOf("生前德高望重；死后立祠享祭") < 0, "E: 混装行不出现");
+
+/* ---- 生死轴不走去重: 整字段即身后内容(贾母型)时, (身后)标签必须保留 ---- */
+var cardF = { name: "测试", fields: {
+  appearance_feature: "临终坐起；脸上发红",
+  appearance_feature__post: "临终坐起；脸上发红"
+} };
+var segF = P.renderFields(cardF, ["appearance_feature"]);
+assert.strictEqual(segF, "- 外貌（身后）：临终坐起；脸上发红",
+  "F: post==flat 也保留阶段标签(去重规则对生死轴失效)");
+
+/* ---- 生死轴合并结构(蒸馏包 fields.post[k]) ---- */
+var cardG = { name: "测试", fields: {
+  reputation: "生前被称贤良；死后遭仇家唾骂",
+  pre: { reputation: "生前被称贤良" },
+  post: { reputation: "死后遭仇家唾骂" }
+} };
+var segG = P.renderFields(cardG, ["reputation"]);
+assert.ok(segG.indexOf("（生前）：生前被称贤良") >= 0, "G: 合并结构生前行");
+assert.ok(segG.indexOf("（身后）：死后遭仇家唾骂") >= 0, "G: 合并结构身后行");
+
 console.log("appear_stage: all pass");

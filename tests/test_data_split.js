@@ -102,7 +102,7 @@ function deepEq(a, b) {
   }
 
   /* ---- 3) 拼回与 git HEAD 原版深度相等 ---- */
-  /* P1-b: rp_cards 现有阶段变体键(<字段>__early/mid/late), 是二级拆包之后
+  /* P1-b: rp_cards 现有阶段变体键(<字段>__early/mid/late/pre/post), 是二级拆包之后
    * 人为补的派生数据, 不在「拆包前」的 git 基准里。本组断言比的是"拆分搬运"
    * 有没有丢东西, 不是"数据能不能演进" —— 两边先剥掉阶段变体键再比;
    * 变体键的在场与存活另立 D10b 钉住。 */
@@ -113,7 +113,7 @@ function deepEq(a, b) {
         const cc = {}; Object.keys(c).forEach(k => { cc[k] = c[k]; });
         const f = {};
         Object.keys(c.fields || {}).forEach(function (k) {
-          if (!/__(early|mid|late)$/.test(k)) f[k] = c.fields[k];
+          if (!/__(early|mid|late|pre|post)$/.test(k)) f[k] = c.fields[k];
         });
         cc.fields = f;
         return cc;
@@ -138,6 +138,19 @@ function deepEq(a, b) {
           && has("贾宝玉", "visual_identity__early") && has("贾宝玉", "visual_identity__late")
           && has("林黛玉", "appearance_feature__late") && has("林黛玉", "voice_dressing__early")
           && has("林黛玉", "voice_dressing__late");
+      })());
+    t("D10c 生死轴变体键在场且拆包不丢(生前/死后)",
+      (function () {
+        const hl = (merged.rp_cards || {}).honglou_full || [];
+        const sh = (merged.rp_cards || {}).shuihu_full || [];
+        function has(cs, nm, k) {
+          const c = cs.filter(x => x.name === nm)[0];
+          return !!(c && c.fields && c.fields[k]);
+        }
+        /* 晴雯 reputation 前后双行; 贾母 appearance_feature 只有身后; 鲁智深 signature_items 前后双行 */
+        return has(hl, "晴雯", "reputation__pre") && has(hl, "晴雯", "reputation__post")
+          && has(hl, "贾母", "appearance_feature__post") && !has(hl, "贾母", "appearance_feature__pre")
+          && has(sh, "鲁智深", "signature_items__pre") && has(sh, "鲁智深", "signature_items__post");
       })());
     t("D11 run 数 = 原版 run 数", Object.keys(merged.runs).length === Object.keys(orig.runs).length);
   } else {
