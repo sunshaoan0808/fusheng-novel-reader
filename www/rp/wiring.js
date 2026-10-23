@@ -54,7 +54,7 @@ var RP_WIRING = (function () {
   var createNotificationCenter = gf("createNotificationCenter");
   var BEATS = typeof globalThis !== "undefined" ? globalThis.RP_BEATS : null;
 
-  var ZONE_NAMES = ["status", "scene", "cg", "diary", "actions"];
+  var ZONE_NAMES = ["status", "scene", "cg", "diary", "actions", "check"];
   var store = null;
   if (createZoneStore) {
     store = createZoneStore();
@@ -63,6 +63,7 @@ var RP_WIRING = (function () {
     store.declare("cg", { kind: "text" });
     store.declare("diary", { kind: "text" });
     store.declare("actions", { kind: "list" });
+    store.declare("check", { kind: "data" });
   }
 
   var favorEngines = new Map();
@@ -110,7 +111,7 @@ var RP_WIRING = (function () {
   var checker = createCheck ? createCheck() : null;
 
   /* ---------- 区块抽取 ---------- */
-  var ZONE_HINT = /<(status|scene|cg|diary|actions)[\s>]/;
+  var ZONE_HINT = /<(status|scene|cg|diary|actions|check)[\s>]/;
   function extractZones(text) {
     var found = {};
     var clean = text;
@@ -145,8 +146,26 @@ var RP_WIRING = (function () {
       return Object.keys(ex.found);
     });
 
+    orchestrator.register("favorRevert", function (ctx) {
+      if (!createFavorEngine || !Array.isArray(ctx.revertFavor) || !ctx.revertFavor.length) return 0;
+      var key = (ctx.runId || "") + "|" + (ctx.name || "");
+      var engine = favorEngineFor(key);
+      var reverted = 0;
+      ctx.revertFavor.forEach(function (prev) {
+        if (!prev || typeof prev.name !== "string") return;
+        var before = (typeof prev.total === "number" ? prev.total : 0) - (typeof prev.delta === "number" ? prev.delta : 0);
+        var patch = {};
+        patch[prev.name + "好感"] = String(before);
+        var res = engine.applyStatus(patch, {});
+        if (res.changes && res.changes.length) reverted++;
+      });
+      if (reverted) persistFavor(key);
+      return reverted;
+    });
+
     orchestrator.register("favor", function (ctx) {
       ctx.favorChanges = [];
+      if (ctx.skipFavor) return 0;
       if (!createFavorEngine || !ctx.zones.status) return 0;
       var key = (ctx.runId || "") + "|" + (ctx.name || "");
       var engine = favorEngineFor(key);
@@ -165,19 +184,59 @@ var RP_WIRING = (function () {
       return ctx.favorChanges.length;
     });
 
+    var WS_WEATHER = { 0: "clear", 1: "cloudy", 2: "cloudy", 3: "rain", 4: "snow", 5: "fog", 6: "storm" };
     orchestrator.register("scene", function (ctx) {
-      if (!sceneMgr || !ctx.zones.scene) return null;
-      var s = ctx.zones.scene;
+      if (!sceneMgr) return null;
+      var s = ctx.zones.scene || {};
       var loc = s["地点"];
+      var period = s["时段"];
+      var weather = s["天气"];
+      /* 双轨合流：worldsim 的 ⟦地点=…⟧/⟦天气=…⟧ 标记作为缺省来源，区块优先 */
+      var WS = typeof globalThis !== "undefined" ? globalThis.RP_WORLDSIM : null;
+      if (WS && typeof WS.parseMarkers === "function") {
+        var mk = WS.parseMarkers(ctx.rawText);
+        if (mk) {
+          if ((typeof loc !== "string" || !loc.trim()) && typeof mk.place === "string" && mk.place) loc = mk.place;
+          if (typeof weather !== "string" && mk.weather != null && WS_WEATHER[mk.weather]) weather = WS_WEATHER[mk.weather];
+        }
+      }
+      var touched = false;
       if (typeof loc === "string" && loc.trim()) {
         var zid = "zone:" + loc.trim();
         sceneMgr.defineLocation(zid, { name: loc.trim(), backgrounds: { default: "zonebg:" + loc.trim() } });
         sceneMgr.enter(zid);
+        touched = true;
       }
-      if (typeof s["时段"] === "string") sceneMgr.setTime(s["时段"].trim());
-      if (typeof s["天气"] === "string") sceneMgr.setWeather(s["天气"].trim());
-      ctx.sceneState = sceneMgr.state();
-      return ctx.sceneState;
+      if (typeof period === "string" && sceneMgr.setTime(period.trim())) touched = true;
+      if (typeof weather === "string" && sceneMgr.setWeather(weather.trim())) touched = true;
+      if (touched) ctx.sceneState = sceneMgr.state();
+      return touched ? ctx.sceneState : null;
+    });
+
+    orchestrator.register("check", function (ctx) {
+      ctx.checkResult = null;
+      if (!checker || !ctx.zones.check) return null;
+      var z = ctx.zones.check;
+      var attr = typeof z["属性"] === "number" ? z["属性"] : parseFloat(z["属性"]);
+      if (!isFinite(attr)) return null;
+      var diff = typeof z["难度"] === "number" ? z["难度"] : parseFloat(z["难度"]);
+      var mod = typeof z["修正"] === "number" ? z["修正"] : parseFloat(z["修正"]);
+      var res = checker.check({
+        attribute: attr,
+        difficulty: isFinite(diff) ? diff : undefined,
+        modifier: isFinite(mod) ? mod : undefined
+      });
+      if (!res) return null;
+      ctx.checkResult = res;
+      if (notices) {
+        var tierText = { critical: "大成功", success: "成功", failure: "失败", fumble: "大失败" }[res.tier] || res.tier;
+        notices.post({
+          kind: "check",
+          text: "判定（属性 " + res.target + "）：掷出 " + res.roll + "，" + tierText,
+          priority: 1
+        });
+      }
+      return res;
     });
 
     orchestrator.register("cg", function (ctx) {
@@ -218,6 +277,7 @@ var RP_WIRING = (function () {
         if (r && r["谁"] && r["表情"]) cues.push({ speaker: r["谁"], expression: r["表情"] });
       });
       if (cues.length) ctx.stageChanges = stage.applyCues(cues);
+      ctx.stageSnapshot = stage.stage();
       return ctx.stageChanges.length;
     });
 
@@ -229,7 +289,7 @@ var RP_WIRING = (function () {
 
   /* ---------- 对外 ---------- */
   function passthrough(rawText) {
-    return { cleanText: rawText, report: null, favorChanges: [], notices: [], pendingActions: null, sceneState: null };
+    return { cleanText: rawText, report: null, favorChanges: [], notices: [], pendingActions: null, sceneState: null, checkResult: null, stageSnapshot: null };
   }
 
   function settleReply(rawText, opts) {
@@ -237,7 +297,11 @@ var RP_WIRING = (function () {
     if (!isEnabled() || !orchestrator || typeof rawText !== "string" || !ZONE_HINT.test(rawText)) {
       return Promise.resolve(passthrough(rawText));
     }
-    var ctx = { runId: opts.runId || "", name: opts.name || "", rawText: rawText };
+    var ctx = {
+      runId: opts.runId || "", name: opts.name || "", rawText: rawText,
+      skipFavor: !!opts.skipFavor,
+      revertFavor: Array.isArray(opts.revertFavor) ? opts.revertFavor : []
+    };
     return orchestrator.settle(ctx).then(function (report) {
       if (!report) return passthrough(rawText);
       return {
@@ -246,7 +310,9 @@ var RP_WIRING = (function () {
         favorChanges: ctx.favorChanges || [],
         notices: ctx.notices || [],
         pendingActions: ctx.pendingActions || null,
-        sceneState: ctx.sceneState || null
+        sceneState: ctx.sceneState || null,
+        checkResult: ctx.checkResult || null,
+        stageSnapshot: ctx.stageSnapshot || null
       };
     });
   }
@@ -256,7 +322,8 @@ var RP_WIRING = (function () {
     "<status> 好感: +3 </status> —— 与当前角色的好感变化（带 + 或 - 号；指向其他角色时写「角色名好感: +3」）",
     "<scene>\n地点: 潇湘馆\n时段: night\n天气: rain\n</scene> —— 地点或时段天气变化时输出（每项一行；时段用 dawn/morning/noon/afternoon/dusk/night/midnight，天气用 clear/cloudy/rain/snow/fog/storm）",
     "<cg>编号</cg> —— 本轮出现值得收录的定格画面时，输出它的编号",
-    "<diary>一句话记下本轮大事</diary> —— 出现值得长期记住的事件时输出"
+    "<diary>一句话记下本轮大事</diary> —— 出现值得长期记住的事件时输出",
+    "<check>\n属性: 60\n难度: 10\n</check> —— 本轮出现成败判定（翻墙、说服、察觉等）时输出，属性填 0-100 的相关能力值，可选难度/修正"
   ].join("\n");
 
   function instruction() {
@@ -271,6 +338,38 @@ var RP_WIRING = (function () {
     favorOf: function (runId, name) {
       if (!createFavorEngine) return null;
       return favorEngineFor((runId || "") + "|" + (name || "")).favorOf(name);
+    },
+    /* 选项卡点选（app.js pickOption 调用）：把卡面选项登记进生命周期并结算点选 */
+    noteOptionPick: function (options, idx) {
+      if (!actionMgr || !Array.isArray(options)) return null;
+      actionMgr.present(options);
+      return actionMgr.pick(idx);
+    },
+    /* 用户发消息时调用：待选选项与文本一致记点选，不一致记放弃 */
+    noteUserText: function (text) {
+      if (!actionMgr || typeof text !== "string") return null;
+      var st = actionMgr.state();
+      if (!st || st.status !== "pending") return null;
+      var idx = -1;
+      for (var i = 0; i < st.options.length; i++) {
+        if (st.options[i].text === text) { idx = i; break; }
+      }
+      return idx >= 0 ? actionMgr.pick(idx) : actionMgr.dismiss();
+    },
+    /* 立绘注册（供后续 UI/卡数据调用）：expressions 为 表情名->图引用 */
+    defineArt: function (id, expressions, defaultExpression) {
+      if (!stage) return false;
+      return stage.defineCharacter(id, { expressions: expressions, defaultExpression: defaultExpression });
+    },
+    /* 手动判定（供后续掷骰 UI 调用）：走 checker 并发一条系统通知 */
+    rollCheck: function (input) {
+      if (!checker) return null;
+      var res = checker.check(input || {});
+      if (res && notices) {
+        var tierText = { critical: "大成功", success: "成功", failure: "失败", fumble: "大失败" }[res.tier] || res.tier;
+        notices.post({ kind: "check", text: "判定（属性 " + res.target + "）：掷出 " + res.roll + "，" + tierText, priority: 1 });
+      }
+      return res;
     },
     engines: {
       store: store,

@@ -54,7 +54,7 @@ const W = require("../www/rp/wiring.js");
   ].join("\n");
   const r = await W.settleReply(raw, { runId: "r1", name: "林黛玉" });
   assert.ok("正文剥离全部分区", r.cleanText === "雨声渐密，她把书合上，抬眼看你。");
-  assert.ok("八步全 ok", r.report && r.report.failCount === 0 && r.report.okCount === 8);
+  assert.ok("十步全 ok", r.report && r.report.failCount === 0 && r.report.okCount === 10);
   assert.ok("好感变化 +5 到 5", r.favorChanges.length === 1 && r.favorChanges[0].name === "林黛玉" && r.favorChanges[0].delta === 5 && r.favorChanges[0].total === 5);
   assert.ok("favorOf 查询一致", W.favorOf("r1", "林黛玉") === 5);
   assert.ok("场景状态落地", r.sceneState && r.sceneState.locationName === "潇湘馆" && r.sceneState.time === "night" && r.sceneState.weather === "rain");
@@ -96,6 +96,62 @@ const W = require("../www/rp/wiring.js");
   const r = await W.settleReply("正文。\n<status> 好感: +9 </status>", { runId: "r1", name: "林黛玉" });
   assert.ok("停用时不结算", r.report === null && W.favorOf("r1", "林黛玉") === 9);
   W.setEnabled(true);
+}
+
+/* 7. check 区块判定 */
+{
+  const r = await W.settleReply("她纵身一跃。\n<check>\n属性: 60\n难度: 10\n</check>", { runId: "r1", name: "林黛玉" });
+  assert.ok("check 结果 target=50、roll 合法", r.checkResult && r.checkResult.target === 50 && r.checkResult.roll >= 1 && r.checkResult.roll <= 100);
+  const expectTier = r.checkResult.roll === 1 ? "critical" : r.checkResult.roll === 100 ? "fumble" : r.checkResult.roll <= 50 ? "success" : "failure";
+  assert.ok("check tier 与 roll/target 一致", r.checkResult.tier === expectTier);
+  assert.ok("check 通知已发", r.notices.some(n => n.kind === "check"));
+  assert.ok("check 区块已剥离", r.cleanText === "她纵身一跃。");
+}
+
+/* 8. revertFavor：重生回滚上一候选再结算 */
+{
+  const a = await W.settleReply("甲版。\n<status> 好感: +10 </status>", { runId: "r2", name: "宝玉" });
+  assert.ok("候选甲结算到 10", W.favorOf("r2", "宝玉") === 10);
+  const b = await W.settleReply("乙版。\n<status> 好感: +4 </status>", { runId: "r2", name: "宝玉", revertFavor: a.favorChanges });
+  assert.ok("回滚甲版后只剩乙版 4", W.favorOf("r2", "宝玉") === 4 && b.favorChanges[0].total === 4);
+}
+
+/* 9. skipFavor：穿越口径只剥区块不动好感 */
+{
+  const before = W.favorOf("r2", "宝玉");
+  const r = await W.settleReply("穿越正文。\n<status> 好感: +9 </status>", { runId: "trav:t1", name: "宝玉", skipFavor: true });
+  assert.ok("skipFavor 好感不变、正文照剥", W.favorOf("r2", "宝玉") === before && r.cleanText === "穿越正文。" && eq(r.favorChanges, []));
+}
+
+/* 10. worldsim 标记合流进 scene */
+{
+  global.RP_WORLDSIM = { parseMarkers(t){
+    return t.indexOf("⟦地点=怡红院⟧") >= 0 ? { place: "怡红院", weather: 3, timeAdd: 0 } : { place: null, weather: null, timeAdd: 0 };
+  } };
+  const r = await W.settleReply("她进了院子。⟦地点=怡红院⟧\n<status> 好感: +1 </status>", { runId: "r1", name: "林黛玉" });
+  assert.ok("标记地点合流 scene", r.sceneState && r.sceneState.locationName === "怡红院");
+  assert.ok("标记天气数字 id 映射 rain", r.sceneState && r.sceneState.weather === "rain");
+  delete global.RP_WORLDSIM;
+}
+
+/* 11. 选项生命周期：卡点选与文本对账 */
+{
+  const out = W.noteOptionPick(["甲", "乙", "丙"], 1);
+  const lo = W.engines.actions.lastOutcome();
+  assert.ok("noteOptionPick 结算 picked 乙", lo && lo.status === "picked" && lo.picked && lo.picked.text === "乙");
+  await W.settleReply("正文。\n<actions>\n向前走\n留下来\n</actions>", { runId: "r1", name: "林黛玉" });
+  W.noteUserText("留下来");
+  assert.ok("noteUserText 命中记 picked", W.engines.actions.lastOutcome().status === "picked" && W.engines.actions.lastOutcome().picked.text === "留下来");
+  await W.settleReply("正文。\n<actions>\n向前走\n留下来\n</actions>", { runId: "r1", name: "林黛玉" });
+  W.noteUserText("我自己想干别的");
+  assert.ok("noteUserText 未命中记 dismissed", W.engines.actions.lastOutcome().status === "dismissed");
+}
+
+/* 12. defineArt / rollCheck 冒烟 */
+{
+  assert.ok("defineArt 注册成功", W.defineArt("宝玉", { "平静": "by.png" }) === true);
+  const rc = W.rollCheck({ attribute: 50 });
+  assert.ok("rollCheck 返回合法结果", rc && ["critical", "success", "failure", "fumble"].indexOf(rc.tier) >= 0 && rc.target === 50);
 }
 
 assert.done();

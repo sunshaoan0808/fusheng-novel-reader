@@ -3788,6 +3788,7 @@ window.pickOption = async (idx, oi)=>{
   const m = h[idx]; if(!m || m.role!=="assistant") return;
   const oc = parseOptCard(m.content); if(!oc || !oc.options[oi]) return;
   pickLock = true;
+  try{ if(typeof RP_WIRING!=="undefined" && RP_WIRING.noteOptionPick) RP_WIRING.noteOptionPick(oc.options, oi); }catch(e){}
   try{ await sendChatText(oc.options[oi]); }finally{ pickLock = false; }
 };
 /* 后悔药：仅当"决策→你的选择→AI回复"恰好是最后三条消息时可回退 */

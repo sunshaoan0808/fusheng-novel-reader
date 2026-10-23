@@ -666,6 +666,8 @@ function buildChapterInstr(run, chapterIdx){
  *                 temperature, oocOn, cardName} */
 async function send(runId, name, text, opts){
   opts = opts || {};
+  /* Tier1 接线：用户文本与待选选项对账（点选记 picked、自由发言记 dismissed） */
+  try{ if(typeof RP_WIRING !== "undefined") RP_WIRING.noteUserText(text); }catch(e){}
   var cfg = opts.cfg || {};
   var h = opts.history || [];
   var run = (window.__DATA__ && window.__DATA__.runs || {})[runId] || {};
@@ -848,19 +850,20 @@ async function send(runId, name, text, opts){
     }
   }catch(e){}
   reply = applyRegex(reply, getRegex(runId, name));
-  /* 世界模拟：解析 AI 的 ⟦时间/天气/地点⟧ 标记并从正文剥离 */
-  try{
-    if(typeof RP_WORLDSIM !== "undefined"){
-      var wres = RP_WORLDSIM.applyReply(wsId, reply, wsHint);
-      if(wres.changed) reply = wres.clean;
-    }
-  }catch(e){}
-  /* Tier1 接线：结构化状态区块结算（好感/场景/CG/日志/立绘），失败不打断主链 */
+  /* Tier1 接线：结构化状态区块结算（好感/场景/CG/日志/立绘/判定），失败不打断主链；
+     放在世界模拟之前，结算层能看到 ⟦⟧ 标记做场景双轨合流 */
   var wireRes = null;
   try{
     if(typeof RP_WIRING !== "undefined"){
       wireRes = await RP_WIRING.settleReply(reply, {runId: runId, name: name});
       if(wireRes && wireRes.cleanText && wireRes.cleanText !== reply) reply = wireRes.cleanText;
+    }
+  }catch(e){}
+  /* 世界模拟：解析 AI 的 ⟦时间/天气/地点⟧ 标记并从正文剥离 */
+  try{
+    if(typeof RP_WORLDSIM !== "undefined"){
+      var wres = RP_WORLDSIM.applyReply(wsId, reply, wsHint);
+      if(wres.changed) reply = wres.clean;
     }
   }catch(e){}
   /* PPA 二遍对齐 (arXiv:2506.11857): 第一遍已流式输出; 第二遍只修人设/知识边界,
@@ -973,6 +976,9 @@ async function regenerate(runId, name, opts){
   }, opts.budget || {});
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + optCardsInstr(opts.optCount, opts.optMood);
+  if(opts.wireZones !== false && typeof RP_WIRING !== "undefined" && b.messages.length && b.messages[0].role === "system"){
+    try{ var _wi2 = RP_WIRING.instruction(); if(_wi2) b.messages[0].content += "\n\n" + _wi2; }catch(e){}
+  }
   if(opts.plotOutline && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + plotRef(opts.plotOutline);
   if(opts.scenario && b.messages.length && b.messages[0].role === "system")
@@ -997,11 +1003,21 @@ async function regenerate(runId, name, opts){
     }
   }catch(e){ ppaReR = null; }
   if(ppaReR){ try{ RP_PPA.recordAlign(wsIdRe, h.length, ppaReR.changed); }catch(e){} }
+  /* Tier1 接线：重生候选同样结算，先回滚上一候选的好感变更再结算本候选 */
+  var wireRe = null;
+  try{
+    if(typeof RP_WIRING !== "undefined"){
+      wireRe = await RP_WIRING.settleReply(reply, {runId: runId, name: name,
+        revertFavor: (last.wire && last.wire.favorChanges) || []});
+      if(wireRe && wireRe.cleanText && wireRe.cleanText !== reply) reply = wireRe.cleanText;
+    }
+  }catch(e){}
   if(!RP_OOC.check(reply, name)){
     last.candidates = last.candidates || [last.content];
     last.candidates.push(reply);
     last.ci = last.candidates.length - 1;
     last.content = reply;
+    if(wireRe) last.wire = {favorChanges: wireRe.favorChanges || [], notices: wireRe.notices || []};
     last.ts = Date.now();
     /* 游玩统计：重抽只记 token，不记轮数（纯本地，RP_STATS） */
     try{
@@ -1139,6 +1155,9 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
   }catch(e){}
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + optCardsInstr(opts.optCount, opts.optMood);
+  if(opts.wireZones !== false && typeof RP_WIRING !== "undefined" && b.messages.length && b.messages[0].role === "system"){
+    try{ var _wi3 = RP_WIRING.instruction(); if(_wi3) b.messages[0].content += "\n\n" + _wi3; }catch(e){}
+  }
   if(opts.plotOutline && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + plotRef(opts.plotOutline);
   if(opts.scenario && b.messages.length && b.messages[0].role === "system")
@@ -1212,6 +1231,14 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
   }
 
   reply = applyRegex(reply, getRegex(runId, speaker));
+  /* Tier1 接线：群聊每位发言人独立结算（好感按发言人记账） */
+  var wireG = null;
+  try{
+    if(typeof RP_WIRING !== "undefined"){
+      wireG = await RP_WIRING.settleReply(reply, {runId: runId, name: speaker});
+      if(wireG && wireG.cleanText && wireG.cleanText !== reply) reply = wireG.cleanText;
+    }
+  }catch(e){}
   /* 世界模拟：解析 AI 标记 */
   try{
     if(typeof RP_WORLDSIM !== "undefined" && wsIdG){
@@ -1234,6 +1261,8 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
     }
   }catch(e){ ppaSpkR = null; }
   var msg = newMsg("assistant", reply);
+  if(wireG && ((wireG.favorChanges && wireG.favorChanges.length) || (wireG.notices && wireG.notices.length)))
+    msg.wire = {favorChanges: wireG.favorChanges || [], notices: wireG.notices || []};
   msg.speaker = speaker;
   h.push(msg);
   if(ppaSpkR){ try{ RP_PPA.recordAlign(wsIdSpk, h.length, ppaSpkR.changed); }catch(e){} }
@@ -1316,6 +1345,9 @@ async function sendTraverse(travId, text, opts){
   /* 剧情选项卡: 与单聊/群聊一致, 由 RP 设置里的选项开关控制 */
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + optCardsInstr(opts.optCount, opts.optMood);
+  if(opts.wireZones !== false && typeof RP_WIRING !== "undefined" && b.messages.length && b.messages[0].role === "system"){
+    try{ var _wi4 = RP_WIRING.instruction(); if(_wi4) b.messages[0].content += "\n\n" + _wi4; }catch(e){}
+  }
   if(opts.onSystem) opts.onSystem(b.preview, b.stats);
 
   var reply = "";
@@ -1348,6 +1380,15 @@ async function sendTraverse(travId, text, opts){
   /* S 级补全: 穿越回复同样过正则 (与单聊/群聊一致) */
   try{ reply = applyRegex(reply, getRegex("trav", travRegexName(trav))); }catch(e){}
 
+  /* Tier1 接线：穿越回复结算（好感由穿越世界状态 <ws> 独占，此处 skipFavor 只做区块/场景/CG/日志） */
+  var wireT = null;
+  try{
+    if(typeof RP_WIRING !== "undefined"){
+      wireT = await RP_WIRING.settleReply(reply, {runId: "trav:" + travId,
+        name: trav.anchorTitle || trav.worldName || "世界", skipFavor: true});
+      if(wireT && wireT.cleanText && wireT.cleanText !== reply) reply = wireT.cleanText;
+    }
+  }catch(e){}
   /* 世界模拟：解析 AI 的 ⟦时间/天气/地点⟧ 标记并从正文剥离 */
   try{
     if(typeof RP_WORLDSIM !== "undefined"){
@@ -1370,7 +1411,10 @@ async function sendTraverse(travId, text, opts){
     }
   }catch(e){ ppaTR = null; }
 
-  h.push(newMsg("assistant", reply));
+  var amT = newMsg("assistant", reply);
+  if(wireT && ((wireT.favorChanges && wireT.favorChanges.length) || (wireT.notices && wireT.notices.length)))
+    amT.wire = {favorChanges: wireT.favorChanges || [], notices: wireT.notices || []};
+  h.push(amT);
   if(ppaTR){ try{ RP_PPA.recordAlign(wsIdT, h.length, ppaTR.changed); }catch(e){} }
   return {history: h, aborted: false, stats: b.stats,
           worldState: RP_TRAVERSE.getState(travId)};
