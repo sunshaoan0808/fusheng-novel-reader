@@ -223,4 +223,10 @@ function createFavorEngine(options = {}) {
   };
 }
 
-module.exports = { FavorEngine: createFavorEngine, createFavorEngine };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { FavorEngine: createFavorEngine, createFavorEngine };
+}
+if (typeof window !== "undefined") {
+  window.createFavorEngine = createFavorEngine;
+  window.FavorEngine = createFavorEngine;
+}

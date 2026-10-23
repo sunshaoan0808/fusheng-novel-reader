@@ -218,4 +218,10 @@ function createZoneStore() {
   return new ZoneStore();
 }
 
-module.exports = { ZoneStore, createZoneStore };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { ZoneStore, createZoneStore };
+}
+if (typeof window !== "undefined") {
+  window.ZoneStore = ZoneStore;
+  window.createZoneStore = createZoneStore;
+}

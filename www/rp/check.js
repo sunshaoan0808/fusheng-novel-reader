@@ -134,4 +134,6 @@ function createCheck(opts = {}) {
   };
 }
 
-module.exports = { createCheck };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createCheck };
+}

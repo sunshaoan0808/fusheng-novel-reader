@@ -180,4 +180,6 @@ function createTurnOrchestrator() {
   };
 }
 
-module.exports = { createTurnOrchestrator };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createTurnOrchestrator };
+}

@@ -157,4 +157,6 @@ function createSceneManager() {
   };
 }
 
-module.exports = { createSceneManager };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createSceneManager };
+}

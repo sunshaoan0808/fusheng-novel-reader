@@ -146,4 +146,6 @@ function createDiary() {
   };
 }
 
-module.exports = { createDiary };
+if (typeof module !== "undefined" && module.exports) {
+  module.exports = { createDiary };
+}
