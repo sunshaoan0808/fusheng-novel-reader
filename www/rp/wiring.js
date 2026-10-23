@@ -27,6 +27,12 @@ var RP_WIRING = (function () {
       localStorage.setItem(key, JSON.stringify(val));
     } catch (e) {}
   }
+  var lastStageFocus = null;
+  function escHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
   function isEnabled() {
     try {
       if (typeof localStorage === "undefined") return true;
@@ -52,7 +58,8 @@ var RP_WIRING = (function () {
   var createDiary = gf("createDiary");
   var createSceneManager = gf("createSceneManager");
   var createNotificationCenter = gf("createNotificationCenter");
-  var BEATS = typeof globalThis !== "undefined" ? globalThis.RP_BEATS : null;
+  var BEATS = (typeof globalThis !== "undefined" && globalThis.RP_BEATS) ||
+    (typeof RP_BEATS !== "undefined" ? RP_BEATS : null);
 
   var ZONE_NAMES = ["status", "scene", "cg", "diary", "actions", "check"];
   var store = null;
@@ -276,7 +283,21 @@ var RP_WIRING = (function () {
       (rows || []).forEach(function (r) {
         if (r && r["谁"] && r["表情"]) cues.push({ speaker: r["谁"], expression: r["表情"] });
       });
-      if (cues.length) ctx.stageChanges = stage.applyCues(cues);
+      if (cues.length) {
+        /* 未注册的说话人自动建档（占位图 letter），让舞台先有状态；
+           之后 defineArt 喂真图会覆盖这份定义 */
+        var bySpeaker = {};
+        cues.forEach(function (c) { (bySpeaker[c.speaker] = bySpeaker[c.speaker] || []).push(c.expression); });
+        Object.keys(bySpeaker).forEach(function (sp) {
+          if (stage.resolve(sp) == null) {
+            var exprs = { "平静": "letter" };
+            bySpeaker[sp].forEach(function (e) { exprs[e] = "letter"; });
+            stage.defineCharacter(sp, { expressions: exprs, defaultExpression: "平静" });
+          }
+        });
+        ctx.stageChanges = stage.applyCues(cues);
+        if (ctx.stageChanges.length) lastStageFocus = ctx.stageChanges[ctx.stageChanges.length - 1];
+      }
       ctx.stageSnapshot = stage.stage();
       return ctx.stageChanges.length;
     });
@@ -360,6 +381,42 @@ var RP_WIRING = (function () {
     defineArt: function (id, expressions, defaultExpression) {
       if (!stage) return false;
       return stage.defineCharacter(id, { expressions: expressions, defaultExpression: defaultExpression });
+    },
+    /* 消息气泡下的结算条（app.js 渲染层调用）：好感 chips + 非好感通知 */
+    wireHTML: function (wire) {
+      if (!wire) return "";
+      var parts = [];
+      (wire.favorChanges || []).forEach(function (ch) {
+        parts.push('<span class="wirechip favor">' + escHtml(ch.name) + " 好感 " +
+          (ch.delta > 0 ? "+" + ch.delta : String(ch.delta)) + " · 当前 " + ch.total + "</span>");
+      });
+      (wire.notices || []).forEach(function (n) {
+        if (!n || n.kind === "favor") return;
+        parts.push('<span class="wirechip ' + escHtml(n.kind || "info") + '">' + escHtml(n.text) +
+          (n.count > 1 ? " ×" + n.count : "") + "</span>");
+      });
+      if (!parts.length) return "";
+      return '<div class="wirebar">' + parts.join("") + "</div>";
+    },
+    /* 世界模拟条里的立绘舞台 chips（app.js renderSimBar 调用） */
+    stageHTML: function () {
+      if (!stage) return "";
+      var items = stage.stage();
+      if (!items.length) return "";
+      return items.map(function (e) {
+        var isImg = typeof e.art === "string" &&
+          (e.art.indexOf("data:") === 0 || e.art.indexOf("/") >= 0 || /\.(png|jpe?g|webp|gif)$/i.test(e.art));
+        var media = isImg
+          ? '<img class="stageimg" src="' + escHtml(e.art) + '" alt="">'
+          : '<span class="stageava">' + escHtml((e.id || "?").charAt(0)) + "</span>";
+        return '<span class="stagechip' + (e.id === lastStageFocus ? " on" : "") + '">' + media +
+          '<span class="stagename">' + escHtml(e.id) + '</span><span class="stageexpr">' +
+          escHtml(e.expression) + "</span></span>";
+      }).join("");
+    },
+    /* 掷骰（工具条按钮调用）：返回 1-100 */
+    rollPercent: function () {
+      return checker ? checker.rollPercent() : 1 + Math.floor(Math.random() * 100);
     },
     /* 手动判定（供后续掷骰 UI 调用）：走 checker 并发一条系统通知 */
     rollCheck: function (input) {

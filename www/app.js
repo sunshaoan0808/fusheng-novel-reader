@@ -3485,8 +3485,10 @@ const bubbleInner = needFold
 /* Soul 冲突徽章 */
 const conflictBadge = (m._conflicts && m._conflicts.length && !m._conflictResolved && typeof RP_SOUL_CFG !== "undefined")
 ? RP_SOUL_CFG.conflictBadgeHTML(m._conflicts, idx) : "";
+/* Tier1 接线结算条：好感变化 / CG / 判定等结构化结果挂在气泡下方 */
+const wireHTML = (m.role==="assistant" && m.wire && typeof RP_WIRING!=="undefined" && RP_WIRING.wireHTML) ? RP_WIRING.wireHTML(m.wire) : "";
 return `<div class="msg ${m.role==="user"?"me":""}${mtype==="narr"?" narr":""}${mtype==="npc"?" npc":""}${isCur?" curhit":""}" id="smsg-${idx}" data-mid="${esc(m.mid||m.id||"")}" onclick="toggleTools(event,${jq(idx)})" oncontextmenu="event.preventDefault();msgMenu(${jq(idx)});return false;" ontouchstart="msgPressStart(event,${jq(idx)})" ontouchend="msgPressEnd()" ontouchmove="msgPressEnd()">`
-+ `<div class="msgcol">${showWho?`<div class="who">${esc(who)}</div>`:""}<div class="bubble${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${extra}</div>`
++ `<div class="msgcol">${showWho?`<div class="who">${esc(who)}</div>`:""}<div class="bubble${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${wireHTML}${extra}</div>`
 + `</div>`;
 }).join("") || `<div class="empty">还没有对话，打个招呼吧<br><span style="font-size:calc(12px * var(--fs))">试试：你是谁？</span></div>`;
 renderCtxBar();
@@ -3620,7 +3622,10 @@ function renderSimBar(){
     if(_lp && _lp.hits && _lp.hits.length && typeof RP_PORTRAIT!=="undefined")
       portChip = `<span class="simchip" onclick="event.stopPropagation();portraitDebug()" title="本轮画像动态检索命中字段">🎭 画像·${_lp.hits.length}</span>`;
   }catch(e){}
-  bar.innerHTML = RP_WORLDSIM.briefHTML(simChatKey(), simHint()) + dirChip + portChip + `<span class="simgo">›</span>`;
+  /* Tier1 接线：立绘舞台 chips（在场角色+当前表情，随世界模拟条一起沉浸显隐） */
+  var stageChip = "";
+  try{ if(typeof RP_WIRING!=="undefined" && RP_WIRING.stageHTML) stageChip = RP_WIRING.stageHTML(); }catch(e){}
+  bar.innerHTML = RP_WORLDSIM.briefHTML(simChatKey(), simHint()) + dirChip + portChip + stageChip + `<span class="simgo">›</span>`;
 }
 /* 画像命中调试弹窗（renderSimBar 的 simchip 入口） */
 window.portraitDebug = ()=>{
@@ -3973,10 +3978,22 @@ return `<div class="cb-tools" data-xfade>`
 + `<button id="narrbtn" class="cb-tool${CHAT.narrMode?" on":""}" onclick="toggleNarr()" title="旁白模式：发送场景/动作描写"><span class="cb-ico">${icon("scroll",15)}</span><span class="cb-tx">旁白</span></button>`
 + `${atb}${spk}`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
++ `<button class="cb-tool" onclick="wireDiceRoll()" title="掷骰：掷一个 1-100 填入输入框，附在行动后面一起发，让 AI 按点数判定成败"><span class="cb-ico">${icon("dice",15)}</span><span class="cb-tx">掷骰</span></button>`
 + `</div>`
 + `<div class="cb-inputrow"><input id="chat_in" placeholder="${CHAT.narrMode?"写场景/动作/心理描写…":ph}" onkeydown="if(event.key==='Enter')sendChat()">`
 + `<button class="cbsend" onclick="sendChat()" title="发送">发送</button></div>`;
 }
+/* 掷骰按钮：掷 1-100 填入输入框（末尾已有骰签则换新签），不直接发送 */
+window.wireDiceRoll = ()=>{
+  const inp = document.getElementById("chat_in"); if(!inp) return;
+  let roll = null;
+  try{ if(typeof RP_WIRING!=="undefined" && RP_WIRING.rollPercent) roll = RP_WIRING.rollPercent(); }catch(e){}
+  if(roll==null) roll = 1 + Math.floor(Math.random()*100);
+  const tag = "（掷骰：" + roll + "）";
+  const v = inp.value || "";
+  inp.value = /（掷骰：\d+）\s*$/.test(v) ? v.replace(/（掷骰：\d+）\s*$/, tag) : (v ? v + " " + tag : tag);
+  inp.focus();
+};
 window.toggleAtMenu = (ev)=>{
 if(ev && ev.stopPropagation) ev.stopPropagation();
 let m = document.getElementById("atmenu");

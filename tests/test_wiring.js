@@ -154,5 +154,41 @@ const W = require("../www/rp/wiring.js");
   assert.ok("rollCheck 返回合法结果", rc && ["critical", "success", "failure", "fumble"].indexOf(rc.tier) >= 0 && rc.target === 50);
 }
 
+/* 13. 气泡结算条 wireHTML */
+{
+  const html = W.wireHTML({
+    favorChanges: [{ name: "林黛玉", delta: 5, total: 62 }],
+    notices: [
+      { kind: "favor", text: "林黛玉 好感 +5（当前 62）" },
+      { kind: "cg", text: "图鉴 +cg_x", count: 2 },
+      { kind: "check", text: "判定（属性 50）：掷出 23，成功" }
+    ]
+  });
+  assert.ok("wireHTML 好感 chip 带当前值", html.indexOf("林黛玉 好感 +5 · 当前 62") >= 0);
+  assert.ok("wireHTML 好感通知不重复", (html.match(/好感 \+5/g) || []).length === 1);
+  assert.ok("wireHTML cg 通知带 ×2", html.indexOf("图鉴 +cg_x ×2") >= 0 && html.indexOf('wirechip cg') >= 0);
+  assert.ok("wireHTML 空输入为空串", W.wireHTML(null) === "" && W.wireHTML({ favorChanges: [], notices: [] }) === "");
+}
+
+/* 14. 立绘自动建档 + stageHTML */
+{
+  const text = "- 谁: '晴雯'  表情: '害羞'  说: '公子……'\n<status> 好感: +2 </status>";
+  const r = await W.settleReply(text, { runId: "r3", name: "晴雯" });
+  const cur = W.engines.stage.current("晴雯");
+  assert.ok("未注册说话人自动建档并上台", cur && cur.expression === "害羞" && cur.art === "letter");
+  const html = W.stageHTML();
+  assert.ok("stageHTML 含名字/表情/焦点类", html.indexOf("晴雯") >= 0 && html.indexOf("害羞") >= 0 && html.indexOf("stagechip on") >= 0);
+  W.defineArt("晴雯", { "微笑": "img/qw.png" });
+  await W.settleReply("- 谁: '晴雯'  表情: '微笑'  说: '嗯。'\n<status> 好感: +1 </status>", { runId: "r3", name: "晴雯" });
+  assert.ok("defineArt 真图后 stageHTML 出 img", W.stageHTML().indexOf('<img class="stageimg" src="img/qw.png"') >= 0);
+}
+
+/* 15. rollPercent 范围 */
+{
+  let okAll = true;
+  for (let i = 0; i < 200; i++) { const v = W.rollPercent(); if (!(v >= 1 && v <= 100)) okAll = false; }
+  assert.ok("rollPercent 恒在 1..100", okAll);
+}
+
 assert.done();
 })().catch(function(e){ console.log("  FAIL 顶层异常", e && e.stack || e); process.exit(1); });

@@ -188,3 +188,4 @@ function lastLook(beats){
 return {scriptBeats: scriptBeats, lookAt: lookAt, lastLook: lastLook, parseNarrativeRows: parseNarrativeRows};
 })();
 if(typeof module !== "undefined" && module.exports) module.exports = RP_BEATS;
+if(typeof window !== "undefined") window.RP_BEATS = RP_BEATS;
