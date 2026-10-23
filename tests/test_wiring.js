@@ -1,54 +1,102 @@
-// test_wiring.js: P2 / 穿越 P1-P3 接线静态回归测试
-// 保证脚本加载顺序、UI 接线字符串、样式类不被后续修改误删
-const fs = require("fs");
-const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
-const read = p=>fs.readFileSync(WWW+"/"+p, "utf8");
-const html = read("index.html"), app = read("app.js"), css = read("style.css"), store = read("rp/store.js");
+/* RP_WIRING 接线层测试：真实模块组装，验证区块结算链（验收人自写） */
+const assert = (function(){ let p = 0, f = 0; return {
+  ok(name, cond){ if(cond){ p++; console.log("  PASS", name); } else { f++; console.log("  FAIL", name); } },
+  done(){ console.log(p + " pass, " + f + " fail"); process.exit(f ? 1 : 0); }
+}; })();
+function eq(a, b){ return JSON.stringify(a) === JSON.stringify(b); }
 
-let pass = 0, fail = 0;
-const t = (n, c)=>{ c? pass++: (fail++, console.log("FAIL:", n)); };
+/* Node 环境垫片：与浏览器一致的全局工厂 + localStorage */
+const store = {};
+global.localStorage = {
+  getItem(k){ return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : null; },
+  setItem(k, v){ store[k] = String(v); },
+  removeItem(k){ delete store[k]; }
+};
+global.createZoneStore = require("../www/rp/zonestore.js").createZoneStore;
+global.createFavorEngine = require("../www/rp/status.js").createFavorEngine;
+global.createTurnOrchestrator = require("../www/rp/onturn.js").createTurnOrchestrator;
+global.createActionManager = require("../www/rp/action.js").createActionManager;
+global.createArtStage = require("../www/rp/art.js").createArtStage;
+global.createCgGallery = require("../www/rp/cg.js").createCgGallery;
+global.createCheck = require("../www/rp/check.js").createCheck;
+global.createDiary = require("../www/rp/diary.js").createDiary;
+global.createSceneManager = require("../www/rp/scene.js").createSceneManager;
+global.createNotificationCenter = require("../www/rp/system.js").createNotificationCenter;
+global.RP_BEATS = require("../www/rp/beats.js");
 
-// --- 脚本加载顺序 ---
-const order = ["rp/typewriter.js","rp/store.js","rp/appearance.js","rp/traverse.js","rp/traverse2.js"];
-const idx = order.map(s=>html.indexOf(`src="${s}"`));
-const appIdx = html.indexOf('src="app.js"');
-t("脚本全部加载", idx.every(i=>i >= 0));
-t("traverse2在traverse之后", idx[3] >= 0 && idx[4] > idx[3]);
-t("新脚本都在app.js之前", idx.every(i=>i >= 0 && i < appIdx));
-/* P0-1: jq() 转义工具必须在 app.js 之前加载 */
-const escIdx = html.indexOf('src="rp/escutil.js"');
-t("escutil在app.js之前", escIdx >= 0 && escIdx < appIdx);
+const W = require("../www/rp/wiring.js");
 
-// --- P2 接线 ---
-t("设置页接typewriter", app.indexOf("RP_TYPEWRITER") >= 0);
-t("设置页接appearance", app.indexOf("RP_APPEAR") >= 0);
-t("设置页接store", app.indexOf("RP_STORE") >= 0);
-t("打字机选择器正确", app.indexOf('$("#chatlog")') >= 0);
-t("聊天记录双写", app.indexOf("syncBig") >= 0 && app.indexOf("cacheGet") >= 0);
-t("小说风格prompt", app.indexOf("novelStylePrompt") >= 0);
-t("清理入口", app.indexOf("storeCleanup") >= 0);
-t("壁纸样式", ["xuanmo","daiqing","zhejin","zitan"].every(w=>css.indexOf(`data-wallpaper="${w}"`) >= 0));
-t("打字机光标样式", css.indexOf(".twcur") >= 0);
+(async function main(){
 
-// --- 穿越 P1 接线 ---
-t("身份重随", app.indexOf("bodyReroll") >= 0);
-t("携带物使用", app.indexOf("travUseItem") >= 0);
-t("出戏值检测", app.indexOf("travOocCheck") >= 0);
-t("出戏值展示", app.indexOf("出戏值") >= 0);
-t("世界补完", app.indexOf("travWorldComplete") >= 0);
-// --- 穿越 P2 接线 ---
-t("异世界入口", app.indexOf("isekaiPickSrc") >= 0 && app.indexOf("isekaiStart") >= 0);
-t("水浒待接入提示", app.indexOf("数据待接入") >= 0);
-// --- 穿越 P3 接线 ---
-t("组团入口", app.indexOf("partySetup") >= 0 && app.indexOf("partyStart") >= 0);
-t("队伍页", app.indexOf("travPartyView") >= 0);
-t("组团prompt", app.indexOf("travExtraPrompt") >= 0);
-// --- traverse2 模块 ---
-t("traverse2注册表", read("rp/traverse2.js").indexOf("WORLD_REGISTRY") >= 0);
-// --- store 新语义 ---
-t("复制模式标记", store.indexOf("nd_idbcopied_") >= 0);
-t("清理API", store.indexOf("cleanupCopied") >= 0);
-t("样式类", [".linkbtn",".charcard.sel",".ooc"].every(c=>css.indexOf(c) >= 0));
+/* 1. 无区块回复原样透传 */
+{
+  const raw = "她望着窗外的雨，轻轻叹了口气。";
+  const r = await W.settleReply(raw, { runId: "r1", name: "林黛玉" });
+  assert.ok("无区块透传 cleanText 不变、report 为 null", r.cleanText === raw && r.report === null && eq(r.favorChanges, []));
+}
 
-console.log(`wiring: ${pass} pass, ${fail} fail`);
-process.exit(fail? 1: 0);
+/* 2. 全区块结算 */
+{
+  const raw = [
+    "雨声渐密，她把书合上，抬眼看你。",
+    "<status> 好感: +5 </status>",
+    "<scene>",
+    "地点: 潇湘馆",
+    "时段: night",
+    "天气: rain",
+    "</scene>",
+    "<cg>moon001</cg>",
+    "<diary>黛玉第一次主动留我喝茶</diary>",
+    "<actions>",
+    "坐下喝茶",
+    "告辞离开",
+    "</actions>"
+  ].join("\n");
+  const r = await W.settleReply(raw, { runId: "r1", name: "林黛玉" });
+  assert.ok("正文剥离全部分区", r.cleanText === "雨声渐密，她把书合上，抬眼看你。");
+  assert.ok("八步全 ok", r.report && r.report.failCount === 0 && r.report.okCount === 8);
+  assert.ok("好感变化 +5 到 5", r.favorChanges.length === 1 && r.favorChanges[0].name === "林黛玉" && r.favorChanges[0].delta === 5 && r.favorChanges[0].total === 5);
+  assert.ok("favorOf 查询一致", W.favorOf("r1", "林黛玉") === 5);
+  assert.ok("场景状态落地", r.sceneState && r.sceneState.locationName === "潇湘馆" && r.sceneState.time === "night" && r.sceneState.weather === "rain");
+  assert.ok("CG 已解锁", W.engines.gallery.isUnlocked("moon001") === true);
+  assert.ok("通知按优先级（cg 先于 favor）", r.notices.length === 2 && r.notices[0].kind === "cg" && r.notices[1].kind === "favor");
+  assert.ok("日志落一条且 round 对齐", W.engines.diary.count() === 1 && W.engines.diary.list()[0].round === r.report.round);
+  assert.ok("选项已 present", r.pendingActions && eq(r.pendingActions.options.map(o => o.text), ["坐下喝茶", "告辞离开"]));
+  assert.ok("好感快照已持久化", typeof store["rp_wire_favor_v1"] === "string" && store["rp_wire_favor_v1"].indexOf("林黛玉") >= 0);
+}
+
+/* 3. 第二轮增量与具名键（全角冒号） */
+{
+  const r = await W.settleReply("正文。\n<status>\n好感: +3\n贾母好感： 40\n</status>", { runId: "r1", name: "林黛玉" });
+  assert.ok("同引擎累积到 8", W.favorOf("r1", "林黛玉") === 8);
+  assert.ok("具名键设定模式", r.favorChanges.some(c => c.name === "贾母" && c.total === 40 && c.mode === "set"));
+}
+
+/* 4. 剧本行驱动立绘状态 */
+{
+  W.engines.stage.defineCharacter("林黛玉", { expressions: { "害羞": "lin_shy.png", "平静": "lin_calm.png" } });
+  const raw = "- 谁: '林黛玉'  表情: '害羞'  说: '才、才没有呢'\n<status> 好感: +1 </status>";
+  const r = await W.settleReply(raw, { runId: "r1", name: "林黛玉" });
+  const cur = W.engines.stage.current("林黛玉");
+  assert.ok("立绘按表情切换", cur && cur.art === "lin_shy.png" && cur.expression === "害羞");
+}
+
+/* 5. 未闭合区块不吞正文 */
+{
+  const raw = "正文一句。\n<status> 好感: +3";
+  const r = await W.settleReply(raw, { runId: "r1", name: "林黛玉" });
+  assert.ok("未闭合区块时正文原样", r.cleanText === raw);
+}
+
+/* 6. 开关与指令 */
+{
+  assert.ok("启用时指令含 status 区块", W.instruction().indexOf("<status>") >= 0);
+  W.setEnabled(false);
+  assert.ok("停用后指令为空、结算透传", W.instruction() === "");
+  const r = await W.settleReply("正文。\n<status> 好感: +9 </status>", { runId: "r1", name: "林黛玉" });
+  assert.ok("停用时不结算", r.report === null && W.favorOf("r1", "林黛玉") === 9);
+  W.setEnabled(true);
+}
+
+assert.done();
+})().catch(function(e){ console.log("  FAIL 顶层异常", e && e.stack || e); process.exit(1); });

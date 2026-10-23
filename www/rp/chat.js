@@ -776,6 +776,10 @@ async function send(runId, name, text, opts){
   b.stats.hasDirector = !!dirText;
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + optCardsInstr(opts.optCount, opts.optMood);
+  /* Tier1 接线：结构化状态区块指令（RP_WIRING，可在接线层停用） */
+  if(opts.wireZones !== false && typeof RP_WIRING !== "undefined" && b.messages.length && b.messages[0].role === "system"){
+    try{ var _wi = RP_WIRING.instruction(); if(_wi) b.messages[0].content += "\n\n" + _wi; }catch(e){}
+  }
   if(opts.plotOutline && b.messages.length && b.messages[0].role === "system")
     b.messages[0].content += "\n\n" + plotRef(opts.plotOutline);
   if(opts.scenario && b.messages.length && b.messages[0].role === "system")
@@ -851,6 +855,14 @@ async function send(runId, name, text, opts){
       if(wres.changed) reply = wres.clean;
     }
   }catch(e){}
+  /* Tier1 接线：结构化状态区块结算（好感/场景/CG/日志/立绘），失败不打断主链 */
+  var wireRes = null;
+  try{
+    if(typeof RP_WIRING !== "undefined"){
+      wireRes = await RP_WIRING.settleReply(reply, {runId: runId, name: name});
+      if(wireRes && wireRes.cleanText && wireRes.cleanText !== reply) reply = wireRes.cleanText;
+    }
+  }catch(e){}
   /* PPA 二遍对齐 (arXiv:2506.11857): 第一遍已流式输出; 第二遍只修人设/知识边界,
    * 失败/超时保留第一遍。气泡 "对齐中…" 经由 opts.onAligning 提示。 */
   var ppaR = null;
@@ -868,6 +880,8 @@ async function send(runId, name, text, opts){
   }catch(e){ ppaR = null; }
   /* S-4 召回指示器: 把本次注入的记忆段标签/世界书命中挂在消息上, 气泡 🧠 角标用 */
   var am = newMsg("assistant", reply);
+  if(wireRes && ((wireRes.favorChanges && wireRes.favorChanges.length) || (wireRes.notices && wireRes.notices.length)))
+    am.wire = {favorChanges: wireRes.favorChanges || [], notices: wireRes.notices || []};
   if(b.stats.memHits && b.stats.memHits.length) am.memHits = b.stats.memHits;
   if(b.stats.loreHits && b.stats.loreHits.length) am.loreHits = b.stats.loreHits;
   h.push(am);
