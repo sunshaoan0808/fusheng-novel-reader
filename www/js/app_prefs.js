@@ -50,10 +50,28 @@ function themeCardsHTML(){
 try{
 if(typeof RP_THEME === "undefined") return "";
 const cur = RP_THEME.get();
-return `<div class="themerow" style="margin-top:8px">` + RP_THEME.THEMES.map(t=>`
+const card = t=>`
 <div class="themecard${cur===t.id?" on":""}" onclick="setThemeUI('${jq(t.id)}')">
 <div class="dots"><span class="dot" style="background:${t.vars["--bg"]}"></span><span class="dot" style="background:${t.vars["--gold"]}"></span><span class="dot" style="background:${t.vars["--ink"]}"></span></div>
-<div class="tname">${esc(t.name)}</div><div class="tdesc">${esc(t.desc)}</div></div>`).join("") + `</div>`;
+<div class="tname">${esc(t.name)}</div><div class="tdesc">${esc(t.desc)}</div></div>`;
+const dark = RP_THEME.THEMES.filter(t=>!t.light), light = RP_THEME.THEMES.filter(t=>t.light);
+return `<div class="themesub">夜间</div><div class="themerow">` + dark.map(card).join("") + `</div>`
++ `<div class="themesub">日间</div><div class="themerow">` + light.map(card).join("") + `</div>`;
+}catch(e){ return ""; }
+}
+/* 字体组切换（内置开源字体，rp/theme.js RP_FONT；预览用该组标题字体渲染） */
+window.setFontUI = (id)=>{
+try{ if(typeof RP_FONT !== "undefined") RP_FONT.apply(id); }catch(e){}
+showSettings();
+};
+function fontCardsHTML(){
+try{
+if(typeof RP_FONT === "undefined") return "";
+const cur = RP_FONT.get();
+return `<div class="themerow" style="margin-top:8px">` + RP_FONT.SETS.map(f=>`
+<div class="themecard${cur===f.id?" on":""}" onclick="setFontUI('${jq(f.id)}')">
+<div class="fprev" style="font-family:${f.serif.replace(/"/g,"'")}">浮生夜话</div>
+<div class="tname">${esc(f.name)}</div><div class="tdesc">${esc(f.desc)}</div></div>`).join("") + `</div>`;
 }catch(e){ return ""; }
 }
 /* ============ 字号缩放（P0-28：--fs 文本倍率） ============

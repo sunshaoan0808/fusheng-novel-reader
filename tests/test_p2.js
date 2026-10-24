@@ -15,13 +15,24 @@ const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };
   vm.createContext(ctx);
   vm.runInContext(fs.readFileSync(WWW + "/rp/theme.js", "utf8"), ctx);
   const T = (s)=>vm.runInContext(s, ctx);
-  t("主题3套", T("RP_THEME.THEMES.length") === 3);
+  t("主题8套", T("RP_THEME.THEMES.length") === 8);
+  t("日间5套", T("RP_THEME.THEMES.filter(x=>x.light).length") === 5);
   t("默认墨夜", T("RP_THEME.get()") === "moye");
   t("切换松烟写变量", T("RP_THEME.apply('songyan')") === "songyan" && rootStyle["--bg"] === "#0e1418");
   t("切换持久化", store["nd_theme_v1"] === "songyan" && T("RP_THEME.get()") === "songyan");
   t("非法id回退默认", T("RP_THEME.apply('nope')") === "moye");
-  t("三套都有name+desc", T("RP_THEME.THEMES.every(x=>x.name&&x.desc)"));
+  t("八套都有name+desc", T("RP_THEME.THEMES.every(x=>x.name&&x.desc)"));
   t("主题含关键变量", T("Object.keys(RP_THEME.def('jiangxia').vars)").includes("--gold"));
+  t("日间变量与墨夜同构", T("RP_THEME.THEMES.filter(x=>x.light).every(x=>Object.keys(x.vars).length===Object.keys(RP_THEME.def('moye').vars).length)"));
+  t("宣纸是浅底深字", T("RP_THEME.apply('xuanzhi')") === "xuanzhi" && rootStyle["--bg"] === "#f6f1e3" && rootStyle["--ink"] === "#2f2a21");
+  /* 字体组 */
+  t("字体5组", T("RP_FONT.SETS.length") === 5);
+  t("默认字体组", T("RP_FONT.get()") === "default");
+  t("文楷写serif与sans", T("RP_FONT.apply('wenkai')") === "wenkai" && rootStyle["--serif"].includes("LXGW WenKai") && rootStyle["--sans"].includes("LXGW WenKai"));
+  t("字体持久化", store["nd_fontset_v1"] === "wenkai" && T("RP_FONT.get()") === "wenkai");
+  t("宋体正文走思源宋", T("RP_FONT.apply('songti')") === "songti" && rootStyle["--sans"].includes("Noto Serif SC"));
+  t("毛笔只换标题", T("RP_FONT.apply('maobi')") === "maobi" && rootStyle["--serif"].includes("Ma Shan Zheng") && rootStyle["--sans"].includes("-apple-system"));
+  t("非法字体回退默认", T("RP_FONT.apply('nope')") === "default");
 })();
 
 /* ---------- 每日签到 ---------- */

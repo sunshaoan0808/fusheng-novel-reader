@@ -148,7 +148,7 @@ t("聊天顶栏走主题变量", /\.chathead[\s\S]{0,400}?background:\s*var\(--n
 t("聊天底栏走主题变量", /\.chatbar\{[^}]*background:\s*var\(--nav-bg\)/.test(css));
 t("actionbar走主题变量", /\.actionbar[\s\S]{0,400}?background:\s*var\(--nav-bg\)/.test(css));
 const themeJs = fs.readFileSync(WWW + "/rp/theme.js", "utf8");
-t("三主题都有nav-bg", (themeJs.match(/"--nav-bg"/g) || []).length === 3);
+t("八主题都有nav-bg", (themeJs.match(/"--nav-bg"/g) || []).length === 8);
 t("栏位无硬编码棕色", !/#topbar[\s\S]{0,300}?rgba\(2[034],1[678],[01][357]/.test(css));
 
 /* ---- 书封面 ---- */
