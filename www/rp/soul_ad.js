@@ -1,6 +1,6 @@
 /* AD. 交通旅行 50条 (1201-1250) */
 var RP_SOUL_AD=(function(){"use strict";
-function k(c){return "nd_soulad_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulad_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1201*/F.addRoute=function(c,a,b,dist){var o=g(c);o.routes=o.routes||[];o.routes.push({a:a,b:b,dist:dist});s(c,o);};
 /*1202*/F.routeDist=function(c,a,b){var r=(g(c).routes||[]).filter(function(x){return (x.a===a&&x.b===b)||(x.a===b&&x.b===a);})[0];return r?r.dist:0;};

@@ -1,7 +1,8 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // P1 发现页/开场选择器/徽章体系/分类chips 回归测试
-const APP_SRC = fs.readFileSync(WWW + "/app.js", "utf8");
+const APP_SRC = __appSource(WWW);
 function pick(names){
   let out = "";
   for(const n of names){

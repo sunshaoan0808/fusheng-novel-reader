@@ -97,7 +97,7 @@ var el = doc.getElementById(targetId);
 if(!el) return;
 var cfg = getCfgSafe();
 if(!cfg.key ||!cfg.base){
-toast("还没配大模型接口，去「设置」填一下 API 地址和 Key 再用 AI 帮填");
+toast("还没配大模型接口，去「我的 · 设置」填一下 API 地址和 Key 再用 AI 帮填");
 return;
 }
 var old = btnEl.innerHTML;
@@ -124,7 +124,7 @@ var el = doc.getElementById("chat_in");
 if(!el || el.disabled) return;
 var cfg = getCfgSafe();
 if(!cfg.key ||!cfg.base){
-toast("还没配大模型接口，去「设置」填一下 API 地址和 Key 再用 AI 帮填");
+toast("还没配大模型接口，去「我的 · 设置」填一下 API 地址和 Key 再用 AI 帮填");
 return;
 }
 var old = btnEl.innerHTML;

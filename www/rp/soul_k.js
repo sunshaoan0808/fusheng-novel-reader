@@ -1,9 +1,7 @@
 /* K. 世界模拟 50条 (251-300) */
 var RP_SOUL_K = (function(){
 "use strict";
-function _k(c){return "nd_soulk_"+c;}
-function _g(c){try{return JSON.parse(localStorage.getItem(_k(c))||"{}");}catch(e){return{};}}
-function _s(c,o){try{localStorage.setItem(_k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulk_"),_k=_kv.k,_g=_kv.g,_s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /* 251 */ F.setLocation=function(c,l){var o=_g(c);o.loc=l;_s(c,o);};
 /* 252 */ F.getLocation=function(c){return _g(c).loc||"";};

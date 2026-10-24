@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 /* v37 回归: 存储型 XSS 防护。
  * 1) jq() 必须让属性/JS 字符串逃逸 payload 失效（不能从 '...' 里跑出来）；
  * 2) app.js 的内联 onclick 里不允许再出现未经 jq() 包裹的 CHAT.name / CHAT.runId；
@@ -42,7 +43,7 @@ for(const p of payloads){
   t("jq 结果可安全放入单引号字面量: " + p, !threw && typeof rt === "string");
 }
 
-const appSrc = fs.readFileSync(WWW + "/app.js", "utf8");
+const appSrc = __appSource(WWW);
 /* 逐个 onclick 属性扫描：出现 CHAT.name / CHAT.runId 且前面不是 jq( 说明又回到裸拼老路 */
 const onclickAttrs = appSrc.match(/onclick="[^"]*"/g) || [];
 const bad = onclickAttrs.filter(a=> /(?<!jq\()CHAT\.(?:name|runId)\b/.test(a));

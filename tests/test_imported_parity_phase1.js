@@ -9,6 +9,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 
 const vmEval = (c, code)=> vm.runInContext(code, c);
 let pass = 0, fail = 0;
@@ -178,7 +179,7 @@ await sec("老键兼容", async()=>{
 /* B6 CHAR_PLOTS 按 runId 分层                                             */
 /* ==================================================================== */
 await sec("B6 CHAR_PLOTS 按 runId 分层", async()=>{
-  const c = mkCtx(RP_FILES.concat(["app.js"]));
+  const c = mkCtx(RP_FILES.concat(__APP_FILES(WWW)));
   /* 同名角色出现在两部书里: 分层结构必须各取各的; 另留一条旧扁平结构做兼容 */
   vmEval(c, "window.CHAR_PLOTS = " + JSON.stringify({
     "honglou_full": {"林黛玉": "【红楼梦】黛玉线"},

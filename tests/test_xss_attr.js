@@ -5,6 +5,7 @@
 // ' 和 \ 转反斜杠（JS 层）。本测试用字符级断言锁死该行为。
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const ctx = {console};
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(WWW + "/rp/escutil.js", "utf8"), ctx);
@@ -52,7 +53,7 @@ for (const p of payloads) {
 t("jqJ双引号转反斜杠", jqJ('a"b') === 'a\\"b');
 
 // 5) 静态：app.js 里不许出现 onclick="..." + 裸 ${}（非 jq/esc/内部常量/数字索引/硬编码徽章ID）
-const app = fs.readFileSync(WWW + "/app.js", "utf8");
+const app = __appSource(WWW);
 const bad = [];
 const re = /onclick="[^"]*\$\{([^}]*)\}[^"]*"/g;
 let m;

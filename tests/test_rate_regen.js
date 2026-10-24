@@ -1,8 +1,9 @@
 const fs = require("fs");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 点踩自动重生回归: rateMsg(idx,-1) 在最新一条 AI 回复上 -> 触发 regenMsg();
 // 其他情况只记录评分, 不触发。
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 
 let pass = 0, fail = 0;
 function ok(name, cond){

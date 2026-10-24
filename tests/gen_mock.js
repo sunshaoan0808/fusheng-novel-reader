@@ -1,4 +1,5 @@
 const fs = require("fs"), vm = require("vm");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const els = {};
 function mkEl(){ return {innerHTML:"", textContent:"", value:"", classList:{add(){},remove(){},toggle(){}},
   querySelectorAll(){return [];}, addEventListener(){}, scrollTo(){}, style:{}}; }
@@ -16,7 +17,7 @@ vm.createContext(ctx);
 vm.runInContext(fs.readFileSync("assets/www/rp/cardwriter.js","utf8"), ctx);
 vm.runInContext(`localStorage.setItem("nd_api_cfg_v1", JSON.stringify({key:"k",base:"b",model:"m"}));`, ctx);
 vm.runInContext(fs.readFileSync("assets/www/icons.js","utf8"), ctx);
-vm.runInContext(fs.readFileSync("assets/www/app.js","utf8"), ctx);
+for(const __f of __APP_FILES("assets/www")) vm.runInContext(fs.readFileSync("assets/www/" + __f, "utf8"), ctx, {filename: __f});
 
 // 真实模板输出
 const MODE = process.env.MOCK_MODE || "single";

@@ -1,10 +1,12 @@
 #!/bin/bash
 # 零依赖手动打包 APK: aapt2 + javac + d8 + apksigner (build-tools 34.0.0)
-# 用法: VCODE=9 VNAME=1.8 bash build.sh   (默认 9 / 1.8)
+# 用法: VCODE=1000 VNAME=1.41 bash build.sh   (默认 1000 / 1.41)
+#       versionCode 方案与 CI 一致: 1000 + 构建序号（CI 用 github.run_number），只增不减
 #       CI 里可覆盖路径: APP=<工作目录> SDK=<android sdk> BT=<build-tools 目录> JAVA_HOME=<jdk17>
-set -e
-VCODE=${VCODE:-9}
-VNAME=${VNAME:-1.8}
+# 严格模式：任一步失败（含管道中的 javac）立即退出，未定义变量视为错误
+set -euo pipefail
+VCODE=${VCODE:-1000}
+VNAME=${VNAME:-1.41}
 # DEBUG=1 打「可调试包」：android:debuggable=1 + WebView 远程调试可用，仅用于真机/模拟器验收。
 # 正式包不要带这个开关。
 DBG=${DEBUG:-0}
@@ -72,12 +74,17 @@ $BT/aapt2 link -o $OUT/base.apk \
   $OUT/compiled.zip -A $APP/assets
 
 echo "[3/6] javac"
-if [ -z "$JAVA_HOME" ]; then export JAVA_HOME=$HOME/jdk17; fi
+if [ -z "${JAVA_HOME:-}" ]; then export JAVA_HOME=$HOME/jdk17; fi
 export PATH="$JAVA_HOME/bin:$PATH"
 mkdir -p $OUT/gen/com/ling/novelreader
 find $OUT/gen $APP/src -name "*.java" > $OUT/sources.txt
-javac -encoding UTF-8 -source 8 -target 8 -classpath $PJ -d $OUT/classes @$OUT/sources.txt 2>&1 | grep -v "bootstrap\|deprecat" || true
-# 守卫: javac 失败会被上面的 || true 吞掉, 这里强制检查产物, 避免打出无 dex 的坏包
+# 过滤 bootstrap/deprecation 噪声警告，但不吞 javac 的退出码：
+# javac 输出先落盘，成败只看 javac 自己的返回值；grep 过滤后无输出返回 1，不参与判定。
+JAVAC_RC=0
+javac -encoding UTF-8 -source 8 -target 8 -classpath "$PJ" -d "$OUT/classes" @"$OUT/sources.txt" > "$OUT/javac.log" 2>&1 || JAVAC_RC=$?
+grep -v "bootstrap\|deprecat" "$OUT/javac.log" || true
+if [ "$JAVAC_RC" -ne 0 ]; then echo "FATAL: javac 编译失败 (exit $JAVAC_RC)"; exit "$JAVAC_RC"; fi
+# 双保险: 即使 javac 返回 0 也检查产物, 避免打出无 dex 的坏包
 [ -n "$(find $OUT/classes -name '*.class')" ] || { echo "FATAL: javac 未生成任何 class 文件"; exit 1; }
 
 echo "[4/6] d8"
@@ -106,5 +113,7 @@ fi
 "$BT/apksigner" sign --ks "$KS" --ks-key-alias "${RELEASE_KEY_ALIAS:-release}" \
   --ks-pass "env:RELEASE_STOREPASS" --key-pass "env:RELEASE_KEYPASS" \
   --out "$APP/$APKNAME" "$OUT/unsigned.apk"
-"$BT/apksigner" verify --print-certs "$APP/$APKNAME" | head -3
+# 先落盘再截取, 避免 pipefail 下 head 提前关管道导致 SIGPIPE 误判失败
+"$BT/apksigner" verify --print-certs "$APP/$APKNAME" > "$OUT/verify.txt"
+head -3 "$OUT/verify.txt"
 ls -la "$APP/$APKNAME"

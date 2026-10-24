@@ -1,6 +1,6 @@
 /* 医疗健康 50条 (1351-1400) */
 var RP_SOUL_AG=(function(){"use strict";
-function k(c){return "nd_soulag_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulag_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1351*/F.setHealth=function(c,a,b){var o=g(c);o['d1351']=o['d1351']||[];o['d1351'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};
 /*1352*/F.diagnose=function(c,a,b){var o=g(c);o['d1352']=o['d1352']||[];o['d1352'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};

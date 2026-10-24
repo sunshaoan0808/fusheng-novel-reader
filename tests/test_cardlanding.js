@@ -1,8 +1,9 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 卡片详情落地页回归测试 (app.js: cardOpenings/cardBadges/cardTags/cardLandingHTML)
 // 只测纯函数与 HTML 生成，不依赖真实卡片数据
-const APP_SRC = fs.readFileSync(WWW + "/app.js", "utf8");
+const APP_SRC = __appSource(WWW);
 function pick(names){
   // 从 app.js 源码里截取指定函数定义，拼成可独立运行的模块
   let out = "";
@@ -104,7 +105,7 @@ t("标签去重", tg.length === 4 && tg.includes("诗社才女") && tg.includes(
 
 /* cardLandingHTML：导入卡（含开场） */
 let html = C("cardLandingHTML('imported','白月光',RP.findCard('imported','白月光'),{novel:'导入角色卡'})");
-t("落地页有CTA", html.includes("立即开始游玩"));
+t("落地页有CTA（v42 文案改为「开始对话」）", html.includes("开始对话"));
 t("落地页有徽章", html.includes("导入") && html.includes("多开场") && html.includes("badgeTip"));
 t("落地页有开场列表", html.includes("开场 · 3 个") && html.includes("chatWithOpening"));
 t("落地页有玩法说明", html.includes("玩法说明"));
@@ -125,7 +126,7 @@ const ctx2 = mkCtx({RP_STATS: undefined});
 const C2 = (n)=>vm.runInContext(n, ctx2);
 let html3 = "";
 try{ html3 = C2("cardLandingHTML('builtin','林黛玉',RP.findCard('builtin','林黛玉'),{novel:'红楼梦'})"); }catch(e){ html3 = "THREW:" + e.message; }
-t("无RP_STATS不崩", html3.indexOf("THREW") !== 0 && html3.includes("立即开始游玩"));
+t("无RP_STATS不崩", html3.indexOf("THREW") !== 0 && html3.includes("开始对话"));
 
 console.log(`\n${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

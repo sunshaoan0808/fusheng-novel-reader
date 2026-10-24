@@ -1,6 +1,6 @@
 /* AA. 生物生态 50条 (1051-1100) */
 var RP_SOUL_AA=(function(){"use strict";
-function k(c){return "nd_soulaa_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulaa_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1051*/F.addSpecies=function(c,name,desc){var o=g(c);o.species=o.species||{};o.species[name]=desc;s(c,o);};
 /*1052*/F.addAnimal=function(c,name,species){var o=g(c);o.animals=o.animals||{};o.animals[name]={species:species,hp:100};s(c,o);};

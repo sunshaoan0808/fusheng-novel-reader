@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 回归: 穿越模式点击链 (v31 真机 bug: onclick="f(${JSON.stringify(x)})" 里 JSON 的双引号
 // 提前终止 HTML 属性, 点下去是 SyntaxError, 子页面所有按钮无反应;
 // 另: Android WebView 不实现 onShowFileChooser 时 input.click() 被静默吞掉, 见 MainActivity.java)
@@ -45,7 +46,7 @@ ctx.CHAR_PLOTS = {"林黛玉": "\n· 黛玉进贾府：初见宝玉"};
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "data/char_plots.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js", "rp/aifill.js",
-"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", "app.js"]){
+"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+ "/" + f, "utf8"), ctx, {filename: f});
 }
 vm.runInContext("window.__DATA__=" + JSON.stringify(DATA), ctx);

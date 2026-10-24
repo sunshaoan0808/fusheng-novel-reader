@@ -5,6 +5,7 @@
  * 修法: 武装 key 按模式取 nd_travchat_<travId>; sendTraverse 注入推进指令。
  */
 const fs = require("fs");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const path = require("path");
 const src = fs.readFileSync(path.join(__dirname, "../www/rp/agent_pushstory.js"), "utf8");
 
@@ -44,7 +45,7 @@ PS.arm(wsIdT, "natural");
 ok("空key隔离", PS.injectPrompt("") === "");
 
 // 5. app.js 武装 key 逻辑：穿越模式用 nd_travchat_ 前缀
-const appSrc = fs.readFileSync(path.join(__dirname, "../www/app.js"), "utf8");
+const appSrc = __appSource(require("path").join(__dirname, "../www"));
 ok("app.js穿越key分支", appSrc.indexOf('"nd_travchat_" + CHAT.travId') >= 0);
 
 // 6. chat.js sendTraverse 有注入点

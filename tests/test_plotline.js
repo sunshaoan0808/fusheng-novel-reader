@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 let pass=0, fail=0; const t=(n,c)=>{c?pass++:(fail++,console.log("FAIL:",n));};
 
 function takeDecl(src, name){
@@ -52,7 +53,7 @@ t("单聊+群聊+重生都注入 plotRef", (csrc.match(/plotRef\(opts\.plotOutli
 t("无 plotGoal 残留",!csrc.includes("plotGoal"));
 
 // ---- app.js: 剧情线存取 v27 ----
-const asrc = fs.readFileSync(WWW+"/app.js","utf8");
+const asrc = __appSource(WWW);
 const store = {};
 const actx = {console, CHAT:{mode:"single",runId:"r1",name:"林黛玉",members:[]},
 window:{CHAR_PLOTS:{"r1":PLOTS}},

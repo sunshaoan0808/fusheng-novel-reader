@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 2026-10-07 四项接 App 回归: ccv3 优先读取 / 管线 openings / OOC 纠错注入 / 剧情线
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false,
@@ -38,7 +39,7 @@ return ctx;
 }
 // 从 app.js 按名提取函数
 function pickFn(name){
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 const i = src.indexOf("function " + name + "(");
 if(i < 0) throw new Error("not found: " + name);
 let d = src.indexOf("{", i), lvl = 0, j = d;

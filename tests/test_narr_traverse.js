@@ -5,13 +5,14 @@
 * 修法: sendTraverse 改走 tagUserMsg; 调用方传 userMtype。
 */
 const fs = require("fs");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const path = require("path");
 
 let pass = 0, fail = 0;
 function ok(name, cond){ if(cond){ pass++; console.log(" PASS", name);} else { fail++; console.log(" FAIL", name);}}
 
 const chatSrc = fs.readFileSync(path.join(__dirname, "../www/rp/chat.js"), "utf8");
-const appSrc = fs.readFileSync(path.join(__dirname, "../www/app.js"), "utf8");
+const appSrc = __appSource(require("path").join(__dirname, "../www"));
 
 // 1. sendTraverse 内不再有裸推, 改走 tagUserMsg
 const stStart = chatSrc.indexOf("async function sendTraverse");

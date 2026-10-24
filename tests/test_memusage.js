@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // P1-8: 长期记忆库用量条 (memStats + 相册顶部用量条 + Pin 30 软提示)
 const store = {};
 const localStorage = {
@@ -73,7 +74,7 @@ ctx2.window = ctx2; ctx2.globalThis = ctx2; ctx2.__DATA__ = DATA;
 vm.createContext(ctx2);
 for(const f of ["data.js", "icons.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/traverse.js", "rp/achieve.js", "rp/pinlock.js", "rp/escutil.js", "app.js"]){
+"rp/group.js", "rp/traverse.js", "rp/achieve.js", "rp/pinlock.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW + "/" + f, "utf8"), ctx2, {filename: f});
 }
 vm.runInContext("openAlbum('r1','n1')", ctx2);

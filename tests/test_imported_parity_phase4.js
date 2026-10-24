@@ -19,6 +19,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 
 const vmEval = (c, code)=> vm.runInContext(code, c);
 let pass = 0, fail = 0;
@@ -99,7 +100,7 @@ const RAW_B = mkRawBare("白薇", "青灯录");
 const RAW_C = mkRawRich("柳三更", "青灯录");
 
 const mkCtxBase = (withApp, extra)=> {
-  const c = mkCtx(withApp ? RP_FILES.concat(["app.js"]) : RP_FILES, extra);
+  const c = mkCtx(withApp ? RP_FILES.concat(__APP_FILES(WWW)) : RP_FILES, extra);
   vmEval(c, "window.__DATA__ = " + JSON.stringify(
     {index: [], runs: BASE_RUNS, rp_cards: BASE_CARDS}) + ";");
   return c;

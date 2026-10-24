@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const JDIR = fs.existsSync("src/com/ling/novelreader/MainActivity.java") ? "src" : (fs.existsSync("app/src") ? "app/src" : "android/src");
 const MF = fs.existsSync("AndroidManifest.xml") ? "AndroidManifest.xml" : (fs.existsSync("app/AndroidManifest.xml") ? "app/AndroidManifest.xml" : "android/AndroidManifest.xml");
 // rp/cardexport.js: Tavern v2 卡构建 + chara tEXt 嵌入 (纯函数部分)
@@ -96,7 +97,7 @@ const mf = fs.readFileSync(MF, "utf8");
 t("manifest provider", mf.indexOf("SharedFileProvider") >= 0 && mf.indexOf("com.ling.novelreader.shared") >= 0);
 const html = fs.readFileSync(WWW+"/index.html", "utf8");
 t("cardexport.js in index.html", html.indexOf("rp/cardexport.js") >= 0);
-const asrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const asrc = __appSource(WWW);
 t("exportCard exists", asrc.indexOf("window.exportCard") >= 0);
 t("export button on card", asrc.indexOf("exportCard('${jq(c.id)}')") >= 0); /* P0-1: 已改 jq() 转义 */
 

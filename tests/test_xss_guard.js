@@ -36,6 +36,9 @@ function walk(dir, acc) {
 const files = walk(WWW, []).filter(f => path.basename(f) !== "data.js");
 const read = f => fs.readFileSync(f, "utf8");
 const rel = f => path.relative(WWW, f).replace(/\\/g, "/");
+/* v41: app.js 按区段原样拆到 js/app_*.js（见 tests/lib_appsrc.js）。逐文件基线按「app 整体」计：
+ * 拆出的分段与 app.js 合并记在 "app.js" 名下，基线上限不变（不放宽，只是同一批代码换了物理文件）。 */
+const bucket = f => (/^js\/app_[a-z_]+\.js$/.test(rel(f)) ? "app.js" : rel(f));
 
 /* 嵌套模板字面量扫描: s[from]==='`' 时返回配对反引号下标, 尊重其中的 ${}
  * (而 ${} 里又可含反引号 —— 所以自身也必须递归)。找不到返回 -1。
@@ -139,7 +142,7 @@ function scanP1() {
           /^(Math\.|.*\.length$|.*\+\s*\d+$|\d+$)/.test(e.trim())) && !/["']/.test(e);
         if (isSafe) { safe++; }
         else if (numOnly) { numeric++; }
-        else { risky++; byFile[rel(f)] = (byFile[rel(f)] || 0) + 1; }
+        else { risky++; byFile[bucket(f)] = (byFile[bucket(f)] || 0) + 1; }
       });
     }
   });

@@ -1,0 +1,19 @@
+{
+  "name": "fusheng-novel-reader",
+  "version": "1.41.0",
+  "private": true,
+  "description": "浮生：小说阅读 / 角色扮演 WebView 应用（运行时零依赖）",
+  "license": "SEE LICENSE IN LICENSE",
+  "scripts": {
+    "test": "node tools/run_tests.js",
+    "test:verbose": "node tools/run_tests.js -v",
+    "acceptance": "node tools/acceptance.js",
+    "lint": "eslint www tests tools"
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // P0-2: 消息编辑 (editMsg/editMsgSave)
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false,
@@ -49,7 +50,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/traverse.js", "rp/escutil.js", "app.js"]){
+"rp/group.js", "rp/traverse.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW + "/" + f, "utf8"), ctx, {filename: f});
 }
 vm.runInContext("window.__DATA__=" + JSON.stringify(DATA), ctx);
@@ -119,7 +120,7 @@ vm.runInContext("editMsgCancel(0)", ctx);
 t("editMsgCancel恢复", bub.innerHTML.indexOf('id="editbox"') < 0);
 
 // ---- 模板里有编辑按钮 ----
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 t("renderChat有编辑按钮", (src.match(/editMsg\(\$\{jq\(idx\)\}\)">编辑/g) || []).length >= 2); /* P0-1: 已改 jq() 转义 */
 
 console.log(`editmsg: ${pass} pass, ${fail} fail`);

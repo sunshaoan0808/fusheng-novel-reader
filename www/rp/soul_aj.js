@@ -1,6 +1,6 @@
 /* 饮食生活 50条 (1501-1550) */
 var RP_SOUL_AJ=(function(){"use strict";
-function k(c){return "nd_soulaj_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulaj_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1501*/F.addRecipe=function(c,a,b){var o=g(c);o['d1501']=o['d1501']||[];o['d1501'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};
 /*1502*/F.cookRecipe=function(c,a,b){var o=g(c);o['d1502']=o['d1502']||[];o['d1502'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};

@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 竞品深挖第二轮 S 级清单回归
 // S-4 召回指示器 / S-5 按卡文风 / S-6 按卡温度 / S-7 高权重场景 / S-8 铁律2000 / S-9 行为标签 / S-12 按轮回溯
 function mkCtx(){
@@ -35,7 +36,7 @@ t("超下限钳制到 0.1", fn({temperature: 0}, 0.9) === 0.1);
 
 /* ---- S-12 按轮回溯 ---- */
 {
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 const fn = new Function("return (" + extractFn(src, "snapRewindIdx") + ")")();
 const h = [{role:"user"},{role:"assistant"},{role:"user"},{role:"assistant"}];
 t("点 AI 消息吸附到本轮 user", fn(h, 3) === 2);

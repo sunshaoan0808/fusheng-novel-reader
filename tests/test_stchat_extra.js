@@ -4,6 +4,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const els = {};
 function mkEl(){ return {innerHTML:"", textContent:"", value:"", classList:{add(){},remove(){},toggle(){}},
   querySelectorAll(){return [];}, addEventListener(){}, scrollTo(){}, style:{}}; }
@@ -22,7 +23,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(WWW+"/icons.js","utf8"), ctx);
-const src = fs.readFileSync(WWW+"/app.js","utf8");
+const src = __appSource(WWW);
 const i = src.indexOf("/* ST 聊天记录(JSONL)");
 const j = src.indexOf("window.importStChat");
 vm.runInContext(src.slice(i, j), ctx);

@@ -1,6 +1,6 @@
 /* U. 战斗系统 50条 (751-800) */
 var RP_SOUL_U=(function(){"use strict";
-function k(c){return "nd_soulu_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulu_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*751*/F.setHP=function(c,name,n){var o=g(c);o.hp=o.hp||{};o.hp[name]={cur:n,max:n};s(c,o);};
 /*752*/F.hp=function(c,name){return (g(c).hp||{})[name]||{cur:100,max:100};};

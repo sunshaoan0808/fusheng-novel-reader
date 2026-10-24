@@ -6,12 +6,13 @@
  *        穿越模式末尾也走 regenMsgAt; regenMsgAt 截断历史后走 sendChatText 重发。
  */
 const fs = require("fs");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const path = require("path");
 
 let pass = 0, fail = 0;
 function ok(name, cond){ if(cond){ pass++; console.log("  PASS", name); } else { fail++; console.log("  FAIL", name); } }
 
-const appSrc = fs.readFileSync(path.join(__dirname, "../www/app.js"), "utf8");
+const appSrc = __appSource(require("path").join(__dirname, "../www"));
 
 // 1. 非末尾 AI 消息也有重生按钮
 ok("非末尾有重生按钮",

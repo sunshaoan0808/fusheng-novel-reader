@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // P0-1: 编辑器 token 计数条 (tokCount -> 可视化条 + 80%/100% 两档告警)
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false,
@@ -33,7 +34,7 @@ const ctx = {console, localStorage, document, alert(){}, confirm(){ return true;
 setTimeout: () => 0, clearTimeout(){}};
 ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
-for(const f of ["rp/prompt.js", "rp/persona.js", "rp/escutil.js", "app.js"]){
+for(const f of ["rp/prompt.js", "rp/persona.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW + "/" + f, "utf8"), ctx, {filename: f});
 }
 
@@ -77,7 +78,7 @@ vm.runInContext("tokCount('nope','alsono')", ctx);
 t("tokCount缺失元素不崩", true);
 
 // 剧情线/Persona 编辑器模板里挂了 tokCount
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 t("plotEditor挂tokCount", src.indexOf("tokCount('p_outline','p_tok')") >= 0);
 t("personaEditor挂tokCount", src.indexOf("tokCount(['p_name','p_called','p_desc','p_extra'],'p_tok')") >= 0); /* #20: 新增 p_called */
 t("loreForm保留", src.indexOf("tokCount('l_content','l_tok')") >= 0);

@@ -1,6 +1,7 @@
 /* 2026-10-14 浮生审计修复回归: P0 参数错位 / P1 key 不匹配+groupKey 碰撞 / P2 命名空间 / P3 死代码 */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const store = {};
 const localStorage = {
   getItem: k => (k in store ? store[k] : null),
@@ -55,7 +56,7 @@ async function main(){
   t("P0: 源码两次调用首参都是 card", calls.length === 2 && calls.every(function(c){ return c.indexOf("(card,") >= 0; }));
 
   /* P1: saveChatParams / saveChatSoulProfile 必须走 soulChatId() */
-  var appSrc = fs.readFileSync(WWW + "/app.js", "utf8");
+  var appSrc = __appSource(WWW);
   var scp = appSrc.match(/window\.saveChatParams = \(\)=>\{[\s\S]*?\n\};/);
   var scsp = appSrc.match(/window\.saveChatSoulProfile = \(\)=>\{[\s\S]*?\n\};/);
   t("P1: saveChatParams 用 soulChatId()", scp && scp[0].indexOf("soulChatId()") >= 0);

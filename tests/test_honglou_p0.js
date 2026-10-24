@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 红学 P0 三项回归: 判词/曲 + 脂批 + 方法论声明进 App(只做展示, 不进 prompt)
 let pass = 0, fail = 0;
 function t(name, cond){ if(cond){ pass++;} else { fail++; console.log("FAIL:", name);}}
@@ -20,7 +21,7 @@ if(end < 0) throw new Error("unbalanced: " + fname);
 return lines.slice(0, end + 1).join("\n");
 }
 
-const html = fs.readFileSync(WWW + "/app.js", "utf8");
+const html = __appSource(WWW);
 const ctx = {console};
 ctx.window = ctx;
 ctx.esc = s => String(s == null? "": s).replace(/&/g, "&amp;")

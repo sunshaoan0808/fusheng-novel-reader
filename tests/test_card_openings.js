@@ -6,7 +6,8 @@ const fs = require("fs"), vm = require("vm"), path = require("path");
 // 这里断言: 列表里是真实开场文本, 且点击下标与 cardOpenings 下标严格对齐
 // (chatWithOpening 按下标取开场, 错位会把别的开场送进首条消息)。
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
-const APP_SRC = fs.readFileSync(path.join(WWW, "app.js"), "utf8");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
+const APP_SRC = __appSource(WWW);
 
 function pick(names){
   let out = "";

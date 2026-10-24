@@ -25,6 +25,15 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: JS tests
+        # 单测零依赖，不需要 npm install；任一失败即中止打包
+        run: npm test
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -87,13 +96,18 @@ jobs:
 
       - name: Build APK
         env:
-          VCODE: ${{ github.run_number }}
-          VNAME: "1.8.${{ github.run_number }}"
+          # versionCode 只增不减：固定基数 + run_number。
+          # 基数 1000 大于仓库/README 里出现过的任何 versionCode（最高为调试示例 99、
+          # 手动示例 31），保证 CI 包永远能覆盖安装旧包。改基数只能往大改。
+          VCODE_BASE: "1000"
+          RUN_NO: ${{ github.run_number }}
           DEBUG: ${{ inputs.debug == true && '1' || '0' }}
         run: |
-          set -e
-          echo "DEBUG=$DEBUG"
-          SDK="$SDK_DIR" APP="$APP" DEBUG="$DEBUG" bash android/build.sh
+          set -euo pipefail
+          VCODE=$((VCODE_BASE + RUN_NO))
+          VNAME="1.41.${RUN_NO}"
+          echo "DEBUG=$DEBUG VCODE=$VCODE VNAME=$VNAME"
+          SDK="$SDK_DIR" APP="$APP" DEBUG="$DEBUG" VCODE="$VCODE" VNAME="$VNAME" bash android/build.sh
           ls -la "$APP"/*.apk
           echo "APK_PATH=$(ls "$APP"/*.apk | head -1)" >> "$GITHUB_ENV"
 

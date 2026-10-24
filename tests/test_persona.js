@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // rp/persona.js: 全局人设 + 按聊天覆盖
 const src = fs.readFileSync(WWW+"/rp/persona.js", "utf8");
 const store = {};
@@ -51,7 +52,7 @@ const html = fs.readFileSync(WWW+"/index.html", "utf8");
 t("persona.js in index.html", html.indexOf('rp/persona.js') >= 0);
 
 // app.js UI 入口
-const asrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const asrc = __appSource(WWW);
 t("personaEditor exists", asrc.indexOf("window.personaEditor") >= 0);
 t("drawer entries", (asrc.match(/personaEditor\(/g) || []).length >= 3);
 

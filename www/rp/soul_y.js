@@ -1,6 +1,6 @@
 /* Y. 魔法超自然 50条 (951-1000) */
 var RP_SOUL_Y=(function(){"use strict";
-function k(c){return "nd_souly_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_souly_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*951*/F.setMana=function(c,name,n){var o=g(c);o.mana=o.mana||{};o.mana[name]={cur:n,max:n};s(c,o);};
 /*952*/F.mana=function(c,name){return (g(c).mana||{})[name]||{cur:100,max:100};};

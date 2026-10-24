@@ -28,7 +28,7 @@ function validWallpaper(id){
 
 /* ---- 字体：系统默认 + 本地 serif/kai fallback 栈（不捆绑字体文件） ---- */
 var FONTS = [
-  {id: "system", name: "系统默认"},
+  {id: "system", name: "默认（聊天正文宋体，界面黑体）"}, /* v42：聊天正文默认走系统宋体栈，见 ui42.css 第 9 节 */
   {id: "song",   name: "宋体（书卷气）"},
   {id: "kai",    name: "楷体（手写感）"}
 ];

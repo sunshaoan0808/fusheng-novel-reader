@@ -1,7 +1,8 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // app.js: 平行存档（新建/加载/改名/删除），localStorage + 函数桩
-const src = fs.readFileSync(WWW+"/app.js", "utf8");
+const src = __appSource(WWW);
 function extract(src, name){
   const pats = [
     "function\\s+"+name+"\\s*\\(",

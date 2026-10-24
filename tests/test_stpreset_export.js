@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // ST 预设导出回归测试: RP_PRESETEXPORT.exportPreset (parseFile 的逆操作)
 // 真实 fixture: tests/fixtures/mom-2.4.json (MoM 2.4, 146 条 prompts)
 // 往返: 真实预设 -> parseFile -> exportPreset -> parseFile, 条目字段一致
@@ -65,7 +66,7 @@ t("缺 params 不写 temperature", !("temperature" in noParams) && noParams.prom
 // ---- 静态: UI 入口 ----
 const html = fs.readFileSync(WWW+"/index.html", "utf8");
 t("presetexport.js in index.html", html.indexOf("rp/presetexport.js") >= 0);
-const asrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const asrc = __appSource(WWW);
 t("导出所选预设 button", asrc.indexOf("exportStPreset()") >= 0);
 t("window.exportStPreset", asrc.indexOf("window.exportStPreset") >= 0);
 t("downloadJson helper", asrc.indexOf("function downloadJson") >= 0);

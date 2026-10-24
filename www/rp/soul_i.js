@@ -1,9 +1,7 @@
 /* I. 群聊高级玩法 50条 (151-200) */
 var RP_SOUL_I = (function(){
 "use strict";
-function _k(c){ return "nd_souli_"+c; }
-function _g(c){ try{return JSON.parse(localStorage.getItem(_k(c))||"{}");}catch(e){return{};} }
-function _s(c,o){ try{localStorage.setItem(_k(c),JSON.stringify(o));}catch(e){} }
+var _kv=RP_SOUL_KV.bucket("nd_souli_"),_k=_kv.k,_g=_kv.g,_s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /* 151 */ F.setTopic=function(c,t){ var o=_g(c);o.topic=t;_s(c,o); };
 /* 152 */ F.getTopic=function(c){ return _g(c).topic||""; };

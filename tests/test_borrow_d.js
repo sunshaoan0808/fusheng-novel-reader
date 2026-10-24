@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // Tier3 21-25: Rewind 回溯 / 群关系+@ / 记忆日记 / 召回通知 / 心跳
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false, tagName: "",
@@ -55,7 +56,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "rp/escutil.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/traverse.js", "rp/heartbeat.js", "app.js"]){
+"rp/group.js", "rp/traverse.js", "rp/heartbeat.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW + "/" + f, "utf8"), ctx, {filename: f});
 }
 vm.runInContext("window.__DATA__=" + JSON.stringify(DATA), ctx);
@@ -120,7 +121,7 @@ t("22 非成员名字被拒", pr2.ok.length===0 && pr2.bad===1);
 // @ 点名：本轮点名该角色先回
 const sp = G.planSpeakers("@贾宝玉 你好呀", ["林黛玉","贾宝玉"], {林黛玉:50,贾宝玉:50}, null, {maxSpeakers:3});
 t("22 @点名者排第一", sp[0]==="贾宝玉");
-const appsrc = fs.readFileSync(WWW+"/app.js","utf8");
+const appsrc = __appSource(WWW);
 t("22 输入区有@按钮", appsrc.indexOf('id="atbtn"')>=0);
 t("22 atMention/at菜单函数存在", appsrc.indexOf("window.atMention")>=0 && appsrc.indexOf("window.toggleAtMenu")>=0);
 t("22 建群页有关系输入框", appsrc.indexOf('id="grel_in"')>=0);

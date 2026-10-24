@@ -49,7 +49,13 @@ function W(id, label, detail){ warn++; warnings.push({ id, label, detail }); con
 function section(t){ console.log("\n" + t); }
 
 const src = {};
-function S(f){ if(!(f in src)) src[f] = fs.readFileSync(path.join(ROOT, f), "utf8"); return src[f]; }
+/* v41: app.js 已按区段拆到 www/js/*.js（index.html 中紧挨 app.js 之前按原顺序加载）；
+ * 对 "www/app.js" 的源码断言按「拆分段 + app.js」拼接后的整体源码判定（与拆分前同序）。 */
+const { appSource } = require(path.join(ROOT, "tests", "lib_appsrc.js"));
+function S(f){
+  if(!(f in src)) src[f] = (f === "www/app.js") ? appSource(path.join(ROOT, "www")) : fs.readFileSync(path.join(ROOT, f), "utf8");
+  return src[f];
+}
 const has = (f, re)=> re.test(S(f));
 const lacks = (f, re)=> !re.test(S(f));
 const countOf = (f, re)=> (S(f).match(new RegExp(re.source, re.flags.includes("g") ? re.flags : re.flags + "g")) || []).length;

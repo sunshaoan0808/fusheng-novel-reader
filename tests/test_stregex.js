@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // v38: ST 正则脚本真实制品回归测试
 // stRegexToRule(stRegexToRules): placement=2(AI输出)门控 / 数组导入 / 字段保留 / 非法正则跳过
 // applyRegex: markdownOnly/promptOnly 门控 / minDepth/maxDepth 过滤 / 顺序执行
@@ -21,7 +22,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(WWW+"/icons.js","utf8"), ctx);
-vm.runInContext(fs.readFileSync(WWW+"/app.js","utf8"), ctx);
+for(const __f of __APP_FILES(WWW)) vm.runInContext(fs.readFileSync(WWW + "/" + __f, "utf8"), ctx, {filename: __f});
 vm.runInContext(fs.readFileSync(WWW+"/rp/chat.js","utf8"), ctx);
 let pass = 0, fail = 0;
 const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };
@@ -123,7 +124,7 @@ t("promptOnly/深度/trim/runOnEdit 往返保留",
   && __po[0].runOnEdit === true && __po[0].name === "n");
 
 // ---- 10) 静态: 导出 UI 入口 ----
-const __asrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const __asrc = __appSource(WWW);
 t("导出 ST 脚本 button", __asrc.indexOf("exportStRegex()") >= 0);
 t("window.exportStRegex", __asrc.indexOf("window.exportStRegex") >= 0);
 

@@ -1,6 +1,6 @@
 /* R. 时间系统 50条 (601-650) */
 var RP_SOUL_R=(function(){"use strict";
-function k(c){return "nd_soulr_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulr_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*601*/F.now=function(c){return _g2(c).now||"";};
 /*602*/F.setNow=function(c,t){var o=g(c);o.now=t;s(c,o);};

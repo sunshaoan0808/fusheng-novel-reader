@@ -249,6 +249,81 @@ public class MainActivity extends Activity {
             }catch(Exception e){ return "[]"; }
         }
 
+        /* ============ v41: API Key 安全存储（Android Keystore AES-256-GCM） ============
+         * 零依赖实现（不引 androidx.security EncryptedSharedPreferences）：密钥由
+         * AndroidKeyStore 生成且不可导出，密文 "iv:ct"(Base64) 存私有 SharedPreferences。
+         * JS 侧 rp/securekey.js 先做一次写读自检，通过才启用，否则回退 localStorage。 */
+        private static final String ND_SEC_ALIAS = "nd_secret_v1";
+        private static final String ND_SEC_PREFS = "nd_secure_v1";
+        private javax.crypto.SecretKey ndSecKey() throws Exception {
+            java.security.KeyStore ks = java.security.KeyStore.getInstance("AndroidKeyStore");
+            ks.load(null);
+            if (ks.containsAlias(ND_SEC_ALIAS)) {
+                java.security.KeyStore.Entry en = ks.getEntry(ND_SEC_ALIAS, null);
+                if (en instanceof java.security.KeyStore.SecretKeyEntry)
+                    return ((java.security.KeyStore.SecretKeyEntry) en).getSecretKey();
+                ks.deleteEntry(ND_SEC_ALIAS);
+            }
+            javax.crypto.KeyGenerator kg = javax.crypto.KeyGenerator.getInstance(
+                android.security.keystore.KeyProperties.KEY_ALGORITHM_AES, "AndroidKeyStore");
+            kg.init(new android.security.keystore.KeyGenParameterSpec.Builder(ND_SEC_ALIAS,
+                    android.security.keystore.KeyProperties.PURPOSE_ENCRYPT
+                    | android.security.keystore.KeyProperties.PURPOSE_DECRYPT)
+                .setBlockModes(android.security.keystore.KeyProperties.BLOCK_MODE_GCM)
+                .setEncryptionPaddings(android.security.keystore.KeyProperties.ENCRYPTION_PADDING_NONE)
+                .setKeySize(256)
+                .build());
+            return kg.generateKey();
+        }
+        private android.content.SharedPreferences ndSecPrefs(){
+            return getSharedPreferences(ND_SEC_PREFS, MODE_PRIVATE);
+        }
+        private boolean ndSecNameOk(String name){
+            return name != null && name.length() > 0 && name.length() <= 128 && name.matches("[A-Za-z0-9_.-]+");
+        }
+        @JavascriptInterface
+        public boolean ndSecretAvailable(){
+            if(!pageAllowed()) return false;
+            try { ndSecKey(); return true; } catch (Exception e) { return false; }
+        }
+        @JavascriptInterface
+        public boolean ndSecretPut(final String name, final String value){
+            if(!pageAllowed() || !ndSecNameOk(name) || value == null || value.length() > 64 * 1024) return false;
+            try {
+                javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+                c.init(javax.crypto.Cipher.ENCRYPT_MODE, ndSecKey());
+                byte[] ct = c.doFinal(value.getBytes("UTF-8"));
+                String enc = Base64.encodeToString(c.getIV(), Base64.NO_WRAP) + ":" + Base64.encodeToString(ct, Base64.NO_WRAP);
+                return ndSecPrefs().edit().putString(name, enc).commit();
+            } catch (Exception e) { return false; }
+        }
+        /** 返回明文；不存在返回 null；解密失败返回 ND_IO_ERROR 哨兵（JS 侧据此回退）。 */
+        @JavascriptInterface
+        public String ndSecretGet(final String name){
+            if(!pageAllowed() || !ndSecNameOk(name)) return ND_IO_ERROR;
+            try {
+                String enc = ndSecPrefs().getString(name, null);
+                if (enc == null) return null;
+                int i = enc.indexOf(':');
+                if (i <= 0) return ND_IO_ERROR;
+                byte[] iv = Base64.decode(enc.substring(0, i), Base64.NO_WRAP);
+                byte[] ct = Base64.decode(enc.substring(i + 1), Base64.NO_WRAP);
+                javax.crypto.Cipher c = javax.crypto.Cipher.getInstance("AES/GCM/NoPadding");
+                c.init(javax.crypto.Cipher.DECRYPT_MODE, ndSecKey(), new javax.crypto.spec.GCMParameterSpec(128, iv));
+                return new String(c.doFinal(ct), "UTF-8");
+            } catch (Exception e) { return ND_IO_ERROR; }
+        }
+        @JavascriptInterface
+        public boolean ndSecretDel(final String name){
+            if(!pageAllowed() || !ndSecNameOk(name)) return false;
+            try { return ndSecPrefs().edit().remove(name).commit(); } catch (Exception e) { return false; }
+        }
+        @JavascriptInterface
+        public boolean ndSecretClear(){
+            if(!pageAllowed()) return false;
+            try { return ndSecPrefs().edit().clear().commit(); } catch (Exception e) { return false; }
+        }
+
         /** JS 桥: 角色召回本地通知（Tier3-24）。纯本地通知，不走任何推送服务器。
          *  JS 只在"App 回到前台且距上次聊天超过 N 小时"时调用。
          *  Android 13+ 需要 POST_NOTIFICATIONS 运行时权限：首次调用时申请，本次先跳过。 */

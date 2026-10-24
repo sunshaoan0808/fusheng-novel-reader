@@ -1,6 +1,6 @@
 /* AE. 通讯信息 50条 (1251-1300) */
 var RP_SOUL_AE=(function(){"use strict";
-function k(c){return "nd_soulae_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulae_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1251*/F.send=function(c,from,to,msg){var o=g(c);o.msgs=o.msgs||[];o.msgs.push({from:from,to:to,msg:msg,t:new Date().toISOString(),read:false});s(c,o);};
 /*1252*/F.inbox2=function(c,to){return (g(c).msgs||[]).filter(function(m){return m.to===to;});};

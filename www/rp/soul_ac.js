@@ -1,6 +1,6 @@
 /* AC. 建筑场所 50条 (1151-1200) */
 var RP_SOUL_AC=(function(){"use strict";
-function k(c){return "nd_soulac_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulac_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1151*/F.addBuilding=function(c,name,type){var o=g(c);o.buildings=o.buildings||{};o.buildings[name]={type:type,rooms:{}};s(c,o);};
 /*1152*/F.addRoom=function(c,building,room,desc){var o=g(c);if(o.buildings&&o.buildings[building])o.buildings[building].rooms[room]=desc;s(c,o);};

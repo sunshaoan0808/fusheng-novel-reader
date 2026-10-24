@@ -1,4 +1,5 @@
 const fs = require("fs"), vm = require("vm");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const els = {};
 function mkEl(){ return {innerHTML:"", textContent:"", value:"", classList:{add(){},remove(){},toggle(){}},
   querySelectorAll(){return [];}, querySelector(){return null;}, addEventListener(){}, scrollTo(){}, style:{},
@@ -17,7 +18,7 @@ const ctx = {localStorage: ls, document, console, alert(){}, confirm(){return tr
 ctx.window = ctx; ctx.globalThis = ctx; ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 for(const f of ["icons.js","rp/prompt.js","rp/persona.js","rp/memory.js","rp/tasks.js","rp/cardwriter.js",
-                "rp/ooc.js","rp/chat.js","rp/group.js","rp/cardexport.js","app.js"]){
+                "rp/ooc.js","rp/chat.js","rp/group.js","rp/cardexport.js", ...__APP_FILES("assets/www")]){
   vm.runInContext(fs.readFileSync("assets/www/"+f,"utf8"), ctx, {filename:f});
 }
 // 群聊场景

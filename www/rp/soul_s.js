@@ -1,6 +1,6 @@
 /* S. 空间导航 50条 (651-700) */
 var RP_SOUL_S=(function(){"use strict";
-function k(c){return "nd_souls_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_souls_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*651*/F.setPos=function(c,name,x,y){var o=g(c);o.pos=o.pos||{};o.pos[name]={x:x,y:y};s(c,o);};
 /*652*/F.getPos=function(c,name){return (g(c).pos||{})[name]||{x:0,y:0};};

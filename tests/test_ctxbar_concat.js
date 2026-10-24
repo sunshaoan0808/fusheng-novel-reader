@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // UI-01 回归: renderCtxBar 的 innerHTML 拼接里, 注释行行首不能再带一个多余的 `+`。
 // 之前写法:
 //   + (hits.length ? ... : "")
@@ -8,7 +9,7 @@ const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
 // 会被解析成 `... + +( ... )`——第二个 `+` 是一元正号，`+""` 得 0，
 // 导致顶栏莫名多出一个 "0" 文本节点；pct>90 时 `+"<div>..."` 得 NaN，
 // 警告条直接被吞掉。修法：注释行行首不带 `+`。
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 const start = src.indexOf("function renderCtxBar(){");
 if(start < 0) throw new Error("renderCtxBar not found");
 const end = src.indexOf("/* ============ 世界模拟 HUD", start);

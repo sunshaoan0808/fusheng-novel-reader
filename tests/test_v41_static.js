@@ -1,0 +1,24 @@
+/* v41 静态守卫：CSP / 脚本顺序 / 无障碍入口 / 构建脚本不吞错 —— 防回退 */
+"use strict";
+const fs = require("fs"), path = require("path");
+const R = p => fs.readFileSync(path.join(__dirname, "..", p), "utf8");
+let pass = 0, fail = 0;
+const ok = (n, c) => { if(c) pass++; else { fail++; console.log("FAIL:", n); } };
+const html = R("www/index.html");
+const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1] || "";
+ok("CSP 存在", !!csp);
+ok("CSP 禁 object/frame", /object-src 'none'/.test(csp) && /frame-src 'none'/.test(csp));
+ok("CSP script-src 不含远程源", /script-src 'self' 'unsafe-inline';/.test(csp) && !/script-src[^;]*https?:/.test(csp));
+ok("CSP connect-src 兼容自配 API", /connect-src[^;]*https:/.test(csp));
+const order = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
+ok("securekey.js 在 app.js 之前", order.indexOf("rp/securekey.js") >= 0 && order.indexOf("rp/securekey.js") < order.indexOf("app.js"));
+ok("a11y.js 在 app.js 之后", order.indexOf("js/a11y.js") > order.indexOf("app.js"));
+ok("底栏 aria-label", /<nav id="mainnav" aria-label="主导航">/.test(html));
+const sh = R("android/build.sh");
+ok("build.sh 严格模式", /^set -euo pipefail$/m.test(sh));
+ok("build.sh 不再 || true 吞 javac", !/^javac[^\n]*\|\|\s*true/m.test(sh) && /JAVAC_RC/.test(sh));
+const ci = R(".github/workflows/build-apk.yml");
+ok("CI versionCode = 基数 + run_number", /VCODE=\$\(\(VCODE_BASE \+ RUN_NO\)\)/.test(ci) && /VCODE_BASE: "1000"/.test(ci));
+ok("CI 跑 JS 单测", /run: npm test/.test(ci));
+console.log(pass + "/" + (pass + fail) + (fail ? "  FAIL " + fail : "  OK"));
+process.exit(fail ? 1 : 0);

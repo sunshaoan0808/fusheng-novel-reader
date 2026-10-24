@@ -22,6 +22,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 
 const vmEval = (c, code)=> vm.runInContext(code, c);
 let pass = 0, fail = 0;
@@ -125,7 +126,7 @@ const viewHTML = (ctx)=> vmEval(ctx, "document.getElementById('view').innerHTML"
 const GATE_MSG = "伏笔面板仅支持《红楼梦》蒸馏剧本";
 
 async function main(){
-  const c = mkCtx(RP_FILES.concat(["app.js"]));
+  const c = mkCtx(RP_FILES.concat(__APP_FILES(WWW)));
   vmEval(c, "window.__DATA__ = " + JSON.stringify({index: [], runs: BASE_RUNS, rp_cards: BASE_CARDS}) + ";");
   vmEval(c, "window.__CAL__ = " + JSON.stringify(CAL) + ";");
   /* 三张导入卡: 两张不同小说 + 一张与红楼同名人物 */

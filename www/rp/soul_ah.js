@@ -1,6 +1,6 @@
 /* 法律秩序 50条 (1401-1450) */
 var RP_SOUL_AH=(function(){"use strict";
-function k(c){return "nd_soulah_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulah_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1401*/F.addLaw3=function(c,a,b){var o=g(c);o['d1401']=o['d1401']||[];o['d1401'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};
 /*1402*/F.enforceLaw=function(c,a,b){var o=g(c);o['d1402']=o['d1402']||[];o['d1402'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};

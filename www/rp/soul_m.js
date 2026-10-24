@@ -1,9 +1,7 @@
 /* M. 关系网 50条 (351-400) */
 var RP_SOUL_M = (function(){
 "use strict";
-function _k(c){return "nd_soulm_"+c;}
-function _g(c){try{return JSON.parse(localStorage.getItem(_k(c))||"{}");}catch(e){return{};}}
-function _s(c,o){try{localStorage.setItem(_k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulm_"),_k=_kv.k,_g=_kv.g,_s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /* 351 */ F.add=function(c,a,b,rel){var o=_g(c);o.edges=o.edges||{};o.edges[a+">"+b]={rel:rel,t:new Date().toISOString()};_s(c,o);};
 /* 352 */ F.get=function(c,a,b){return ((_g(c).edges||{})[a+">"+b]||{}).rel||"";};

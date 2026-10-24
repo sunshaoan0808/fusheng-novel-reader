@@ -1,7 +1,8 @@
 const fs = require("fs");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 沉浸式聊天 UI 回归: M3 回到底部按钮 / M4 长文本折叠 / M6 改写 / S5 去时间戳 / S6 姓名行条件显示
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 const css = fs.readFileSync(WWW + "/style.css", "utf8");
 
 let pass = 0, fail = 0;
@@ -140,9 +141,11 @@ src.indexOf("rewritable") >= 0 && src.indexOf("rewriteMsg(${jq(idx)})") >= 0 /* 
 
 /* ---------- S5/S6: 模板 ---------- */
 ok("S5 去时间戳: 模板无 .ts 渲染", src.indexOf('<div class="ts">') < 0);
-ok("S6 姓名行: 只在群聊渲染 (showWho gating)",
-src.indexOf("showWho") >= 0 && src.indexOf('showWho?`<div class="who">') >= 0
-&& src.indexOf('const showWho = CHAT.mode==="group"') >= 0);
+/* v42：AI 消息一律带头像名牌（chatWhoHTML），玩家消息的姓名行仍只在群聊出现 */
+ok("S6 姓名行: 群聊保留说话人；v42 AI 消息带头像名牌 (showWho gating)",
+src.indexOf("showWho") >= 0 && src.indexOf('showWho?whoHTML:""') >= 0
+&& src.indexOf('const showWho = CHAT.mode==="group" || m.role==="assistant"') >= 0
+&& src.indexOf('m.role==="assistant" ? chatWhoHTML(who) : `<div class="who">${esc(who)}</div>`') >= 0);
 
 /* ---------- S1/S2/S3/S7/S8: 气泡 CSS ---------- */
 /* P0-28：字号改写成 calc(Npx * var(--fs))，断言跟着改成"16px 基准 × 倍率" */

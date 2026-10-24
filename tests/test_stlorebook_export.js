@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // ST 世界书导出回归测试: RP_LOREBOOK.exportST (importST 的逆操作)
 // 真实 fixture: tests/fixtures/lorebook-jiangxueying.json
 // (迟归人 v1.2.0 PNG 内嵌 character_book 44 条中抽 4 条, 变体字段)
@@ -82,7 +83,7 @@ t("空输入不抛错", empty && typeof empty.entries === "object"
   && Object.keys(empty.entries).length === 0);
 
 // ---- 静态: UI 入口 ----
-const asrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const asrc = __appSource(WWW);
 t("导出 ST 世界书 button", asrc.indexOf("exportStLore(") >= 0);
 t("window.exportStLore", asrc.indexOf("window.exportStLore") >= 0);
 

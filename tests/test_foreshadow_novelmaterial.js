@@ -19,6 +19,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 
 const vmEval = (c, code)=> vm.runInContext(code, c);
 let pass = 0, fail = 0;
@@ -102,7 +103,7 @@ function material(ctx, runId, name){
 }
 
 function main(){
-  const c = mkCtx(RP_FILES.concat(["app.js"]));
+  const c = mkCtx(RP_FILES.concat(__APP_FILES(WWW)));
   vmEval(c, "window.__DATA__ = " + JSON.stringify({index: [], runs: BASE_RUNS, rp_cards: BASE_CARDS}) + ";");
   vmEval(c, "window.__CAL__ = " + JSON.stringify(CAL) + ";");
   /* 同名导入卡: 夜行录的林黛玉; 不同名导入卡: 夜行录的沈砚 */

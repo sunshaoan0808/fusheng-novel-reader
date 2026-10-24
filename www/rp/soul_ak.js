@@ -1,6 +1,6 @@
 /* 服饰装扮 50条 (1551-1600) */
 var RP_SOUL_AK=(function(){"use strict";
-function k(c){return "nd_soulak_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulak_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1551*/F.addOutfit=function(c,a,b){var o=g(c);o['d1551']=o['d1551']||[];o['d1551'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};
 /*1552*/F.wearOutfit=function(c,a,b){var o=g(c);o['d1552']=o['d1552']||[];o['d1552'].push({a:a,b:b,t:new Date().toISOString()});s(c,o);return true;};

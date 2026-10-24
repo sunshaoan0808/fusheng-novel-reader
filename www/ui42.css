@@ -1,0 +1,259 @@
+/* 浮生 v42 界面层（在 style.css / soul_warm.css 之后加载，只做覆盖与新增）
+ * 色板/圆角/阴影/z-index 一律取 DESIGN.md 的 token；字号一律 calc(Npx * var(--fs))。
+ * 每节标注对应的 v42 条目。 */
+
+/* ===== 1. 聊天：立绘背景 + 头像名牌 + 旁白/对白分排 ===== */
+/* 立绘层：夹在山水底图(.bglayer)与渐变罩(.bgshade)之间；中心实、四周羽化，压得很淡，只给「人在场」的感觉 */
+.chatbg .bgchar{
+  position:absolute; left:0; right:0; top:7%; height:74%;
+  background-repeat:no-repeat; background-position:center top; background-size:contain;
+  opacity:0; transition:opacity .6s ease;
+  -webkit-mask-image:radial-gradient(62% 58% at 50% 42%, #000 30%, transparent 78%);
+          mask-image:radial-gradient(62% 58% at 50% 42%, #000 30%, transparent 78%);
+}
+.chatbg .bgchar.on{ opacity:.34; }
+/* 有立绘时山水退后一步（压暗），人物才站得出来 */
+.chatbg.has-por .bglayer{ opacity:.5; transition:opacity .6s ease; }
+/* 白底线描/木刻：反相后只留墨线，滤色叠加让黑底消失，再染一点金 */
+.chatbg .bgchar.inv{ filter:invert(1) sepia(.7) saturate(.9) brightness(1.05) contrast(1.15); mix-blend-mode:screen; }
+.chatbg .bgchar.inv.on{ opacity:.52; }
+body.chatmode.immersive .chatbg .bgchar.on{ opacity:.42; }
+body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
+
+/* 名牌：小头像 + 名字 */
+.msg .who.whoav{ display:flex; align-items:center; gap:6px; margin:0 0 5px 2px; color:var(--gold-soft);
+  font-size:calc(12px * var(--fs)); letter-spacing:.08em; font-family:var(--serif); font-weight:600; }
+.mav{ position:relative; flex:none; width:22px; height:22px; border-radius:50%; overflow:hidden;
+  display:inline-flex; align-items:center; justify-content:center;
+  font-family:var(--serif); font-size:calc(11px * var(--fs)); line-height:1; color:#1a1408; font-weight:700;
+  background:linear-gradient(135deg,var(--gold-soft),var(--gold)); box-shadow:0 0 0 1px rgba(212,162,78,.45); }
+.mav img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 20%; }
+.mav.mav-ic{ background:rgba(34,30,25,.8); color:var(--gold); }
+.msg.me .who.whoav{ justify-content:flex-end; }
+
+/* 分排容器：气泡本身退成透明容器，样式落到每个块上 */
+.bubble.segd, body.chatmode .msg .bubble.segd{
+  background:transparent; border:0; box-shadow:none; padding:0;
+  -webkit-backdrop-filter:none; backdrop-filter:none;
+}
+.bubble.segd .seg + .seg{ margin-top:6px; }
+/* 对白：金边气泡 */
+.bubble.segd .seg-dlg{
+  background:rgba(34,30,25,.78); border:1px solid rgba(212,162,78,.34); border-radius:14px;
+  padding:9px 15px; box-shadow:var(--shadow-s);
+  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
+}
+.bubble.segd .seg-dlg:first-child{ border-top-left-radius:5px; }
+/* 旁白：无气泡，弱化灰、略斜，左侧一道淡墨线 */
+.bubble.segd .seg-nar{
+  color:var(--ink-dim); font-style:italic; padding:1px 6px 1px 12px;
+  border-left:2px solid rgba(179,168,143,.22);
+  font-size:calc(15px * var(--fs)); line-height:24px;
+  text-shadow:0 1px 6px rgba(0,0,0,.65);
+}
+.bubble.segd .seg p{ margin:.35em 0; } .bubble.segd .seg p:first-child{ margin-top:0; } .bubble.segd .seg p:last-child{ margin-bottom:0; }
+body.chatmode.bars-light .bubble.segd .seg-nar{ color:#4a3d24; text-shadow:0 1px 6px rgba(255,255,255,.6); }
+
+/* ===== 2. 角色页：大立绘头图 + 台词 + 性格词 + 常驻「开始对话」 ===== */
+/* 头图顶满：角色页收起通用顶栏（名字已在头图里），头图从状态栏下开始 */
+body:has(.chx) #topbar{ display:none; }
+.chx{ position:relative; margin:-14px -14px 10px; height:calc(380px + env(safe-area-inset-top)); overflow:hidden; background:var(--bg2); }
+.chx-img{ position:absolute; inset:0; background-size:cover; background-position:center 22%; background-repeat:no-repeat; }
+/* 白底线描/木刻：做旧成宣纸色，不在深色界面上留一块刺眼的白 */
+.chx-img.light{ filter:sepia(.45) brightness(.78) contrast(1.05); background-position:center 46%; }
+.chx-img.chx-noimg{ background-image:url("bg/splash.jpg"); opacity:.55; }
+.chx-fade{ position:absolute; inset:0; pointer-events:none;
+  background:linear-gradient(180deg, rgba(18,16,13,.55) 0%, rgba(18,16,13,0) 22%, rgba(18,16,13,0) 38%,
+    rgba(18,16,13,.72) 66%, var(--bg) 100%); }
+.chx-back{ position:absolute; top:calc(10px + env(safe-area-inset-top)); left:10px; z-index:var(--z-float); width:40px; height:40px; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center; padding:0; cursor:pointer;
+  background:rgba(18,16,13,.55); color:var(--gold-soft); border:1px solid rgba(212,162,78,.3);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.chx-acts{ position:absolute; top:calc(12px + env(safe-area-inset-top)); right:12px; z-index:var(--z-float); display:flex; gap:8px; }
+.chx-act{ display:inline-flex; align-items:center; gap:4px; min-height:36px; padding:0 12px; border-radius:999px; cursor:pointer;
+  font-size:calc(12px * var(--fs)); color:var(--ink); background:rgba(18,16,13,.55); border:1px solid rgba(236,228,211,.22);
+  -webkit-backdrop-filter:blur(8px); backdrop-filter:blur(8px); }
+.chx-act.on{ color:var(--gold-soft); border-color:rgba(212,162,78,.6); }
+.chx-txt{ position:absolute; left:18px; right:18px; bottom:14px; z-index:var(--z-base); }
+.chx-name{ font-family:var(--serif); font-size:calc(30px * var(--fs)); font-weight:700; letter-spacing:.14em; color:var(--gold-soft);
+  text-shadow:0 2px 12px rgba(0,0,0,.7); line-height:1.2; }
+.chx-novel{ font-size:calc(12px * var(--fs)); color:var(--ink-dim); letter-spacing:.1em; margin-top:2px; }
+.chx-quote{ margin-top:8px; font-family:"Songti SC","Noto Serif CJK SC","Source Han Serif SC","STSong",serif;
+  font-size:calc(15px * var(--fs)); line-height:1.55; color:var(--ink); text-shadow:0 1px 8px rgba(0,0,0,.8);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.chx-quote.plain{ color:var(--ink-dim); font-size:calc(13px * var(--fs)); white-space:normal;
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+.chx-tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:10px; }
+.chx-tag{ font-size:calc(12px * var(--fs)); color:var(--gold-soft); padding:2px 10px; border-radius:999px;
+  border:1px solid rgba(212,162,78,.38); background:rgba(18,16,13,.45); }
+.char-badges{ display:flex; flex-wrap:wrap; gap:6px; margin:0 0 10px; }
+.card.statfold > summary .kv{ margin:0 0 0 8px; font-family:inherit; }
+.card.statfold .stat-line{ text-align:left; }
+/* 「开始对话」常驻：钉在底栏之上（原 sticky 版被底栏压住一截），页面底部让出同等高度 */
+.ctadock{ position:fixed; left:50%; transform:translateX(-50%); width:100%; max-width:640px;
+  bottom:var(--nav-h); margin:0; z-index:var(--z-nav); padding:8px 16px 10px; }
+body:has(.ctadock) #view{ padding-bottom:calc(var(--nav-h) + 86px); }
+body:has(.ctadock) #asst_fab{ bottom:calc(var(--nav-h) + 86px); }
+
+/* ===== 3. 书架：继续上次 / 最近聊过 / 结识进度 / 空态 ===== */
+.resume{ position:relative; display:flex; align-items:center; gap:12px; width:100%; min-height:96px; margin:2px 0 6px;
+  padding:14px 14px 14px 16px; text-align:left; cursor:pointer; overflow:hidden; color:var(--ink);
+  border-radius:var(--r); border:1px solid rgba(212,162,78,.38); box-shadow:var(--shadow);
+  background:linear-gradient(100deg, var(--card2) 0%, var(--card) 55%, rgba(29,25,21,.6) 100%); }
+.resume-img{ position:absolute; right:0; top:0; bottom:0; width:56%; background-size:cover; background-position:center 30%;
+  opacity:.55; -webkit-mask-image:linear-gradient(90deg, transparent 0%, #000 70%); mask-image:linear-gradient(90deg, transparent 0%, #000 70%); }
+.resume-img.light{ filter:sepia(.5) brightness(.7); background-position:center 45%; opacity:.6; }
+.resume-txt{ position:relative; z-index:var(--z-base); flex:1; min-width:0; display:flex; flex-direction:column; gap:2px; }
+.resume-k{ font-size:calc(12px * var(--fs)); color:var(--gold); letter-spacing:.14em; }
+.resume-n{ font-family:var(--serif); font-size:calc(19px * var(--fs)); font-weight:700; color:var(--gold-soft); letter-spacing:.08em; }
+.resume-b{ font-family:inherit; font-size:calc(12px * var(--fs)); font-weight:400; color:var(--ink-dim); letter-spacing:0; margin-left:6px; }
+.resume-s{ font-size:calc(13px * var(--fs)); color:var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  text-shadow:0 1px 6px rgba(0,0,0,.8); }
+.resume-go{ position:relative; z-index:var(--z-base); flex:none; display:inline-flex; align-items:center; gap:4px;
+  font-size:calc(13px * var(--fs)); color:var(--gold-soft); padding:6px 12px; border-radius:999px;
+  border:1px solid rgba(212,162,78,.5); background:rgba(18,16,13,.55); }
+.shelf-sec{ margin-top:16px; }
+.recentrow{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; margin:0 -14px; padding:2px 14px 4px; }
+.recentrow::-webkit-scrollbar{ display:none; }
+.recent{ flex:none; width:68px; display:flex; flex-direction:column; align-items:center; gap:4px; padding:6px 0; cursor:pointer;
+  background:none; border:0; color:var(--ink); border-radius:var(--r-s); }
+.mav.lg{ width:50px; height:50px; font-size:calc(20px * var(--fs)); color:var(--gold-soft);
+  background:radial-gradient(circle at 35% 30%, #2e2820 0%, var(--card) 70%); box-shadow:0 0 0 1px rgba(212,162,78,.55), var(--shadow-s); }
+.recent-n{ font-size:calc(12px * var(--fs)); max-width:64px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.recent-b{ font-size:calc(11px * var(--fs)); color:var(--ink-faint); max-width:64px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:-3px; }
+.bw-prog{ height:3px; border-radius:2px; background:var(--line); margin-top:8px; overflow:hidden; }
+.bw-prog i{ display:block; height:100%; border-radius:2px; background:linear-gradient(90deg,var(--gold-deep),var(--gold)); }
+.bw-progt{ font-size:calc(11px * var(--fs)); color:var(--ink-dim); margin-top:3px; }
+.shelf-empty{ display:flex; flex-direction:column; align-items:center; text-align:center; padding:10px 18px 4px; }
+.shelf-empty img{ width:120px; height:120px; object-fit:cover; border-radius:50%; opacity:.75;
+  -webkit-mask-image:radial-gradient(circle, #000 55%, transparent 72%); mask-image:radial-gradient(circle, #000 55%, transparent 72%); }
+.shelf-empty-t{ font-family:var(--serif); font-size:calc(16px * var(--fs)); color:var(--gold-soft); margin-top:4px; letter-spacing:.1em; }
+.shelf-empty-s{ font-size:calc(13px * var(--fs)); color:var(--ink-dim); margin-top:4px; max-width:280px; }
+
+/* ===== 4. 底栏四栏 + 创作中心 + 我的 ===== */
+#mainnav button{ flex:1 1 0; }
+/* 创作子页（蒸馏/穿越/写卡）顶栏左侧回创作 */
+#tbback{ display:none; background:none; border:0; padding:4px 10px 4px 0; margin:0 4px 0 -2px; min-height:36px; cursor:pointer;
+  color:var(--gold); font-size:calc(13px * var(--fs)); vertical-align:4px; letter-spacing:.06em; }
+body.nav-sub:not(.chatmode) #tbback{ display:inline-block; }
+.hubgrid{ display:flex; flex-direction:column; gap:12px; margin-top:4px; }
+.hubtile{ position:relative; display:grid; grid-template-columns:48px 1fr 16px; grid-template-rows:auto auto; column-gap:12px;
+  align-items:center; text-align:left; width:100%; padding:18px 16px; min-height:104px; overflow:hidden; cursor:pointer; color:var(--ink);
+  border-radius:var(--r); border:1px solid var(--line); box-shadow:var(--shadow);
+  background:radial-gradient(120% 140% at 100% 0%, rgba(212,162,78,.10) 0%, rgba(212,162,78,0) 45%), var(--card); }
+.hub-seal{ position:absolute; right:-16px; bottom:-34px; font-family:var(--serif); font-size:calc(96px * var(--fs)); font-weight:700;
+  color:rgba(212,162,78,.07); line-height:1; pointer-events:none; }
+.hub-ic{ grid-row:1 / span 2; width:48px; height:48px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  color:var(--gold); border:1px solid rgba(212,162,78,.4); background:rgba(212,162,78,.06); }
+.hub-n{ display:block; font-family:var(--serif); font-size:calc(19px * var(--fs)); font-weight:700; letter-spacing:.14em; color:var(--gold-soft); }
+.hub-d{ display:block; grid-column:2; font-size:calc(13px * var(--fs)); color:var(--ink-dim); margin-top:2px; line-height:1.5; }
+.hub-go{ grid-row:1 / span 2; grid-column:3; color:var(--ink-faint); font-size:calc(20px * var(--fs)); }
+.hubassist{ display:flex; align-items:center; gap:12px; width:100%; margin-top:16px; padding:12px 14px; text-align:left; cursor:pointer;
+  border-radius:var(--r-s); border:1px dashed rgba(212,162,78,.35); background:transparent; color:var(--ink); }
+.hubassist .hub-ic{ width:36px; height:36px; flex:none; }
+.hubassist .hub-n{ font-size:calc(15px * var(--fs)); }
+.mehead{ margin:0 0 14px; padding:14px 14px 10px; border-radius:var(--r); border:1px solid var(--line); background:var(--card); box-shadow:var(--shadow); }
+.me-t{ font-family:var(--serif); font-size:calc(16px * var(--fs)); color:var(--gold-soft); letter-spacing:.12em; }
+.megrid{ display:grid; grid-template-columns:repeat(4, 1fr); gap:6px; margin-top:10px; }
+.mecell{ display:flex; flex-direction:column; align-items:center; padding:8px 2px; border-radius:var(--r-s); background:var(--bg2); }
+.mecell b{ font-family:var(--serif); font-size:calc(18px * var(--fs)); color:var(--ink); font-weight:700; }
+.mecell span{ font-size:calc(12px * var(--fs)); color:var(--ink-faint); white-space:nowrap; }
+.me-fav{ margin-top:10px; } .me-fav .recentrow{ margin:4px -14px 0; }
+.me-note{ margin-top:8px; }
+
+/* ===== 5. 抽屉顶部常用宫格 ===== */
+.drawer .dgrid{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin:0 0 6px; }
+.drawer .dtile{ display:flex; align-items:center; gap:8px; min-height:58px; padding:8px 8px; text-align:left;
+  cursor:pointer; color:var(--ink); border-radius:var(--r-s); background:var(--card); border:1px solid var(--line); }
+.drawer .dtile-ic{ flex:none; width:34px; height:34px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center;
+  color:var(--gold); background:rgba(212,162,78,.08); border:1px solid rgba(212,162,78,.28); }
+.drawer .dtile-lb{ font-size:calc(13px * var(--fs)); color:var(--ink); line-height:1.3; min-width:0; }
+.drawer .dtile:active{ background:rgba(212,162,78,.10); }
+
+/* ===== 6. 小助手入口：聊天页留悬浮球（沉浸态），其它页收进顶栏 ===== */
+body:not(.chatmode) #asst_fab{ display:none; }
+#topbar{ position:sticky; }
+#tbasst{ position:absolute; right:12px; top:calc(50% - 20px); width:40px; height:40px; padding:0; border-radius:50%;
+  display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+  color:var(--gold); background:transparent; border:1px solid rgba(212,162,78,.32); }
+#tbasst:active{ background:rgba(212,162,78,.12); }
+#title, #sub{ padding-right:48px; }
+
+/* ===== 7. 动效：墨晕转场 / 消息浮现 / 按压微缩（prefers-reduced-motion 下全部关闭） ===== */
+#inkfx{ position:fixed; inset:0; z-index:var(--z-sheet); pointer-events:none; opacity:0;
+  background:radial-gradient(circle at var(--ink-x,50%) var(--ink-y,45%), rgba(242,221,171,0) 0%, rgba(242,221,171,0) 16%, rgba(242,221,171,.10) 34%, rgba(10,8,6,.45) 48%, rgba(10,8,6,0) 74%); }
+@media (prefers-reduced-motion:no-preference){
+  /* 页面转场：淡入 + 微放大（原 translateY 版换掉）；常驻 CTA 有自己的 transform，不参与 */
+  #view > *:not(.drawer):not(.scrim){ animation:inkin .3s ease; }
+  #view > .ctadock{ animation:none; }
+  @keyframes inkin{ from{ opacity:0; transform:scale(.985); } to{ opacity:1; transform:none; } }
+  /* 墨晕：一圈淡墨从点按处向外洇开再散去（JS 只在「换页」时加 .go） */
+  #inkfx.go{ animation:inkspread .3s ease; }
+  @keyframes inkspread{ 0%{ opacity:.9; transform:scale(.35); } 100%{ opacity:0; transform:scale(1.6); } }
+  /* 新消息浮现：气泡/分排块依次淡入上浮 */
+  #chatlog .msg:last-child{ animation:msgin .3s ease; }
+  #chatlog .msg:last-child .seg{ animation:segin .36s ease backwards; }
+  #chatlog .msg:last-child .seg:nth-child(2){ animation-delay:.06s; }
+  #chatlog .msg:last-child .seg:nth-child(3){ animation-delay:.12s; }
+  #chatlog .msg:last-child .seg:nth-child(n+4){ animation-delay:.18s; }
+  @keyframes segin{ from{ opacity:0; transform:translateY(6px); } to{ opacity:1; transform:none; } }
+  /* 按压微缩：全局 button:active 已有 scale(.96)，这里补过渡与非 button 的可点块 */
+  .resume, .recent, .hubtile, .hubassist, .drawer .dtile, .chx-act, .chx-back, .bw-card, [role="button"]{ transition:transform .12s ease, background-color .12s ease; }
+  [role="button"]:active{ transform:scale(.97); }
+  .resume:active, .hubtile:active{ transform:scale(.98); }
+}
+@media (prefers-reduced-motion:reduce){
+  #inkfx{ display:none; }
+  .resume:active, .recent:active, .hubtile:active, .hubassist:active, .drawer .dtile:active, .chx-act:active, .chx-back:active,
+  #tbasst:active, [role="button"]:active{ transform:none; }
+}
+
+/* ===== 8. 金色只给每屏唯一的主操作 =====
+   实心金：聊天「发送/停止」、角色页「开始对话」、书架「续聊」、新手引导的下一步。
+   其余 .btn 默认改成金描边（次要操作），选中态 chips 改成金边淡底，不再是一屏多块实心金。 */
+.btn{ background:rgba(212,162,78,.07); color:var(--gold-soft); border:1px solid rgba(212,162,78,.5);
+  box-shadow:none; font-weight:600; }
+.btn:active{ background:rgba(212,162,78,.16); }
+.btn.primary, .btn.landcta, .obcard .btnrow .btn:last-child{
+  background:linear-gradient(180deg,#e0b45e,#c9973f); color:#1c1407; border:1px solid var(--gold-deep);
+  box-shadow:var(--shadow-s); font-weight:700; }
+.resume-go{ background:var(--gold); color:#1c1407; border-color:var(--gold-deep); font-weight:700; }
+/* 聊天工具行：.chatbar button（实心金）把 .cb-tool 盖住了，推剧情/旁白/帮我说/掷骰一排四块金——还原成次要样式 */
+.chatbar .cb-tool{ padding:8px 14px; font-size:calc(13px * var(--fs)); font-weight:400;
+  background:rgba(236,228,211,.05); color:var(--ink); border:1px solid var(--line-soft); }
+.chatbar .cb-tool .cb-ico{ color:var(--gold); }
+.chatbar .cb-tool.on, .cb-tool.on{ background:rgba(212,162,78,.16); color:var(--gold-soft); border-color:var(--gold); font-weight:600; }
+/* 选中态 chips：金边淡底 */
+.povchip.on, .pickchip.on{ background:rgba(212,162,78,.16); color:var(--gold-soft); border-color:var(--gold); }
+body.chatmode.bars-light .chatbar .cb-tool{ color:#2a2013; background:rgba(255,255,255,.4); border-color:rgba(138,106,36,.35); }
+
+/* ===== 9. 字体层级：聊天正文走系统宋体/楷体栈，元信息黑体小一档 =====
+   只用系统字体（CSP font-src 'self' + 离线）：iOS/mac 有 Songti SC，Android 9+ 多数机型有 Noto Serif CJK SC。
+   不把自托管的 "Noto Serif SC" 放进正文栈：它只有 600/700 两档（标题用），400 正文会被拿去顶替成半粗体，且要下 1.7MB。
+   用户在设置里显式选了「宋体/楷体」时，style.css 的 body[data-font] 规则照旧生效（这里只管默认档）。 */
+:root{ --read:"Songti SC","Noto Serif CJK SC","Source Han Serif SC","Source Han Serif CN","STSong","SimSun","STKaiti",serif; }
+body:not([data-font="song"]):not([data-font="kai"]) #chatlog .bubble,
+body:not([data-font="song"]):not([data-font="kai"]) .chx-quote{ font-family:var(--read); }
+#chatlog .bubble{ font-size:calc(16px * var(--fs)); line-height:calc(25px * var(--fs)); letter-spacing:.02em; }
+#chatlog .bubble.segd .seg-nar{ font-size:calc(15px * var(--fs)); line-height:calc(24px * var(--fs)); }
+/* 元信息：名牌 12、工具条 12、上下文条 11（装饰性计数） —— 与正文 16 至少差两档 */
+#chatlog .msgtools button{ font-size:calc(12px * var(--fs)); }
+#chatlog .mmhits{ font-size:calc(12px * var(--fs)); }
+
+/* ===== 10. 等待态：「X正在提笔…」——头像 + 金色墨点（reduced-motion 下静止） ===== */
+.msg.penwait .penwait-row{ margin-bottom:0; padding:7px 12px 7px 7px; border-radius:999px;
+  background:rgba(18,16,13,.55); border:1px solid rgba(212,162,78,.22); width:max-content; max-width:100%; }
+.penwait-t{ font-family:var(--serif); font-size:calc(13px * var(--fs)); color:var(--gold-soft); letter-spacing:.08em;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
+.penwait-ink{ display:inline-flex; align-items:flex-end; gap:4px; height:12px; margin-left:2px; flex:none; }
+.penwait-ink i{ display:block; width:5px; height:5px; border-radius:50% 50% 50% 0; transform:rotate(-45deg);
+  background:var(--gold); opacity:.75; }
+@media (prefers-reduced-motion:no-preference){
+  .penwait-ink i{ animation:pw-ink 1.4s ease-in-out infinite; }
+  .penwait-ink i:nth-child(2){ animation-delay:.2s; }
+  .penwait-ink i:nth-child(3){ animation-delay:.4s; }
+}
+@keyframes pw-ink{
+  0%,100%{ opacity:.25; transform:rotate(-45deg) scale(.7); }
+  45%{ opacity:.95; transform:rotate(-45deg) scale(1.15); box-shadow:0 0 6px rgba(212,162,78,.45); }
+}

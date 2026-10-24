@@ -1,11 +1,12 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 /* v37 回归: 清空数据必须走统一执行器。
  * 只 localStorage.clear() 会留下 IndexedDB 整库与原生 ndblob 文件，
  * 与"不可恢复"的承诺相反。这里验证 __wipeAllData 真的调用了 RP_STORE.wipeAll，
  * 且 after / reload 两条收尾分支都按预期执行。 */
 
-const appSrc = fs.readFileSync(WWW + "/app.js", "utf8");
+const appSrc = __appSource(WWW);
 
 let pass = 0, fail = 0;
 const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };

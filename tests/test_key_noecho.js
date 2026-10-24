@@ -1,10 +1,11 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 /* v37 回归: API Key 不再回显到页面 DOM。
  * 以前设置页把 key 直接写进 <input value="...">，任何同源脚本/开发者工具都能读到明文；
  * 现在页面只显示"已保存"，输入框留空表示沿用旧 Key。 */
 
-const appSrc = fs.readFileSync(WWW + "/app.js", "utf8");
+const appSrc = __appSource(WWW);
 
 let pass = 0, fail = 0;
 const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };

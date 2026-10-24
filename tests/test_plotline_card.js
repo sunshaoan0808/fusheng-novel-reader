@@ -7,7 +7,8 @@
  */
 const fs = require("fs");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
+const src = __appSource(WWW);
 const escSrc = fs.readFileSync(WWW + "/rp/escutil.js", "utf8");
 const { jq, escH } = new Function(escSrc + "\nreturn {jq, escH};")();
 
@@ -129,7 +130,18 @@ const BIBLE = {
      && html.indexOf("花灯之约") >= 0
      && html.indexOf("plotlinePickBook()") >= 0
      && html.indexOf("plotlineStartCard('imp_done',0)") >= 0);
-  ok("c 幕描述取 bible.bg 前 60 字", html.indexOf("大周朝，京城。旧党与新党在朝堂上对峙，边关战事吃紧。") >= 0);
+  /* v41：世界背景只在列表顶部出现一次，不再每幕重复 */
+  ok("c 世界背景 bible.bg 只出现一次", html.split("大周朝，京城。旧党与新党在朝堂上对峙，边关战事吃紧。").length === 2);
+}
+{
+  /* v41：锚点「标题：概要」拆出每幕自己的概要 */
+  const env = makeEnv({ cards: [CARD_A] });
+  env.store.set("nd_wb2_card_imp_done", JSON.stringify({ bg: "大周朝", anchors: ["雪夜初见：你在城门口救下一个受伤的少年", "朝堂风云", "长安 12:30 之约"] }));
+  env.plotlinePickCardStage("imp_done");
+  const html = env.html();
+  ok("c 带冒号的锚点拆为标题+概要", /<div class="name">雪夜初见<\/div>[\s\S]*?<div class="st">你在城门口救下一个受伤的少年<\/div>/.test(html));
+  ok("c 纯标题锚点不硬凑概要", /<div class="name">朝堂风云<\/div>\s*<div class="meta">[^<]*<span class="badge">AI 补完<\/span><\/div>\s*<\/div>/.test(html));
+  ok("c 时间里的冒号不当分隔", html.indexOf('<div class="name">长安 12:30 之约</div>') >= 0);
 }
 {
   /* bible 缺失 */

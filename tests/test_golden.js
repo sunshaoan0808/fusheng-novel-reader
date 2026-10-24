@@ -2,6 +2,7 @@
  * 用法: node tests/test_golden.js */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false,
 classList: {add(){}, remove(){}, toggle(){}, contains(){ return false;}},
@@ -64,7 +65,7 @@ vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "data/covers.js", "data/char_plots.js", "rp/escutil.js", "rp/lazy.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js", "rp/aifill.js",
 "rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js",
-"rp/plotrun.js", "app.js"]){
+"rp/plotrun.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+ "/" + f, "utf8"), ctx, {filename: f});
 }
 vm.runInContext("window.__DATA__=" + JSON.stringify(DATA), ctx);

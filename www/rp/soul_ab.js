@@ -1,6 +1,6 @@
 /* AB. 气象天文 50条 (1101-1150) */
 var RP_SOUL_AB=(function(){"use strict";
-function k(c){return "nd_soulab_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulab_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*1101*/F.setTemp=function(c,t){var o=g(c);o.temp=t;s(c,o);};
 /*1102*/F.temp=function(c){return g(c).temp||20;};

@@ -2,6 +2,7 @@
 // 纯 JS 逻辑走 vm + localStorage shim; app.js/index.html/style.css 走静态字符串断言
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 const store = {};
 const localStorage = {
 getItem: (k)=> (k in store ? store[k] : null),
@@ -21,7 +22,7 @@ const E = (code)=>vm.runInContext(code, ctx);
 
 let pass = 0, fail = 0;
 const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };
-const appSrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const appSrc = __appSource(WWW);
 const htmlSrc = fs.readFileSync(WWW+"/index.html", "utf8");
 const cssSrc = fs.readFileSync(WWW+"/style.css", "utf8");
 

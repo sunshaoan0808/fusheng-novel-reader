@@ -1,6 +1,6 @@
 /* X. 文化习俗 50条 (901-950) */
 var RP_SOUL_X=(function(){"use strict";
-function k(c){return "nd_soulx_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulx_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*901*/F.setLang2=function(c,l){var o=g(c);o.lang=l;s(c,o);};
 /*902*/F.addProverb=function(c,p){var o=g(c);o.prov=o.prov||[];o.prov.push(p);s(c,o);};

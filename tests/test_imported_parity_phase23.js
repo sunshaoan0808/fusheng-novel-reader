@@ -17,6 +17,7 @@
  */
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 
 const vmEval = (c, code)=> vm.runInContext(code, c);
 let pass = 0, fail = 0;
@@ -94,7 +95,7 @@ function seedCustom(ctx, card){
   ctx.localStorage.setItem("nd_custom_chars", JSON.stringify(list));
 }
 const mkCtxBase = (withApp)=> {
-  const c = mkCtx(withApp ? RP_FILES.concat(["app.js"]) : RP_FILES);
+  const c = mkCtx(withApp ? RP_FILES.concat(__APP_FILES(WWW)) : RP_FILES);
   vmEval(c, "window.__DATA__ = " + JSON.stringify(
     {index: [], runs: BASE_RUNS, rp_cards: BASE_CARDS}) + ";");
   return c;

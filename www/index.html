@@ -3,10 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- v41 安全：CSP。脚本只许本地文件 + 内联（现有 400+ 处内联 onclick 仍需 unsafe-inline，迁到事件委托后可去掉）；
+     禁远程脚本 / object / iframe / worker。connect-src 放宽到 https:/http:，因为 API 地址由用户自配（含局域网 http 模型）。 -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' data: blob: https: http:; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'">
 <title>浮生</title>
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="rp/soul_warm.css">
+<link rel="stylesheet" href="ui42.css">
 <script src="rp/theme.js"></script>
+<script src="rp/securekey.js"></script>
 <script src="rp/escutil.js"></script>
 <script src="rp/lazy.js"></script>
 <script>
@@ -19,8 +24,8 @@ try{ var _fsv = parseFloat(localStorage.getItem("nd_font_scale"));
 </head>
 <body>
 <div id="app">
-  <header id="topbar"><span id="title">浮生</span><span id="sub"></span></header>
-  <nav id="tabs" class="hidden" data-xfade>
+  <header id="topbar"><button id="tbback" type="button" onclick="setNav('create')" aria-label="返回创作">‹ 创作</button><span id="title">浮生</span><span id="sub"></span><button id="tbasst" type="button" onclick="openAssistant()" title="浮生小助手" aria-label="浮生小助手"></button></header>
+  <nav id="tabs" class="hidden" data-xfade aria-label="书目分区">
     <button data-tab="chars" class="active">人物</button>
     <button data-tab="outline">大纲</button>
     <button data-tab="relations">关系</button>
@@ -29,19 +34,21 @@ try{ var _fsv = parseFloat(localStorage.getItem("nd_font_scale"));
     <button data-tab="more">更多</button>
   </nav>
   <main id="view"></main>
-  <nav id="mainnav">
-    <button data-nav="product" class="active">产物</button>
-    <button data-nav="chat">聊天</button>
-    <button data-nav="distill" class="create-tab">蒸馏</button>
-    <button data-nav="traverse">穿越</button>
-    <button data-nav="writer">写卡</button>
-    <button data-nav="settings">设置</button>
+  <nav id="mainnav" aria-label="主导航">
+    <button data-nav="product" class="active" data-ico="books">书架</button>
+    <button data-nav="chat" data-ico="chat">聊天</button>
+    <button data-nav="create" class="create-tab" data-ico="sparkles">创作</button>
+    <button data-nav="me" data-ico="user">我的</button>
   </nav>
 </div>
 <script src="data.js"></script>
 <script src="data/charimg.js"></script>
 <script src="data/covers.js"></script>
 <script src="icons.js"></script>
+<script>/* v40 UI：底栏图标 + 文字（图标由 data-ico 指定，复用 icons.js） */
+try{ document.querySelectorAll("#mainnav button[data-ico]").forEach(function(b){
+  b.innerHTML = '<span class="nav-ico" aria-hidden="true">' + icon(b.dataset.ico, 20) + '</span><span class="nav-lb">' + b.textContent + '</span>';
+}); }catch(e){}</script>
 <script src="data/char_plots.js"></script>
 <script src="data/foreshadow_cal.js"></script>
 <script src="rp/foreshadow.js"></script>
@@ -77,6 +84,7 @@ try{ var _fsv = parseFloat(localStorage.getItem("nd_font_scale"));
 <script src="rp/soul_ux.js"></script>
 <script src="rp/soul_warm.js"></script>
 <script src="rp/soul_sync.js"></script>
+<script src="rp/soul_kv.js"></script>
 <script src="rp/soul_h.js"></script>
 <script src="rp/soul_i.js"></script>
 <script src="rp/soul_j.js"></script>
@@ -138,9 +146,32 @@ try{ var _fsv = parseFloat(localStorage.getItem("nd_font_scale"));
 <script src="rp/scene.js"></script>
 <script src="rp/system.js"></script>
 <script src="rp/wiring.js"></script>
+<script src="js/app_core.js"></script>
+<script src="js/app_shelf.js"></script>
+<script src="js/app_rundata.js"></script>
+<script src="js/app_tts.js"></script>
+<script src="js/app_lore.js"></script>
+<script src="js/app_chat_core.js"></script>
+<script src="js/app_group.js"></script>
+<script src="js/app_picker.js"></script>
+<script src="js/app_foreshadow.js"></script>
+<script src="js/app_msgmenu.js"></script>
+<script src="js/app_prefs.js"></script>
+<script src="js/app_chat_hud.js"></script>
+<script src="js/app_plotline.js"></script>
+<script src="js/app_chapter.js"></script>
+<script src="js/app_memory.js"></script>
+<script src="js/app_saves.js"></script>
+<script src="js/app_character.js"></script>
+<script src="js/app_chat_settings.js"></script>
+<script src="js/app_ui.js"></script>
 <script src="app.js"></script>
+<script src="js/a11y.js"></script>
 <button id="asst_fab" type="button" title="浮生小助手" aria-label="浮生小助手"></button>
-<script>document.getElementById("asst_fab").innerHTML = icon("lightbulb",22);</script>
+<script>document.getElementById("asst_fab").innerHTML = icon("lightbulb",20);
+/* v42：小助手是「功能用法 / 帮你建角色、世界书」的帮手。悬浮球只留在聊天沉浸态（v41 为它留好的位置），
+   其它页面收进顶栏右侧的灯泡按钮，不再浮在书封/设置项上。 */
+try{ document.getElementById("tbasst").innerHTML = icon("lightbulb",18); }catch(e){}</script>
 <script>
 /* 小助手悬浮球：可拖动，点按打开；位置记忆 */
 (function(){

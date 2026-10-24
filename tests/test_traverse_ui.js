@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 回归: 穿越各页模板渲染 (用 mock DOM 跑真实函数), 重点防属性引号错乱
 function mkEl(){
 /* P1-12: 记录 addEventListener 绑定，测试用 __fire(type) 触发（app 已改 addEventListener，不再用 onscroll 属性） */
@@ -52,7 +53,7 @@ ctx.window = ctx; ctx.globalThis = ctx; ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "data/char_plots.js", "rp/escutil.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js", "rp/aifill.js",
-"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "app.js"]){
+"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+"/" + f, "utf8"), ctx, {filename: f});
 }
 // data.js 会覆盖 __DATA__; 加载完再注入测试数据, 并同步重置 INDEX

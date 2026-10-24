@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 回归: 滚动体验三件套
 // 1) 上滑看历史时, 流式/打字机/重渲染不得强制拽回底部(持续抖动根因)
 // 2) 下滑时底栏(输入条)跟随顶栏一起隐藏, 上滑/回顶恢复
@@ -53,7 +54,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "rp/escutil.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "app.js"]){
+"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+"/" + f, "utf8"), ctx, {filename: f});
 }
 let pass = 0, fail = 0;

@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // v38: ST 聊天记录(JSONL)导入回归测试
 // 真实 fixture: tests/fixtures/chat-ruby.jsonl (用户 RUBY 真实聊天记录, 37 行)
 // stChatParse(首行元数据/消息行) / stChatToEntries(角色映射/时间解析/空消息跳过)
@@ -21,7 +22,7 @@ ctx.__DATA__ = DATA;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(WWW+"/icons.js","utf8"), ctx);
 // 只取 stChatParse/stChatToEntries(避免全量 app.js 的 DOM 依赖)
-const src = fs.readFileSync(WWW+"/app.js","utf8");
+const src = __appSource(WWW);
 const i = src.indexOf("/* ST 聊天记录(JSONL)");
 const j = src.indexOf("window.importStChat");
 vm.runInContext(src.slice(i, j), ctx);
@@ -102,7 +103,7 @@ t("往返 37 条一致",
 t("空白 content 跳过", run(`stEntriesToJsonl([{role:"user", content:"  ", ts:1}])`).split("\n").length === 1);
 
 // ---- 导出 UI 入口(静态) ----
-const __asrc2 = fs.readFileSync(WWW+"/app.js", "utf8");
+const __asrc2 = __appSource(WWW);
 t("导出 ST JSONL button x2(单聊+群聊抽屉)",
   __asrc2.split("exportChatJsonl()").length - 1 >= 2);
 t("window.exportChatJsonl", __asrc2.indexOf("window.exportChatJsonl") >= 0);

@@ -1,8 +1,9 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // UI-00 回归: getHist 在 RP_STORE 缓存未命中时必须回退 localStorage，
 // 否则冷启动后小键历史读成空，showChat 的打招呼分支会覆盖真实历史（数据丢失）。
-const src = fs.readFileSync(WWW + "/app.js", "utf8");
+const src = __appSource(WWW);
 function extract(src, name){
   const pats = [
     "(?:let|const|var)\\s+" + name + "\\s*=\\s*\\([^)]*\\)\\s*=>",

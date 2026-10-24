@@ -1,6 +1,6 @@
 /* T. 经济系统 50条 (701-750) */
 var RP_SOUL_T=(function(){"use strict";
-function k(c){return "nd_soult_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soult_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*701*/F.balance=function(c,name){return (g(c).bal||{})[name]||0;};
 /*702*/F.give=function(c,name,n){var o=g(c);o.bal=o.bal||{};o.bal[name]=(o.bal[name]||0)+n;s(c,o);return o.bal[name];};

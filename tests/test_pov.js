@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 视角/人称切换: postInstructions / groupPostInstructions / 抽屉 chips / 持久化
 let pass = 0, fail = 0;
 const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };
@@ -58,7 +59,7 @@ t("group char+third", g2.includes("以贾宝玉为中心") && g2.includes("第�
 
 // ---- app.js: POVS/PERSONS + povChipsHTML + setPov/setPerson + 持久化 ----
 {
-const src = fs.readFileSync(WWW+"/app.js", "utf8");
+const src = __appSource(WWW);
 function extract(name){
 const pats = [
 "(?:let|const|var)\\s+"+name+"\\s*=\\s*function\\s*\\(",
@@ -134,7 +135,7 @@ t("chips reflect char active", html2.includes("🎭以角色为主") && /povchip
 
 // ---- sendChatText sendOpts 含 pov/person/onUserMsg; chat.js 调用 onUserMsg ----
 {
-const src = fs.readFileSync(WWW+"/app.js", "utf8");
+const src = __appSource(WWW);
 t("sendOpts has pov", /pov:\s*CHAT\.pov\s*\|\|\s*"player"/.test(src));
 t("sendOpts has person", /person:\s*CHAT\.person\s*\|\|\s*"second"/.test(src));
 t("sendOpts has onUserMsg", /onUserMsg:\s*\(\)=>\{\s*renderChat\(true\);\s*\}/.test(src));

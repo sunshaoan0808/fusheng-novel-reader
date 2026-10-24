@@ -9,6 +9,7 @@
 const fs = require("fs"), path = require("path");
 const ROOT = path.join(__dirname, "..");
 const WWW = path.join(ROOT, "www");
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 eval(fs.readFileSync(path.join(WWW, "rp/persona.js"), "utf8"));
 
 let pass = 0, fail = 0;
@@ -57,7 +58,7 @@ t("personas 为空抛错", throws(()=>RP_PERSONA.stPersonaParse({personas: {}}))
 t("字符串抛错", throws(()=>RP_PERSONA.stPersonaParse("oops")));
 
 /* 5) 静态: UI 入口 */
-const asrc = fs.readFileSync(path.join(WWW, "app.js"), "utf8");
+const asrc = __appSource(WWW);
 t("导入 ST 人设 button", asrc.indexOf("importStPersona()") >= 0);
 t("导出 ST 人设 button", asrc.indexOf("exportStPersonaUI()") >= 0);
 t("window.importStPersona", asrc.indexOf("window.importStPersona") >= 0);

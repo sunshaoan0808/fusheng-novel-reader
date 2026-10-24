@@ -1,7 +1,8 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 从 app.js / chat.js 抽取纯函数做单元测试 (不依赖 DOM)
-const appSrc = fs.readFileSync(WWW+"/app.js", "utf8");
+const appSrc = __appSource(WWW);
 const chatSrc = fs.readFileSync(WWW+"/rp/chat.js", "utf8");
 function extract(src, name){
   // 提取 function name(...) {...} (顶层函数, 大括号配对)

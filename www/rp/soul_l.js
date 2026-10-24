@@ -1,9 +1,7 @@
 /* L. 叙事引擎 50条 (301-350) */
 var RP_SOUL_L = (function(){
 "use strict";
-function _k(c){return "nd_soull_"+c;}
-function _g(c){try{return JSON.parse(localStorage.getItem(_k(c))||"{}");}catch(e){return{};}}
-function _s(c,o){try{localStorage.setItem(_k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soull_"),_k=_kv.k,_g=_kv.g,_s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /* 301 */ F.setArc=function(c,a){var o=_g(c);o.arc=a;_s(c,o);};
 /* 302 */ F.getArc=function(c){return _g(c).arc||"";};

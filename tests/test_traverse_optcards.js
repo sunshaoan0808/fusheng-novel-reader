@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www")? "assets/www": "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 回归: 穿越模式剧情选项卡(2026-09-30 用户抓包: 穿越聊天没有选项)
 // 根因: app.js 穿越分支没把 optCards/optCount/optMood 透传给 sendTraverse,
 // 且 sendTraverse 也不像 send/sendGroup 那样注入指令。
@@ -48,7 +49,7 @@ const sys2 = lastBody.messages[0];
 t("optCards=false 时不注入", !sys2.content.includes("【剧情选项】"));
 
 // 3. app.js 穿越分支把开关透传给 sendTraverse
-const appSrc = fs.readFileSync(WWW + "/app.js", "utf8");
+const appSrc = __appSource(WWW);
 const m = appSrc.match(/sendTraverse\(CHAT\.travId, text, \{([\s\S]*?)\}\)/);
 t("穿越分支存在",!!m);
 if (m) {

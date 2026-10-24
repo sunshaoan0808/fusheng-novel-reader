@@ -1,5 +1,6 @@
 const fs = require("fs"), vm = require("vm");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 回归: 聊天壁纸上传/优先级/按聊天隔离
 function mkEl(){
 return {innerHTML: "", textContent: "", value: "", checked: false,
@@ -46,7 +47,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", "app.js"]){
+"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+"/" + f, "utf8"), ctx, {filename: f});
 }
 let pass = 0, fail = 0;

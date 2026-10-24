@@ -1,8 +1,9 @@
 const fs = require("fs");
 const WWW = fs.existsSync("assets/www") ? "assets/www" : "www";
+const { APP_FILES: __APP_FILES, appSource: __appSource } = require("./lib_appsrc.js"); /* v41: app.js 拆分后按加载顺序取全部分段 */
 // 角色卡画像回归: CHARIMG 覆盖 data.js 全部人物, 文件真实存在,
 // charCardHTML 支持 o.img, 详情页挂 charhero, index.html 引入映射表。
-const appJs = fs.readFileSync(WWW + "/app.js", "utf8");
+const appJs = __appSource(WWW);
 const css = fs.readFileSync(WWW + "/style.css", "utf8");
 const html = fs.readFileSync(WWW + "/index.html", "utf8");
 

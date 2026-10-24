@@ -1,6 +1,6 @@
 /* W. 社交礼仪 50条 (851-900) */
 var RP_SOUL_W=(function(){"use strict";
-function k(c){return "nd_soulw_"+c;}function g(c){try{return JSON.parse(localStorage.getItem(k(c))||"{}");}catch(e){return{};}}function s(c,o){try{localStorage.setItem(k(c),JSON.stringify(o));}catch(e){}}
+var _kv=RP_SOUL_KV.bucket("nd_soulw_"),k=_kv.k,g=_kv.g,s=_kv.s; /* v41: 共用 soul_kv.js */
 var F={};
 /*851*/F.greet=function(c,a,b){var o=g(c);o.greets=o.greets||[];o.greets.push({a:a,b:b,t:new Date().toISOString()});s(c,o);};
 /*852*/F.greeted=function(c,a,b){return (g(c).greets||[]).some(function(x){return x.a===a&&x.b===b;});};
