@@ -410,6 +410,12 @@ bar.innerHTML = `<div class="csbar">`
 }
 /* ============ P2: 打字机效果（AI 回复逐字呈现，可打断） ============ */
 let TW = {timer:null, key:"", idx:-1, mid:""};
+/* 会话内「已见过」登记：histKey -> Set(末条 AI 消息标识)。进一个已有聊天时先把
+ * 现存消息登记为已见、绝不重播打字机——旧逻辑只靠内存里的 TW.key 防重播，冷启动
+ * 后 key 为空，每次打开聊天都会把最后一条 AI 消息从空气泡重新逐字打一遍
+ * （长文 ~110 帧 × 45ms ≈ 5 秒，气泡 innerHTML 反复重写 = 用户实报的「打开就狂闪」）。
+ * 本会话内新到达的消息（新开局的开场白、刚收到的回复）不在登记里，照常播放。 */
+let __twSeenChats = {};
 function twStop(){ if(TW.timer){ clearInterval(TW.timer); TW.timer = null; } }
 /* 立即打断完成：停掉定时器并整页重渲染出全文 */
 window.twFinish = ()=>{ if(!TW.timer) return; twStop(); renderChat(); };
@@ -465,6 +471,10 @@ return parts.join("|");
 function renderChat(forceBottom){
 twStop(); /* 新渲染进来（发消息/切tab/新回复）先停掉旧动画 */
 const _k = chatHistKey();
+/* 打字机准入：这个聊天在本会话是否已经被渲染过（即用户正看着它时新消息才配逐字播）。
+ * 首次渲染（刚打开这个聊天）一律全文直出——进门重播就是用户实报的「打开就狂闪」。 */
+const _chatWasOpen = !!__twSeenChats[_k + "|touched"];
+__twSeenChats[_k + "|touched"] = 1;
 const h = getHistSafe(_k);
 const log = $("#chatlog");
 if(!log) return;
@@ -573,17 +583,26 @@ try{ if(CHAT.mode==="group") paintChatPortrait(); }catch(e){} /* v42: 群聊立�
 if(stick){ markProgScroll(); log.scrollTop = log.scrollHeight; }
 renderWsBar();
 renderSimBar();
-/* P2 打字机：只对"最新一条 AI 消息"做逐字动画；重渲染旧消息不重复播 */
+/* P2 打字机：只对"本会话内新到达的最新一条 AI 消息"做逐字动画；
+ * 打开已有聊天时现存消息一律先登记为已见、直接全文呈现（修冷启动重播狂闪） */
 try{
 if(lastAI>=0){
 const key = chatHistKey()+"|"+h.length+"|"+(h[lastAI].ts||h[lastAI].content.length);
-if(lastAI===h.length-1 && TW.key!==key && typeof RP_TYPEWRITER!=="undefined" && RP_TYPEWRITER.shouldAnimate()){
+const hk = chatHistKey();
+const tok = h[lastAI].mid || h[lastAI].id || key;
+const seen = __twSeenChats[hk] || (__twSeenChats[hk] = new Set());
+if(!_chatWasOpen){
+seen.add(tok); /* 刚打开这个聊天：现存末条只登记不重播，全文直出 */
+TW.key = key;
+}else if(lastAI===h.length-1 && !seen.has(tok) && TW.key!==key && typeof RP_TYPEWRITER!=="undefined" && RP_TYPEWRITER.shouldAnimate()){
+seen.add(tok);
 TW.key = key;
 const m = h[lastAI];
 const oc0 = parseOptCard(m.content);
 const body0 = oc0 ? m.content.replace(oc0.full,"").trim() : m.content;
 twStart(lastAI, body0, oc0 ? optCardHTML(oc0, true, lastAI) : "", h[lastAI].mid || h[lastAI].id || "");
 }else{
+seen.add(tok);
 TW.key = key;
 }
 }
