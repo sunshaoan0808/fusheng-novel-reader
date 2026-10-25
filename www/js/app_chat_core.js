@@ -210,7 +210,56 @@ jobs.push(document.fonts.load(`16px "${f}"`, "永字"));
 jobs.push(document.fonts.load(`600 16px "${f}"`, "永字"));
 jobs.push(document.fonts.load(`700 16px "${f}"`, "永字"));
 });
-await Promise.race([Promise.all(jobs), new Promise(r=>setTimeout(r, 1000))]);
+await Promise.race([Promise.all(jobs), new Promise(r=>setTimeout(r, 1600))]);
+}catch(e){}
+}
+/* App 启动后空闲时把全部字体组先解码一遍：首个会话的第一次进聊天也赶得上，
+ * 不必全靠进场那道门（门只等当前组，真机解码 3MB woff2 可能超过等待上限）。 */
+function warmFontsBoot(){
+try{
+if(typeof document === "undefined" || !document.fonts || !document.fonts.load) return;
+const fams = [];
+try{
+RP_THEME.FONTSETS.forEach(fd=>{
+[fd.serif, fd.sans].forEach(st=>{
+const ms = String(st || "").match(/"([^"]+)"/g) || [];
+ms.forEach(m=>{ const f = m.replace(/"/g, ""); if(fams.indexOf(f) < 0) fams.push(f); });
+});
+});
+}catch(e){}
+fams.forEach(f=>{
+try{ document.fonts.load(`16px "${f}"`, "永字"); }catch(e){}
+try{ document.fonts.load(`600 16px "${f}"`, "永字"); }catch(e){}
+try{ document.fonts.load(`700 16px "${f}"`, "永字"); }catch(e){}
+});
+}catch(e){}
+}
+/* 进聊天前预热本聊天的图片（背景图/角色立绘/消息头像）：实测（限速+CPU节流复现）——
+ * 不预热时历史先画出来，背景约 1 秒后才 pop-in、立绘再晚、头像因 loading=lazy 在
+ * 已滚到底的容器里只零星加载（30 个里 3 秒只到 7 个），连环浮现就是真机上的「狂闪」。
+ * 这里把本聊天要用的图先加载+解码完再进场，最多等 1.2 秒，超时先行（剩余的也已在路上）。 */
+async function warmChatMedia(){
+try{
+const urls = [];
+try{ const r = resolveChatBg(); if(r && r.type === "img" && r.url) urls.push(r.url); }catch(e){}
+try{
+const names = (typeof CHAT !== "undefined" && CHAT.mode === "group") ? (CHAT.members || [])
+  : ((typeof CHAT !== "undefined" && CHAT.name) ? [CHAT.name] : []);
+names.slice(0, 8).forEach(n=>{
+try{ const av = (typeof charAvatarUrl === "function") ? charAvatarUrl(CHAT.runId, n) : ""; if(av) urls.push(av); }catch(e){}
+try{ const p = (typeof charPortrait === "function") ? charPortrait(CHAT.runId, n) : null; if(p && p.url) urls.push(p.url); }catch(e){}
+});
+}catch(e){}
+const uniq = [...new Set(urls)].filter(u=>u && u.indexOf("data:") !== 0);
+if(!uniq.length) return;
+const jobs = uniq.map(u=>new Promise(res=>{
+const im = new Image();
+const done = ()=>res();
+im.onload = ()=>{ if(im.decode){ im.decode().then(done, done); } else done(); };
+im.onerror = done;
+im.src = u;
+}));
+await Promise.race([Promise.all(jobs), new Promise(r=>setTimeout(r, 1200))]);
 }catch(e){}
 }
 async function warmWallpaper(){
@@ -559,7 +608,7 @@ const run = ((window.__DATA__||{}).runs||{})[CHAT.runId] || {};
 try{ if(CHAT.runId) loadWorldcard(CHAT.runId); }catch(e){} /* 世界卡预热：导演编排可用原著蓝图，fire-and-forget */
 let memN = 0;
 try{ const mst = RP_MEM.get(CHAT.runId, CHAT.name); memN = (mst && mst.short ? mst.short.length : 0); }catch(e){}
-await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
+await warmWallpaper(); await warmGlobalWall(); await warmChatMedia(); /* 先读用户壁纸与本聊天图片，避免先闪默认图/连环 pop-in */
 /* 消息操作发现性：首次进聊天提示一次"点一下消息有更多操作" */
 try{
   if(!localStorage.getItem("nd_msgtools_tip")){
@@ -625,10 +674,10 @@ ${drawerAdvHTML(`<button class="ditem" onclick="toggleDrawer(false);exportChat()
 <button class="ditem" onclick="exitChatTo('settings')">${icon("settings")} 大模型与 RP 设置</button>
 </div>
 ${!cfg.key?`<div class="hint" style="margin:10px 14px">还没配大模型接口，先去「我的 · 设置」里填 API 地址/Key/模型，聊天才能用。Key 只存在你手机上。</div>`:""}`;
-renderChat();
+attachHeadHide(); /* 先定栏位显隐再渲染：栏位后藏会改变日志可视高度、把已吸底的滚动钳走一截（进场跳一下） */
 renderScenChips();
+renderChat();
 paintChatBg();
-attachHeadHide();
 updateChapterBadge();
 applySoulWarm(); /* 浮生暖系: soul 卡时注入角色头卡 + 快捷 chips */
 const k = chatKey(CHAT.runId, CHAT.name);

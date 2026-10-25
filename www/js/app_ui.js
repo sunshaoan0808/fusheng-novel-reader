@@ -49,9 +49,9 @@ function charAvatarUrl(runId, name){
 function chatAvatarHTML(runId, name, cls){
   const p = name ? charPortrait(runId, name) : null;
   const ch = esc(String(name || "?")[0]);
-  if(p && p.own) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(p.url)}" alt="" loading="lazy" onerror="this.remove()">${ch}</span>`;
+  if(p && p.own) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(p.url)}" alt="" onerror="this.remove()">${ch}</span>`;
   const av = name ? charAvatarUrl(runId, name) : "";
-  if(av) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(av)}" alt="" loading="lazy" onerror="this.remove()">${ch}</span>`;
+  if(av) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(av)}" alt="" onerror="this.remove()">${ch}</span>`;
   return `<span class="mav ${cls || ""}" aria-hidden="true">${ch}</span>`;
 }
 /* 大头像（.avatar 圆角方形）：与 chatAvatarHTML 同优先级，图盖住金底、加载失败摘除回落首字 */
@@ -59,7 +59,7 @@ function avatarHTML(runId, name, cls){
   const p = name ? charPortrait(runId, name) : null;
   const ch = esc(String(name || "?")[0]);
   const url = (p && p.own) ? p.url : (name ? charAvatarUrl(runId, name) : "");
-  if(url) return `<div class="avatar ${cls || ""}"><img src="${esc(url)}" alt="" loading="lazy" onerror="this.remove()">${ch}</div>`;
+  if(url) return `<div class="avatar ${cls || ""}"><img src="${esc(url)}" alt="" onerror="this.remove()">${ch}</div>`;
   return `<div class="avatar ${cls || ""}">${ch}</div>`;
 }
 /* AI 消息名牌：头像 + 名字（单聊/群聊/穿越都显示；穿越的「世界」用卷轴图标） */

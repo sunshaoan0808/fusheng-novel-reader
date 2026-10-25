@@ -14,7 +14,7 @@ const gkey = ms.slice().sort().join("_");
 const gorder = RP_GROUP.getOrder(CHAT.runId, gkey);
 const stack = ms.slice(0,4).map(n=>avatarHTML(CHAT.runId, n, "sm stacka")).join("");
 await warmFonts(); /* 先把字体等回来再画历史，避免整页换字重排闪烁 */
-await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
+await warmWallpaper(); await warmGlobalWall(); await warmChatMedia(); /* 先读用户壁纸与本聊天图片，避免连环 pop-in */
 view.innerHTML = `
 ${chatBgHTML()}
 <div class="chathead" id="chathead">
@@ -66,11 +66,11 @@ ${drawerAdvHTML(`<button class="ditem" onclick="toggleDrawer(false);exportChat()
 <button class="ditem" onclick="exitChatTo('settings')">${icon("settings")} 大模型与 RP 设置</button>
 </div>
 ${!cfg.key?`<div class="hint" style="margin:10px 14px">还没配大模型接口，先去「我的 · 设置」里填 API 地址/Key/模型，聊天才能用。Key 只存在你手机上。</div>`:""}`;
-renderChat();
+attachHeadHide(); /* 先定栏位显隐再渲染，免进场滚动被钳走（同单聊） */
 renderScenChips();
+renderChat();
 renderGRelBox();
 paintChatBg();
-attachHeadHide();
 updateChapterBadge();
 /* 浮生暖系: soul 多智能体群聊时用暖系底 */
 try{

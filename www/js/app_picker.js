@@ -240,7 +240,11 @@ setBars(false);
    只在进场时播一次，之后发消息/重渲染不重播（CSS 侧按 .entering 命中） */
 try{
   log.classList.add("entering");
-  setTimeout(()=>{ try{ log.classList.remove("entering"); }catch(e){} }, 1600);
+  /* 摘除时机随速度档缩放：慢档级联总时长更长，固定 1.6s 会把尾段动画掐断 */
+  let _em = 1;
+  try{ if(typeof RP_MOTION !== "undefined") _em = RP_MOTION.speedDef(RP_MOTION.get().speed).mult || 1; }catch(e){}
+  const _ew = Math.min(4500, Math.max(900, Math.round(1100 * _em)));
+  setTimeout(()=>{ try{ log.classList.remove("entering"); }catch(e){} }, _ew);
 }catch(e){}
 /* 兼容旧测试钩子：__setHeadHidden(true)=隐藏，(false)=显示 */
 window.__setHeadHidden = (hide)=>setBars(!hide);

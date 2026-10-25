@@ -1332,6 +1332,8 @@ await pinUnlockScreen(); /* P1-7: PIN 未验证通过前不进主界面 */
 await boot();
 /* P2: 应用壁纸/字体；后台把大文件复制到 IndexedDB（复制模式：localStorage 副本保留，同步读取不受影响；失败自动回退 localStorage） */
 try{ applyAppearance(); }catch(e){}
+/* 字体空闲预解码：启动 1.5s 后把全部字体组先 load 一遍，第一次进聊天也不必等进场门 */
+try{ setTimeout(()=>{ try{ if(typeof warmFontsBoot === "function") warmFontsBoot(); }catch(e){} }, 1500); }catch(e){}
 try{ if(typeof RP_STORE!=="undefined"){ RP_STORE.warmCache().catch(()=>{}); RP_STORE.migrate().catch(()=>{}); } }catch(e){}
 /* 存储配额：向系统申请持久化存储，避免大文件被自动清理；超大文件走原生文件层（2GB，App 私有目录） */
 try{ if(typeof navigator!=="undefined" && navigator.storage && typeof navigator.storage.persist==="function"){ navigator.storage.persist().catch(()=>{}); } }catch(e){}
@@ -2203,7 +2205,7 @@ async function showTraverseChat(cfg){
   const _plotHud = (trav.plotrunId && typeof RP_PLOTRUN!=="undefined") ? RP_PLOTRUN.hudHTML(RP_PLOTRUN.load(trav.plotrunId)) : "";
   const title = travPlayerName();
   await warmFonts(); /* 先把字体等回来再画历史，避免整页换字重排闪烁 */
-  await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
+  await warmWallpaper(); await warmGlobalWall(); await warmChatMedia(); /* 先读用户壁纸与本聊天图片，避免连环 pop-in */
   view.innerHTML = `
   ${chatBgHTML()}
   <div class="chathead" id="chathead">
@@ -2231,7 +2233,7 @@ async function showTraverseChat(cfg){
   <button class="ditem" onclick="toggleDrawer(false);exportChat()">${icon("download")} 复制聊天记录</button>
   <button class="ditem danger" onclick="toggleDrawer(false);travEnd()">${icon("x")} 结束穿越</button>
   </div>`;
-  renderChat(); renderWsBar(); paintChatBg(); attachHeadHide();
+  attachHeadHide(); renderChat(); renderWsBar(); paintChatBg(); /* 先定栏位显隐再渲染，免进场滚动被钳走（同单聊） */
   const k = chatHistKey();
   /* P0-2/P1-4: 读失败≠空历史；await 开场白生成后必须再确认（用户可能已发消息） */
   let __th0 = null;

@@ -245,10 +245,10 @@ var PRESETS = [
   {id:"vivid", name:"绚烂", desc:"灵动之上 · 页面缩放淡入、背景呼吸更明显、消息带轻缩放"}
 ];
 var SPEEDS = [
-  {id:"slow", name:"慢",   mult:1.6},
-  {id:"std",  name:"标准", mult:1},
-  {id:"fast", name:"快",   mult:0.6},
-  {id:"turbo",name:"极快", mult:0.3}
+  {id:"slow", name:"慢",   mult:3},
+  {id:"std",  name:"标准", mult:1.8},
+  {id:"fast", name:"快",   mult:1},
+  {id:"turbo",name:"极快", mult:0.55}
 ];
 function presetDef(id){ for(var i = 0; i < PRESETS.length; i++) if(PRESETS[i].id === id) return PRESETS[i]; return PRESETS[1]; }
 function speedDef(id){ for(var i = 0; i < SPEEDS.length; i++) if(SPEEDS[i].id === id) return SPEEDS[i]; return SPEEDS[1]; }
