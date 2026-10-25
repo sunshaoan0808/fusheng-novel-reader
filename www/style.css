@@ -543,14 +543,15 @@ body.chatmode.immersive .chatbg .bgshade{
 }
 body.chatmode.immersive #chatlog{ padding-top:8px; }
 body.chatmode.immersive #ctxbar{ padding-top:0; padding-bottom:0; }
-/* 气泡半透明毛玻璃，浮在场景上 */
+/* 气泡浮在场景上：底色用主题表面色 --nav-bg（与对白块同方），文字 --ink。
+ * 旧版写死深棕 rgba(34,30,25,.74)+毛玻璃：浅色主题（如青瓷）的深色字压上去
+ * 对比度灾难——打字机播放中的气泡、流式气泡、普通气泡全中招（用户截图实报）；
+ * 且 blur 垫在呼吸背景上逐帧重采样也是闪烁源，一并摘掉。 */
 body.chatmode .bubble{
-  background:rgba(34,30,25,.74);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
+  background:var(--nav-bg); color:var(--ink);
 }
 body.chatmode .msg.me .bubble{
   background:rgba(212,162,78,.16); border-color:rgba(212,162,78,.24);
-  backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
 }
 /* 底栏悬浮胶囊；隐藏时 JS 写行内 fixed+位移覆盖，不冲突。
    背景色跟随聊天壁纸主色（--barbg-bar 由 JS 取色写入）；
