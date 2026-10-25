@@ -425,7 +425,7 @@ for(let i=0;i<tys.length;i++) tys[i].classList.remove("typing");
 }
 }catch(e){} }
 /* 立即打断完成：停掉定时器并整页重渲染出全文 */
-window.twFinish = ()=>{ if(!TW.timer) return; twStop(); renderChat(); };
+window.twFinish = ()=>{ if(!TW.timer) return; twStop(); __chatRenderSig = null; renderChat(); };
 function twStart(idx, bodyText, cardHTML, mid){
 const log = $("#chatlog"); if(!log) return;
 const frames = (typeof RP_TYPEWRITER!=="undefined") ? RP_TYPEWRITER.progressFrames(bodyText) : [bodyText];
@@ -438,7 +438,12 @@ TW.idx = idx;
 TW.mid = mid || "";
 /* 首帧立即置空+光标，避免 45ms 后才改造成的全文闪烁 */
 const el0 = document.getElementById("smsg-"+idx);
-if(el0){ const b0 = el0.querySelector(".bubble"); if(b0) b0.innerHTML = `<span class="twcur"></span>`;
+if(el0){ const b0 = el0.querySelector(".bubble"); if(b0){ b0.innerHTML = `<span class="twcur"></span>`;
+/* 播放期间摘掉分排（segd）：分排按「引号是否已出现」给文本分类，未打完的半截文本
+ * 会被整段判成对白块（深色底+毛玻璃），引号一出现又翻成无底斜体旁白——背景块
+ * 随每帧分类翻转而闪烁、播完又凭空消失（用户实报）。播放期走纯文本渲染，
+ * 播完的 renderChat 一次性出分排成品。 */
+b0.classList.remove("segd"); }
 /* 播放态瘦身：摘阴影 + 冻结背景呼吸（见 ui42.css .msg.typing）——带模糊阴影的文字
  * 每帧整段重栅格、底下背景还在呼吸缩放，真机上就是闪个不停（用户定位） */
 el0.classList.add("typing"); }
@@ -449,7 +454,7 @@ const done = fi >= frames.length;
 const el = document.getElementById("smsg-"+idx);
 /* P2-3: idx 漂移（播放中插入/删除消息）——元素没了，或该位置已被别的消息顶替：
    停掉定时器并整页重渲染，从历史补出剩余全文，不许永久停在半截/光标帧 */
-if(!el || (TW.mid && el.dataset && el.dataset.mid !== TW.mid)){ twStop(); renderChat(); return; }
+if(!el || (TW.mid && el.dataset && el.dataset.mid !== TW.mid)){ twStop(); __chatRenderSig = null; renderChat(); return; }
 const bub = el.querySelector(".bubble");
 if(bub){
 const partial = frames[Math.min(fi, frames.length-1)];
@@ -462,7 +467,7 @@ bub.innerHTML = (bub.classList.contains("segd") ? chatSegHTML(_ph) : _ph) + (don
 }
 }
 if(chatNearBottom()){ markProgScroll(); log.scrollTop = log.scrollHeight; }
-if(done){ twStop(); renderChat(); /* M4: 播完重渲染，长消息挂上折叠结构 */ }
+if(done){ twStop(); __chatRenderSig = null; renderChat(); /* M4: 播完重渲染（清签名强制真重建：出分排成品/长消息折叠结构，否则签名相同会被跳过、停在播放期的纯文本形态） */ }
 }, 45);
 }
 /* v37 性能: 渲染签名——数据未变时跳过全量重建。

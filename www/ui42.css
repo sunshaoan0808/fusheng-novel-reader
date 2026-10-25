@@ -37,11 +37,13 @@ body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
   -webkit-backdrop-filter:none; backdrop-filter:none;
 }
 .bubble.segd .seg + .seg{ margin-top:6px; }
-/* 对白：金边气泡 */
+/* 对白：金边气泡。底色用主题自带的 --nav-bg（随主题/壁纸家族走的半透明表面色），
+ * 文字显式用主题 --ink——旧版写死深棕底 rgba(34,30,25,.78)，在青瓷等冷色主题上
+ * 与壁纸打架、且浅色主题的深色字压在深棕底上根本看不清（用户截图实报）。 */
 .bubble.segd .seg-dlg{
-  background:rgba(34,30,25,.78); border:1px solid rgba(212,162,78,.34); border-radius:14px;
+  background:var(--nav-bg); color:var(--ink);
+  border:1px solid rgba(212,162,78,.34); border-radius:14px;
   padding:9px 15px; box-shadow:var(--shadow-s);
-  -webkit-backdrop-filter:blur(10px); backdrop-filter:blur(10px);
 }
 .bubble.segd .seg-dlg:first-child{ border-top-left-radius:5px; }
 /* 旁白：无气泡，弱化灰、略斜，左侧一道淡墨线 */
@@ -56,6 +58,8 @@ body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
  * 整段重栅格化，真机 GPU 扛不住就是「闪个不停」（用户定位：阴影+背景+打字机）。
  * 播完的 renderChat 会一次性带阴影重建，最终观感不变。 */
 .msg.typing .bubble, .msg.typing .bubble *{ text-shadow:none !important; }
+/* 播放中若仍有对白块（如流式半成品），摘掉它的毛玻璃：blur 垫在动底上逐帧重采样同样闪 */
+.msg.typing .seg-dlg{ -webkit-backdrop-filter:none; backdrop-filter:none; }
 body.tw-active .chatbg .bglayer{ animation-play-state:paused; }
 .bubble.segd .seg p{ margin:.35em 0; } .bubble.segd .seg p:first-child{ margin-top:0; } .bubble.segd .seg p:last-child{ margin-bottom:0; }
 body.chatmode.bars-light .bubble.segd .seg-nar{ color:#4a3d24; text-shadow:0 1px 3px rgba(255,255,255,.6); }
