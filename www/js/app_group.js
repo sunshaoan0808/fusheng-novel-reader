@@ -13,6 +13,7 @@ const k = chatHistKey();
 const gkey = ms.slice().sort().join("_");
 const gorder = RP_GROUP.getOrder(CHAT.runId, gkey);
 const stack = ms.slice(0,4).map(n=>avatarHTML(CHAT.runId, n, "sm stacka")).join("");
+await warmFonts(); /* 先把字体等回来再画历史，避免整页换字重排闪烁 */
 await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
 view.innerHTML = `
 ${chatBgHTML()}

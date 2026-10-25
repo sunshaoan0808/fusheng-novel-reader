@@ -188,6 +188,31 @@ if(dim > 0) parts.push("brightness(" + (1 - dim/100).toFixed(2) + ")");
 if(blur > 0) parts.push("blur(" + blur + "px)");
 return parts.join(" ");
 }
+/* 进入聊天前预热当前字体组的字体文件：全是 font-display:swap + MB 级 woff2 子集，
+ * 不预热的话历史会先以系统字体画出来、字体陆续到达再整页换字重排——真机上就是
+ * 「历史闪个不停然后才显示出来」。只等当前字体组用到的家族，最多等 1 秒，
+ * 超时先行进场（至多再换一次字），热启动时字体已缓存、立即返回。 */
+async function warmFonts(){
+try{
+if(typeof document === "undefined" || !document.fonts || !document.fonts.load) return;
+let fams = [];
+try{
+const fd = RP_THEME.fontDef(RP_THEME.getFont());
+[fd.serif, fd.sans].forEach(st=>{
+const ms = String(st || "").match(/"([^"]+)"/g) || [];
+ms.forEach(m=>{ const f = m.replace(/"/g, ""); if(fams.indexOf(f) < 0) fams.push(f); });
+});
+}catch(e){}
+if(!fams.length) fams = ["Noto Serif SC"];
+const jobs = [];
+fams.forEach(f=>{
+jobs.push(document.fonts.load(`16px "${f}"`, "永字"));
+jobs.push(document.fonts.load(`600 16px "${f}"`, "永字"));
+jobs.push(document.fonts.load(`700 16px "${f}"`, "永字"));
+});
+await Promise.race([Promise.all(jobs), new Promise(r=>setTimeout(r, 1000))]);
+}catch(e){}
+}
 async function warmWallpaper(){
 const k = chatHistKey();
 if(k in WALL_MEM) return getWallOpts();
@@ -518,6 +543,7 @@ if(isRealRun(CHAT.runId) && !runReady(CHAT.runId) && typeof RP_LAZY !== "undefin
   try{ await RP_LAZY.ensureRun(CHAT.runId); }
   catch(e){ runLoadingFailed(e, function(){ showChat(); }); return; }
 }
+await warmFonts(); /* 先把字体等回来再画历史，避免整页换字重排闪烁（与预热壁纸同理） */
 __backAction = ()=>exitChat();
 document.body.classList.add("chatmode");
 const cs = allChars();

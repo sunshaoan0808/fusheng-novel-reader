@@ -10,6 +10,10 @@
 <link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="rp/soul_warm.css">
 <link rel="stylesheet" href="ui42.css">
+<!-- 字体预加载：MB 级 woff2 子集 + font-display:swap，不预热会在进聊天时整页换字重排闪烁。
+     只预载最常用的两套（默认标题思源宋 600、文楷全文 400）的 common 子集，其余靠 warmFonts 进场等。 -->
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/NotoSerifSC-600-common.woff2">
+<link rel="preload" as="font" type="font/woff2" crossorigin href="fonts/LXGWWenKai-400-common.woff2">
 <script src="rp/theme.js"></script>
 <script src="rp/securekey.js"></script>
 <script src="rp/escutil.js"></script>

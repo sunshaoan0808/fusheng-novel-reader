@@ -2200,6 +2200,7 @@ async function showTraverseChat(cfg){
   const modeName = _comps0.length? "组团穿越" : trav.mode==="isekai"? "异世界" : (RP_TRAVERSE.MODES[trav.mode]||"穿越");
   const _plotHud = (trav.plotrunId && typeof RP_PLOTRUN!=="undefined") ? RP_PLOTRUN.hudHTML(RP_PLOTRUN.load(trav.plotrunId)) : "";
   const title = travPlayerName();
+  await warmFonts(); /* 先把字体等回来再画历史，避免整页换字重排闪烁 */
   await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
   view.innerHTML = `
   ${chatBgHTML()}

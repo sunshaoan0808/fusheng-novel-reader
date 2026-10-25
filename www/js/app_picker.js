@@ -245,7 +245,7 @@ window.__setHeadHidden = (hide)=>setBars(!hide);
 window.__showBars = ()=>{ if(!barsVisible) setBars(true); };
 if(!window.__immKeysBound){
   window.__immKeysBound = true;
-  document.addEventListener("keydown", (e)=>{
+  try{ document.addEventListener("keydown", (e)=>{
     if(!document.body.classList.contains("chatmode")) return;   /* 不在聊天页就别插手 */
     if(window.__barsVisible !== false) return;                  /* 栏本来就看得见 */
     const ae = document.activeElement;
@@ -254,7 +254,7 @@ if(!window.__immKeysBound){
     if(k !== "Escape" && k !== "Enter" && k !== " " && k.length !== 1) return;
     if(typeof window.__showBars === "function") window.__showBars();
     if(k.length === 1){ setTimeout(()=>{ const i=document.getElementById("chat_in"); if(i && !i.disabled) i.focus(); }, 0); }
-  });
+  }); }catch(e){}
 }
 window.__immActive = true;
 window.__barsVisible = barsVisible;
