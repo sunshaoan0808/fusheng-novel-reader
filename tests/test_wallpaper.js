@@ -47,7 +47,7 @@ ctx.window = ctx; ctx.globalThis = ctx;
 vm.createContext(ctx);
 for(const f of ["data.js", "icons.js", "rp/prompt.js", "rp/persona.js",
 "rp/memory.js", "rp/tasks.js", "rp/cardwriter.js", "rp/ooc.js", "rp/chat.js",
-"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", ...__APP_FILES(WWW)]){
+"rp/group.js", "rp/cardexport.js", "rp/cardimport.js", "rp/traverse.js", "rp/traverse2.js", "rp/escutil.js", "rp/theme.js", ...__APP_FILES(WWW)]){
 vm.runInContext(fs.readFileSync(WWW+"/" + f, "utf8"), ctx, {filename: f});
 }
 let pass = 0, fail = 0;
@@ -116,6 +116,13 @@ await runA("await clearGlobalWallpaper()");
 t("清除全局后回退默认", run("pickChatBgURL()") === "bg/chat_night.jpg");
 await runA("await warmGlobalWall(); await warmGlobalWall();");
 t("warmGlobalWall 幂等", run("getGlobalWallOpts()") === null);
+
+/* ---------- 背景来源（2026-10-25 壁纸跟随主题） ---------- */
+await runA("await saveGlobalWallpaper('data:image/jpeg;base64,GGG')");
+t("保存全局图自动选用自定义", run("RP_THEME.getBgMode()") === "custom" && run("pickChatBgURL()") === "data:image/jpeg;base64,GGG");
+t("跟随主题时全局图不压主题", run("RP_THEME.setBgMode('theme')") === "theme" && run("pickChatBgURL()") === "bg/chat_night.jpg");
+t("切回自定义全局图再生效", run("RP_THEME.setBgMode('custom')") === "custom" && run("pickChatBgURL()") === "data:image/jpeg;base64,GGG");
+await runA("await clearGlobalWallpaper()"); run("RP_THEME.setBgMode('theme')");
 run("globalWallpaperEditor()");
 t("全局编辑器标题", /全局壁纸/.test(run("titleEl.innerHTML")));
 run("wallpaperEditor()");

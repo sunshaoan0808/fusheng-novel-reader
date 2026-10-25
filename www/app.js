@@ -115,15 +115,15 @@ view.innerHTML = `<div class="searchwrap"><input id="set_q" placeholder="搜索�
 + `<h2 class="sec setsec">本机</h2>` + renderStorageCard()
 + `<h2 class="sec setsec">外观</h2>` + `
 <div class="setcard"><h3>${icon("palette",15)} 命名主题</h3>
-<div class="kv">八套中式意象色板（夜间 3 · 日间 5），纯本地，切换即时生效。</div>
+<div class="kv">八套中式意象色板（夜间 3 · 日间 5），纯本地，切换即时生效。每套主题自带壁纸，切换时壁纸跟着换；当前外观还能命名存成你的自定义主题。</div>
 ${themeCardsHTML()}</div>` + `
 <div class="setcard"><h3>${icon("type",15)} 字号</h3>
 <div class="kv">整体缩放界面，聊天泡泡也会变大，即时生效。</div>
 ${fontScaleCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 字体</h3>
 <div class="kv">内置开源字体（霞鹜文楷 / 思源宋体 / 马善政毛笔 / 得意黑），随包分发，离线可用。</div>
 ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("image",15)} 全局壁纸</h3>
-<div class="kv">所有聊天的默认背景，存在本机；某个聊天单独设过壁纸的不受影响。</div>
-<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="globalWallpaperEditor()">设置全局壁纸</button></div></div>` + `<h2 class="sec setsec">游玩</h2>` + checkinCardHTML() + `
+<div class="kv">聊天背景默认跟随主题；你上传的图是「自定义壁纸」，在编辑器里选用后才压过主题，存在本机。某个聊天单独设过壁纸的不受影响。</div>
+<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="globalWallpaperEditor()">全局壁纸 / 背景来源</button></div></div>` + `<h2 class="sec setsec">游玩</h2>` + checkinCardHTML() + `
 <div class="setcard"><h3>${icon("check",15)} 成就</h3>
 <div class="kv">${typeof RP_ACHV!=="undefined" ? `已解锁 ${RP_ACHV.count()}/${RP_ACHV.DEFS.length}` : ""}</div>
 <div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="showAchv()">查看成就</button></div></div>` + `<h2 class="sec setsec">安全</h2>

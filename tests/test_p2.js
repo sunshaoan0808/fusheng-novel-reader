@@ -33,6 +33,26 @@ const t = (n, c)=>{ c ? pass++ : (fail++, console.log("FAIL:", n)); };
   t("宋体正文走思源宋", T("RP_FONT.apply('songti')") === "songti" && rootStyle["--sans"].includes("Noto Serif SC"));
   t("毛笔只换标题", T("RP_FONT.apply('maobi')") === "maobi" && rootStyle["--serif"].includes("Ma Shan Zheng") && rootStyle["--sans"].includes("-apple-system"));
   t("非法字体回退默认", T("RP_FONT.apply('nope')") === "default");
+  /* 壁纸跟随主题（2026-10-25）：每套主题带 wp，渐变 id 必须在 WP_GRADIENTS 里 */
+  t("八套主题都带壁纸", T("RP_THEME.THEMES.every(x=>x.wp&&x.wp.kind)"));
+  t("渐变壁纸id都可查", T("RP_THEME.THEMES.filter(x=>x.wp.kind==='gradient').every(x=>!!RP_THEME.WP_GRADIENTS[x.wp.id])"));
+  t("墨夜壁纸auto不介入", T("RP_THEME.def('moye').wp.kind") === "auto");
+  t("背景来源默认跟随主题", T("RP_THEME.getBgMode()") === "theme");
+  T("RP_THEME.apply('songyan')");
+  t("松烟生效壁纸是黛青渐变", T("RP_THEME.effectiveWp().kind") === "gradient" && T("RP_THEME.effectiveWp().id") === "daiqing");
+  t("自定义来源生效为上传图", T("RP_THEME.setBgMode('custom')") === "custom" && T("RP_THEME.effectiveWp().kind") === "upload");
+  t("切内置主题重置来源为跟随主题", T("RP_THEME.apply('xuanzhi')") === "xuanzhi" && T("RP_THEME.getBgMode()") === "theme"
+    && T("RP_THEME.effectiveWp().id") === "paper");
+  T("RP_THEME.setBgMode('custom')");
+  t("keepBg回放不重置来源", T("RP_THEME.apply('xuanzhi', true)") === "xuanzhi" && T("RP_THEME.getBgMode()") === "custom");
+  /* 自定义主题：命名保存（色板基底+壁纸+字体）→ 选用 → 删除 */
+  const entry = T("RP_THEME.saveCustom('我的宣纸', {base:'xuanzhi', wp:{kind:'upload'}, font:'wenkai'})");
+  t("自定义主题入库", !!entry.id && T("RP_THEME.listCustom().length") === 1);
+  t("自定义主题可选用", T("RP_THEME.apply(RP_THEME.listCustom()[0].id)") === entry.id && T("RP_THEME.get()") === entry.id);
+  t("自定义主题写基底变量", rootStyle["--bg"] === "#f6f1e3");
+  t("自定义主题带回字体", rootStyle["--serif"].includes("LXGW WenKai"));
+  t("自定义主题壁纸是自定义图", T("RP_THEME.effectiveWp().kind") === "upload" && T("RP_THEME.wallpaperLabel(RP_THEME.effectiveWp())") === "自定义图");
+  t("自定义主题可删除", T("RP_THEME.removeCustom(RP_THEME.listCustom()[0].id).length") === 0 && T("RP_THEME.get()") === "moye");
 })();
 
 /* ---------- 每日签到 ---------- */

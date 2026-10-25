@@ -55,10 +55,51 @@ const card = t=>`
 <div class="dots"><span class="dot" style="background:${t.vars["--bg"]}"></span><span class="dot" style="background:${t.vars["--gold"]}"></span><span class="dot" style="background:${t.vars["--ink"]}"></span></div>
 <div class="tname">${esc(t.name)}</div><div class="tdesc">${esc(t.desc)}</div></div>`;
 const dark = RP_THEME.THEMES.filter(t=>!t.light), light = RP_THEME.THEMES.filter(t=>t.light);
-return `<div class="themesub">夜间</div><div class="themerow">` + dark.map(card).join("") + `</div>`
+let h = `<div class="themesub">夜间</div><div class="themerow">` + dark.map(card).join("") + `</div>`
 + `<div class="themesub">日间</div><div class="themerow">` + light.map(card).join("") + `</div>`;
+/* 我的主题：用户命名的自定义主题（色板基底 + 壁纸 + 字体快照） */
+const customs = RP_THEME.listCustom ? RP_THEME.listCustom() : [];
+if(customs.length){
+  const ccard = c=>{
+    const b = RP_THEME.def(c.base);
+    return `<div class="themecard${cur===c.id?" on":""}" onclick="setThemeUI('${jq(c.id)}')">
+<div class="dots"><span class="dot" style="background:${b.vars["--bg"]}"></span><span class="dot" style="background:${b.vars["--gold"]}"></span><span class="dot" style="background:${b.vars["--ink"]}"></span></div>
+<div class="tname">${esc(c.name)}<span style="float:right;color:var(--ink-faint);padding:0 2px" onclick="event.stopPropagation();delCustomThemeUI('${jq(c.id)}')">✕</span></div>
+<div class="tdesc">自定义 · ${esc(b.name)}色板 · 壁纸：${esc(RP_THEME.wallpaperLabel(c.wp))}</div></div>`;
+  };
+  h += `<div class="themesub">我的主题</div><div class="themerow">` + customs.map(ccard).join("") + `</div>`;
+}
+h += `<div class="btnrow" style="margin-top:10px"><button class="btn ghost" onclick="saveCustomThemeUI()">＋ 把当前外观存为主题</button></div>
+<div class="kv" style="margin-top:6px">把现在的色板、壁纸（跟随主题或你的自定义图）和字体一起命名保存，以后一键切回。</div>`;
+return h;
 }catch(e){ return ""; }
 }
+/* 保存当前外观为自定义主题：快照 = 基底色板 + 当前生效壁纸 + 当前字体组 */
+window.saveCustomThemeUI = async ()=>{
+try{
+if(typeof RP_THEME === "undefined" || typeof uiPrompt === "undefined") return;
+const name = await uiPrompt("存为自定义主题", "给这套外观起个名字：", "");
+if(name === null) return;
+const nm = String(name || "").trim();
+if(!nm){ alert("名字不能为空"); return; }
+const curDef = RP_THEME.def(RP_THEME.get());
+const snap = { base: curDef.custom ? curDef.base : curDef.id,
+               wp: RP_THEME.effectiveWp(),
+               font: RP_THEME.getFont ? RP_THEME.getFont() : "" };
+RP_THEME.saveCustom(nm, snap);
+showSettings();
+}catch(e){}
+};
+window.delCustomThemeUI = async (id)=>{
+try{
+if(typeof RP_THEME === "undefined") return;
+if(typeof uiConfirm !== "undefined" && !(await uiConfirm("删除这个自定义主题？", ""))) return;
+const wasActive = RP_THEME.get() === id;
+RP_THEME.removeCustom(id);
+if(wasActive) RP_THEME.apply("moye");
+showSettings();
+}catch(e){}
+};
 /* 字体组切换（内置开源字体，rp/theme.js RP_FONT；预览用该组标题字体渲染） */
 window.setFontUI = (id)=>{
 try{ if(typeof RP_FONT !== "undefined") RP_FONT.apply(id); }catch(e){}

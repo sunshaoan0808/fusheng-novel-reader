@@ -196,29 +196,53 @@ try{ v = JSON.parse(v); }catch(e){ /* 老版本存的是纯 dataURL 字符串 */
 WALL_MEM[k] = v || null;
 return getWallOpts();
 }
-/* 选背景优先级：单聊上传壁纸 > 全局壁纸 > 角色卡/穿越世界自带 bg > 内置默认图；
-   图片加载失败回退渐变，绝不破图。
+/* 选背景（2026-10-25 壁纸跟随主题）：单聊上传 > 背景来源层 > 角色卡/穿越自带 bg > 内置默认图。
+   背景来源层由 RP_THEME.effectiveWp() 决定：自定义主题的壁纸 / 自定义模式的全局上传图 /
+   当前主题自带壁纸（渐变或内置图；auto 则不介入，落到卡背景）。图片加载失败回退，绝不破图。
    预留 setChatBg(url)：以后世界状态/剧情推进可按场景切换背景 */
-function pickChatBgURL(){
-try{
-const o = getWallOpts();
-if(o && o.url) return o.url;
+function resolveChatBg(){
+const own = getWallOpts();
+if(own && own.url) return {type:"img", url:own.url, opts:own, upload:true};
+let spec = null;
+try{ if(typeof RP_THEME !== "undefined") spec = RP_THEME.effectiveWp(); }catch(e){}
+if(!spec) spec = {kind:"upload"}; /* 无主题系统的环境（老页/测试）保持老行为：全局图即默认 */
+if(spec && spec.kind === "upload"){
 const g = getGlobalWallOpts();
-if(g && g.url) return g.url;
+if(g && g.url) return {type:"img", url:g.url, opts:g, upload:true};
+spec = null; /* 自定义图已删除：回落当前主题壁纸 */
+if(!spec){ try{ const t = RP_THEME.def(RP_THEME.get()); spec = t.custom ? {kind:"auto"} : (t.wp || {kind:"auto"}); }catch(e){ spec = {kind:"auto"}; } }
+}
+if(spec && spec.kind === "gradient") return {type:"gradient", id:spec.id};
+if(spec && spec.kind === "image" && spec.url) return {type:"img", url:spec.url, opts:null};
+try{
 if(CHAT.mode === "traverse" && typeof RP_TRAVERSE !== "undefined"){
-const trav = RP_TRAVERSE.get(CHAT.travId); if(trav && trav.bg) return trav.bg;
+const trav = RP_TRAVERSE.get(CHAT.travId); if(trav && trav.bg) return {type:"img", url:trav.bg, opts:null};
 }else if(CHAT.name && typeof allChars === "function"){
 const c = (allChars() || []).find(x => x.runId === CHAT.runId && x.name === CHAT.name);
-if(c && c.bg) return c.bg;
+if(c && c.bg) return {type:"img", url:c.bg, opts:null};
 }
 }catch(e){}
-return "bg/chat_night.jpg";
+return {type:"img", url:"bg/chat_night.jpg", opts:null};
+}
+function pickChatBgURL(){
+const r = resolveChatBg();
+return r.type === "img" ? r.url : "";
 }
 function paintChatBg(){
 const layer = document.getElementById("chatbglayer");
 if(!layer) return;
-const url = pickChatBgURL();
-const filter = wallFilterCSS(getWallOpts() || getGlobalWallOpts());
+const r = resolveChatBg();
+window.__BG_FROM_UPLOAD__ = !!r.upload; /* 立绘叠加层据此判断：最终背景是用户图就不叠 */
+if(r.type === "gradient"){
+let css = "";
+try{ css = RP_THEME.WP_GRADIENTS[r.id].css; }catch(e){}
+layer.style.backgroundImage = css || "";
+layer.style.filter = "";
+clearBarColors();
+return;
+}
+const url = r.url;
+const filter = wallFilterCSS(r.opts || {});
 const probe = new Image();
 probe.onload = ()=>{ layer.style.backgroundImage = `url("${url}")`; layer.style.filter = filter; sampleBarColors(probe); };
 probe.onerror = ()=>{ layer.style.backgroundImage = ""; layer.style.filter = ""; clearBarColors(); };
@@ -266,7 +290,21 @@ document.body.classList.remove("chatmode","immersive"); /* P2-1: 切页同时清
 titleEl.innerHTML = S.title; subEl.textContent = S.sub;
 const o = S.get(), cur = o && o.url;
 const dim = o ? o.dim : 0, blur = o ? o.blur : 0;
+/* 全局编辑器多一张「背景来源」卡：跟随主题 / 自定义壁纸 二选一（单聊编辑器不显示，单聊图永远最优先） */
+let srcCard = "";
+if(_wallStore === "global" && typeof RP_THEME !== "undefined"){
+try{
+const eff = RP_THEME.effectiveWp();
+const t = RP_THEME.def(RP_THEME.get());
+const isCustom = eff && eff.kind === "upload";
+const srcTxt = isCustom ? "自定义壁纸（你上传的图）" : ("跟随主题「" + t.name + "」 · " + RP_THEME.wallpaperLabel(eff));
+srcCard = `<div class="card"><div class="kv">背景来源：<b>${escH(srcTxt)}</b></div>
+<div class="btnrow" style="margin-top:8px"><button class="btn ${isCustom ? "ghost" : ""}" onclick="bgSrcUI('theme')">跟随主题</button>${cur ? `<button class="btn ${isCustom ? "" : "ghost"}" onclick="bgSrcUI('custom')">使用自定义壁纸</button>` : ""}</div>
+<div class="hint">切主题时壁纸跟着主题换；自定义壁纸只有被选用时才压过主题。</div></div>`;
+}catch(e){}
+}
 view.innerHTML = `<button class="back" onclick="__backAction()">${icon("back")} 返回</button>
+${srcCard}
 <div class="card" style="text-align:center">
 ${cur ? `<img id="wall_preview" src="${cur}" style="max-width:100%;border-radius:8px;filter:${wallFilterCSS(o)}" alt="当前壁纸">`
       : `<div style="padding:24px;color:var(--ink-faint)">当前使用默认壁纸<br><span style="font-size:calc(12px * var(--fs))">上传后可调暗度和模糊</span></div>`}
@@ -358,6 +396,8 @@ const o = Object.assign({url:url, dim:0, blur:0}, opts || {});
 o.dim = Math.min(70, +o.dim || 0); o.blur = Math.min(12, +o.blur || 0);
 GLOBAL_WALL = o;
 try{ if(typeof RP_STORE!=="undefined") await RP_STORE.setItemAsync(GLOBAL_WALL_KEY, JSON.stringify(o)); }catch(e){}
+/* 保存全局图 = 选用自定义壁纸（唯一写入路径在此翻来源，编辑器不再单独处理） */
+try{ if(typeof RP_THEME!=="undefined") RP_THEME.setBgMode("custom"); }catch(e){}
 };
 window.clearGlobalWallpaper = async ()=>{
 GLOBAL_WALL = null;
@@ -371,13 +411,19 @@ chat:{ title:"🖼️ 聊天壁纸", sub:"只换这个聊天的背景，存在�
   clear:async ()=>{ const k = chatHistKey(); WALL_MEM[k] = null;
     try{ if(typeof RP_STORE!=="undefined") await RP_STORE.removeItemAsync(wallStoreKey()); }catch(e){} },
   back:()=>showChat() },
-global:{ title:"🖼️ 全局壁纸", sub:"所有聊天的默认背景，存在本机",
-  hint:"图片会压缩到最长边 1080px 后存到本机。所有聊天默认都用它；某个聊天单独设过壁纸的，仍用自己的那张。",
+global:{ title:"🖼️ 全局壁纸", sub:"你上传的自定义壁纸，选用后才是所有聊天的默认背景",
+  hint:"图片会压缩到最长边 1080px 后存到本机。聊天背景默认跟随主题；上传并选用这张自定义壁纸后，它才压过主题（某个聊天单独设过壁纸的，仍用自己的那张）。",
   get:()=>getGlobalWallOpts(), save:(u,o)=>saveGlobalWallpaper(u,o),
   clear:()=>clearGlobalWallpaper(), back:()=>setNav("settings") }
 };
 let _wallStore = "chat";
 window.globalWallpaperEditor = ()=>wallpaperEditor("global");
+/* 背景来源切换：跟随主题 / 自定义壁纸（全局上传图） */
+window.bgSrcUI = (m)=>{
+try{ if(typeof RP_THEME !== "undefined") RP_THEME.setBgMode(m); }catch(e){}
+try{ if(typeof CHAT !== "undefined" && CHAT && CHAT.open) paintChatBg(); }catch(e){}
+wallpaperEditor("global");
+};
 /* 浮生暖系 (2026-10-15): soul 卡单聊时注入暖系角色头卡 + 快捷 chips */
 function applySoulWarm(){
   try{

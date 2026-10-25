@@ -113,12 +113,13 @@ function chatPortraitWho(){
   }
   return CHAT.name || null;
 }
-/* 用户自己设过壁纸（单聊或全局）就尊重壁纸，不再叠立绘；否则在山水底图上叠一层淡立绘 */
+/* 最终背景是用户上传图（单聊或自定义全局）就尊重壁纸，不再叠立绘；主题壁纸/卡图则照旧叠。
+   判定用 paintChatBg 落的 __BG_FROM_UPLOAD__ 标记：全局图存着但没被选用（跟随主题时）不算。 */
 function paintChatPortrait(){
   const el = document.getElementById("chatbgchar");
   if(!el) return;
   let userWall = false;
-  try{ const o = getWallOpts(), g = getGlobalWallOpts(); userWall = !!((o && o.url) || (g && g.url)); }catch(e){}
+  try{ const o = getWallOpts(); userWall = !!((o && o.url) || window.__BG_FROM_UPLOAD__); }catch(e){}
   const who = userWall ? null : chatPortraitWho();
   const p = who ? charPortrait(CHAT.runId, who) : null;
   const url = p ? p.url : "";

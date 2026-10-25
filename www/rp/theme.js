@@ -6,7 +6,7 @@ var RP_THEME = (function(){
 "use strict";
 var KEY = "nd_theme_v1";
 var THEMES = [
-  {id:"moye", name:"墨夜", desc:"默认 · 暗夜底 + 琥珀金，沉浸的原点",
+  {id:"moye", name:"墨夜", wp:{kind:"auto"}, desc:"默认 · 暗夜底 + 琥珀金，沉浸的原点",
    vars:{
     "--bg":"#12100d","--bg2":"#171411","--card":"#1d1915","--card2":"#23201b",
     "--line":"#2d2720","--line-soft":"#242019",
@@ -16,7 +16,7 @@ var THEMES = [
     "--topbar-bg":"#12100d","--glow":"#1e1913","--nav-bg":"rgba(23,20,17,.92)",
     "--shadow":"0 6px 24px rgba(0,0,0,.45)","--shadow-s":"0 2px 10px rgba(0,0,0,.28)"
    }},
-  {id:"songyan", name:"松烟", desc:"松烟入墨 · 青黑底 + 石青，冷峻书卷气",
+  {id:"songyan", name:"松烟", wp:{kind:"gradient", id:"daiqing"}, desc:"松烟入墨 · 青黑底 + 石青，冷峻书卷气",
    vars:{
     "--bg":"#0e1418","--bg2":"#121a20","--card":"#162026","--card2":"#1b2830",
     "--line":"#28363f","--line-soft":"#202b33",
@@ -26,7 +26,7 @@ var THEMES = [
     "--topbar-bg":"#0e1418","--glow":"#14202a","--nav-bg":"rgba(18,26,32,.92)",
     "--shadow":"0 6px 24px rgba(0,0,0,.5)","--shadow-s":"0 2px 10px rgba(0,0,0,.32)"
    }},
-  {id:"jiangxia", name:"绛霞", desc:"暮色绛紫 · 黛紫底 + 绛红，浓烈戏剧感",
+  {id:"jiangxia", name:"绛霞", wp:{kind:"gradient", id:"zitan"}, desc:"暮色绛紫 · 黛紫底 + 绛红，浓烈戏剧感",
    vars:{
     "--bg":"#161114","--bg2":"#1b1418","--card":"#211920","--card2":"#271e26",
     "--line":"#392b33","--line-soft":"#2e232b",
@@ -36,7 +36,7 @@ var THEMES = [
     "--topbar-bg":"#161114","--glow":"#241a20","--nav-bg":"rgba(27,20,24,.92)",
     "--shadow":"0 6px 24px rgba(0,0,0,.5)","--shadow-s":"0 2px 10px rgba(0,0,0,.32)"
    }},
-  {id:"xuanzhi", name:"宣纸", light:true, desc:"日间 · 米纸底 + 墨字，白天读长文不刺眼",
+  {id:"xuanzhi", name:"宣纸", light:true, wp:{kind:"gradient", id:"paper"}, desc:"日间 · 米纸底 + 墨字，白天读长文不刺眼",
    vars:{
     "--bg":"#f6f1e3","--bg2":"#f0e8d5","--card":"#fffaf0","--card2":"#faf3e2",
     "--line":"#ded2b8","--line-soft":"#e9e0c9",
@@ -46,7 +46,7 @@ var THEMES = [
     "--topbar-bg":"#f6f1e3","--glow":"#fff6da","--nav-bg":"rgba(250,245,232,.94)",
     "--shadow":"0 6px 24px rgba(122,100,52,.16)","--shadow-s":"0 2px 10px rgba(122,100,52,.12)"
    }},
-  {id:"qingci", name:"青瓷", light:true, desc:"日间 · 淡青釉面 + 深青，清润安静",
+  {id:"qingci", name:"青瓷", light:true, wp:{kind:"gradient", id:"celadon"}, desc:"日间 · 淡青釉面 + 深青，清润安静",
    vars:{
     "--bg":"#ebf1ea","--bg2":"#e2ebdf","--card":"#fbfdf9","--card2":"#f3f7f1",
     "--line":"#ccd9c9","--line-soft":"#dde7da",
@@ -56,7 +56,7 @@ var THEMES = [
     "--topbar-bg":"#ebf1ea","--glow":"#f4faf0","--nav-bg":"rgba(243,248,241,.94)",
     "--shadow":"0 6px 24px rgba(70,100,80,.16)","--shadow-s":"0 2px 10px rgba(70,100,80,.12)"
    }},
-  {id:"tianqing", name:"天青", light:true, desc:"日间 · 雨过天青 + 黛蓝，通透清凉",
+  {id:"tianqing", name:"天青", light:true, wp:{kind:"gradient", id:"skyqing"}, desc:"日间 · 雨过天青 + 黛蓝，通透清凉",
    vars:{
     "--bg":"#eaf0f4","--bg2":"#dfe9ef","--card":"#fcfeff","--card2":"#f2f7fa",
     "--line":"#c9d8e1","--line-soft":"#dae5ec",
@@ -66,7 +66,7 @@ var THEMES = [
     "--topbar-bg":"#eaf0f4","--glow":"#f2f9ff","--nav-bg":"rgba(241,247,250,.94)",
     "--shadow":"0 6px 24px rgba(60,90,110,.16)","--shadow-s":"0 2px 10px rgba(60,90,110,.12)"
    }},
-  {id:"taoyao", name:"桃夭", light:true, desc:"日间 · 淡桃粉 + 绛色，温柔明媚",
+  {id:"taoyao", name:"桃夭", light:true, wp:{kind:"gradient", id:"taohong"}, desc:"日间 · 淡桃粉 + 绛色，温柔明媚",
    vars:{
     "--bg":"#faf0ea","--bg2":"#f5e4da","--card":"#fffaf6","--card2":"#fdf2ec",
     "--line":"#ecd3c6","--line-soft":"#f3e0d4",
@@ -76,7 +76,7 @@ var THEMES = [
     "--topbar-bg":"#faf0ea","--glow":"#fff3e4","--nav-bg":"rgba(252,244,238,.94)",
     "--shadow":"0 6px 24px rgba(140,90,70,.16)","--shadow-s":"0 2px 10px rgba(140,90,70,.12)"
    }},
-  {id:"qiuxiang", name:"秋香", light:true, desc:"日间 · 明人秋香色 + 橄榄金，古雅暖意",
+  {id:"qiuxiang", name:"秋香", light:true, wp:{kind:"gradient", id:"qiuxiangwp"}, desc:"日间 · 明人秋香色 + 橄榄金，古雅暖意",
    vars:{
     "--bg":"#f3f0da","--bg2":"#ece8c8","--card":"#fdfbee","--card2":"#f8f5e2",
     "--line":"#ddd8ae","--line-soft":"#e7e3c2",
@@ -87,24 +87,97 @@ var THEMES = [
     "--shadow":"0 6px 24px rgba(110,105,55,.16)","--shadow-s":"0 2px 10px rgba(110,105,55,.12)"
    }},
 ];
+/* ============ 主题壁纸（2026-10-25 用户拍板：壁纸跟随主题） ============
+ * 每套主题带自己的壁纸 wp：auto=不介入（卡背景/默认山水图照旧）、gradient=渐变、image=内置图。
+ * 用户上传的图不再默认压过一切：它只是「自定义」背景来源，选用后才生效（见 getBgMode）。
+ * 渐变表与 style.css 里 body[data-wallpaper] 的深色四款同值，另加日间浅色五款。 */
+var WP_GRADIENTS = {
+  xuanmo:    {name:"玄墨",   css:"linear-gradient(160deg,#14161c 0%,#1b1e28 45%,#12141a 100%)"},
+  daiqing:   {name:"黛青",   css:"linear-gradient(160deg,#12211f 0%,#16302b 50%,#101c1a 100%)"},
+  zhejin:    {name:"赭金",   css:"linear-gradient(160deg,#241b10 0%,#2e2113 50%,#1d150c 100%)"},
+  zitan:     {name:"紫檀",   css:"linear-gradient(160deg,#221418 0%,#2c1a22 50%,#1a1114 100%)"},
+  paper:     {name:"宣纸纹", css:"linear-gradient(160deg,#f7f2e4 0%,#efe6cf 55%,#f3ecd9 100%)"},
+  celadon:   {name:"青瓷釉", css:"linear-gradient(160deg,#edf3ec 0%,#dfeadb 55%,#e7efe3 100%)"},
+  skyqing:   {name:"天青冻", css:"linear-gradient(160deg,#ecf2f6 0%,#d9e6ee 55%,#e4edf3 100%)"},
+  taohong:   {name:"桃红雾", css:"linear-gradient(160deg,#fbf1ec 0%,#f6ded2 55%,#f9e9e1 100%)"},
+  qiuxiangwp:{name:"秋香雾", css:"linear-gradient(160deg,#f5f2dc 0%,#eae4ba 55%,#f1edd2 100%)"}
+};
+function wallpaperLabel(spec){
+  if(!spec || spec.kind === "auto") return "跟随角色卡";
+  if(spec.kind === "upload") return "自定义图";
+  if(spec.kind === "image") return "内置图";
+  if(spec.kind === "gradient") return (WP_GRADIENTS[spec.id] || {}).name || "渐变";
+  return "";
+}
+/* 背景来源：theme=跟随当前主题壁纸；custom=用全局上传图（自定义壁纸） */
+var BGKEY = "nd_bg_src_v1";
+function getBgMode(){
+  try{ return localStorage.getItem(BGKEY) === "custom" ? "custom" : "theme"; }catch(e){ return "theme"; }
+}
+function setBgMode(m){
+  try{ localStorage.setItem(BGKEY, m === "custom" ? "custom" : "theme"); }catch(e){}
+  return getBgMode();
+}
+/* ============ 自定义主题：用户命名的「色板基底 + 壁纸 + 字体」快照 ============ */
+var CKEY = "nd_custom_themes_v1";
+function listCustom(){
+  try{
+    var arr = JSON.parse(localStorage.getItem(CKEY) || "[]");
+    return Array.isArray(arr) ? arr.filter(function(c){ return c && c.id && c.name; }) : [];
+  }catch(e){ return []; }
+}
+function customById(id){
+  var arr = listCustom();
+  for(var i = 0; i < arr.length; i++) if(arr[i].id === id) return arr[i];
+  return null;
+}
+function saveCustom(name, snap){
+  var arr = listCustom();
+  var entry = {id:"ct" + Date.now().toString(36), name:String(name || "我的主题"),
+    base:(snap && snap.base) || "moye", wp:(snap && snap.wp) || {kind:"auto"},
+    font:(snap && snap.font) || "", ts:Date.now()};
+  arr.unshift(entry);
+  try{ localStorage.setItem(CKEY, JSON.stringify(arr.slice(0, 24))); }catch(e){}
+  return entry;
+}
+function removeCustom(id){
+  var arr = listCustom().filter(function(c){ return c.id !== id; });
+  try{ localStorage.setItem(CKEY, JSON.stringify(arr)); }catch(e){}
+  return arr;
+}
 function get(){
   try{
     var id = localStorage.getItem(KEY);
-    if(id && THEMES.some(function(t){ return t.id === id; })) return id;
+    if(id && (THEMES.some(function(t){ return t.id === id; }) || customById(id))) return id;
   }catch(e){}
   return "moye";
 }
 function def(id){
   for(var i = 0; i < THEMES.length; i++) if(THEMES[i].id === id) return THEMES[i];
+  var c = customById(id);
+  if(c){
+    var b = def(c.base);
+    return {id:c.id, name:c.name, desc:"自定义主题", light:!!b.light, vars:b.vars,
+            wp:c.wp || {kind:"auto"}, font:c.font || "", custom:true, base:b.id};
+  }
   return THEMES[0];
 }
-function apply(id){
-  id = def(id).id;
+/* 当前实际生效的壁纸规格：自定义主题用自己的；内置主题看背景来源 */
+function effectiveWp(){
+  var d = def(get());
+  if(d.custom) return d.wp || {kind:"auto"};
+  if(getBgMode() === "custom") return {kind:"upload"};
+  return d.wp || {kind:"auto"};
+}
+function apply(id, keepBg){
+  var d = def(id); id = d.id;
   var root = document.documentElement;
-  root.setAttribute("data-theme", id);
-  var vars = def(id).vars, k;
+  root.setAttribute("data-theme", d.custom ? d.base : id);
+  var vars = d.vars, k;
   for(k in vars){ if(Object.prototype.hasOwnProperty.call(vars, k)) root.style.setProperty(k, vars[k]); }
   try{ localStorage.setItem(KEY, id); }catch(e){}
+  if(d.custom){ if(d.font){ try{ applyFont(d.font); }catch(e){} } }
+  else if(!keepBg) setBgMode("theme"); /* 用户主动切内置主题 = 壁纸跟随主题；init 回放不重置来源 */
   return id;
 }
 /* ============ 字体组（内置开源字体，@font-face 在 style.css） ============
@@ -146,11 +219,14 @@ function applyFont(id){
   return f.id;
 }
 function init(){
-  /* 尽早执行，避免主题闪烁：脚本在 head 引入 */
-  try{ apply(get()); }catch(e){}
+  /* 尽早执行，避免主题闪烁：脚本在 head 引入。keepBg=true：回放持久化状态，不重置背景来源 */
+  try{ apply(get(), true); }catch(e){}
   try{ applyFont(getFont()); }catch(e){}
 }
 return {THEMES: THEMES, get: get, def: def, apply: apply, init: init,
+        WP_GRADIENTS: WP_GRADIENTS, wallpaperLabel: wallpaperLabel,
+        getBgMode: getBgMode, setBgMode: setBgMode, effectiveWp: effectiveWp,
+        listCustom: listCustom, saveCustom: saveCustom, removeCustom: removeCustom,
         FONTSETS: FONTSETS, getFont: getFont, fontDef: fontDef, applyFont: applyFont};
 })();
 var RP_FONT = {SETS: RP_THEME.FONTSETS, get: RP_THEME.getFont, def: RP_THEME.fontDef, apply: RP_THEME.applyFont};
