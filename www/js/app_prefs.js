@@ -90,6 +90,31 @@ RP_THEME.saveCustom(nm, snap);
 showSettings();
 }catch(e){}
 };
+/* ---------- 动效（预设组 × 速度档，RP_MOTION） ---------- */
+function motionCardsHTML(){
+try{
+if(typeof RP_MOTION === "undefined") return "";
+const cur = RP_MOTION.get();
+const pcard = p=>`<div class="themecard${cur.preset===p.id?" on":""}" onclick="setMotionUI('${jq(p.id)}')">
+<div class="tname">${esc(p.name)}</div><div class="tdesc">${esc(p.desc)}</div></div>`;
+const sbtn = s=>`<button class="btn ${cur.speed===s.id?"":"ghost"}" onclick="setMotionSpeedUI('${jq(s.id)}')">${esc(s.name)}</button>`;
+return `<div class="themesub">风格</div><div class="themerow">` + RP_MOTION.PRESETS.map(pcard).join("") + `</div>`
++ `<div class="themesub">速度</div><div class="btnrow">` + RP_MOTION.SPEEDS.map(sbtn).join("") + `</div>`
++ `<div class="kv" style="margin-top:6px">速度对全部动效统一生效（页面切换、消息浮现、抽屉滑出、背景呼吸）。</div>`;
+}catch(e){ return ""; }
+}
+function refreshMotionBox(){
+const b = document.getElementById("motionbox");
+if(b) b.innerHTML = motionCardsHTML();
+}
+window.setMotionUI = (id)=>{
+try{ if(typeof RP_MOTION !== "undefined") RP_MOTION.setPreset(id); }catch(e){}
+refreshMotionBox();
+};
+window.setMotionSpeedUI = (id)=>{
+try{ if(typeof RP_MOTION !== "undefined") RP_MOTION.setSpeed(id); }catch(e){}
+refreshMotionBox();
+};
 window.delCustomThemeUI = async (id)=>{
 try{
 if(typeof RP_THEME === "undefined") return;

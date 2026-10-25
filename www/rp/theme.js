@@ -230,3 +230,55 @@ return {THEMES: THEMES, get: get, def: def, apply: apply, init: init,
         FONTSETS: FONTSETS, getFont: getFont, fontDef: fontDef, applyFont: applyFont};
 })();
 var RP_FONT = {SETS: RP_THEME.FONTSETS, get: RP_THEME.getFont, def: RP_THEME.fontDef, apply: RP_THEME.applyFont};
+
+/* ============ 动效（2026-10-25 用户要求：几组可选 + 可调速） ============
+ * 预设组决定「哪些动效在跑」，速度档决定「跑多快」：CSS 侧关键动画/过渡时长
+ * 统一写成 calc(时长 * var(--anim-mult))，JS 只切 html[data-motion] 与 --anim-mult。
+ * 本脚本在 head 执行，模块加载即应用持久化状态，进页无动效闪烁。 */
+var RP_MOTION = (function(){
+"use strict";
+var KEY = "nd_motion_v1";
+var PRESETS = [
+  {id:"still", name:"静止", desc:"关掉全部动效，页面切换瞬时完成"},
+  {id:"soft",  name:"柔和", desc:"默认 · 页面轻淡入、最新消息浮现、背景慢呼吸"},
+  {id:"fluid", name:"灵动", desc:"进聊天时最近消息依次浮现，卡片错落入场"},
+  {id:"vivid", name:"绚烂", desc:"灵动之上 · 页面缩放淡入、背景呼吸更明显、消息带轻缩放"}
+];
+var SPEEDS = [
+  {id:"slow", name:"慢",   mult:1.6},
+  {id:"std",  name:"标准", mult:1},
+  {id:"fast", name:"快",   mult:0.6},
+  {id:"turbo",name:"极快", mult:0.3}
+];
+function presetDef(id){ for(var i = 0; i < PRESETS.length; i++) if(PRESETS[i].id === id) return PRESETS[i]; return PRESETS[1]; }
+function speedDef(id){ for(var i = 0; i < SPEEDS.length; i++) if(SPEEDS[i].id === id) return SPEEDS[i]; return SPEEDS[1]; }
+function load(){
+  try{
+    var o = JSON.parse(localStorage.getItem(KEY) || "null");
+    if(o && presetDef(o.preset).id === o.preset) return {preset:o.preset, speed:speedDef(o.speed).id};
+  }catch(e){}
+  /* 没存过：系统要求减少动态时默认静止，否则柔和 */
+  var still = false;
+  try{ still = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches); }catch(e){}
+  return {preset: still ? "still" : "soft", speed:"std"};
+}
+function apply(o, persist){
+  var p = presetDef(o && o.preset), s = speedDef(o && o.speed);
+  try{
+    var root = document.documentElement;
+    if(root){
+      root.setAttribute("data-motion", p.id);
+      if(root.dataset) root.dataset.motion = p.id;
+      if(root.style && root.style.setProperty) root.style.setProperty("--anim-mult", String(s.mult));
+    }
+  }catch(e){}
+  if(persist){ try{ localStorage.setItem(KEY, JSON.stringify({preset:p.id, speed:s.id})); }catch(e){} }
+  return {preset:p.id, speed:s.id};
+}
+function get(){ return load(); }
+function setPreset(id){ var o = load(); o.preset = presetDef(id).id; return apply(o, true); }
+function setSpeed(id){ var o = load(); o.speed = speedDef(id).id; return apply(o, true); }
+try{ apply(load(), false); }catch(e){}
+return {PRESETS: PRESETS, SPEEDS: SPEEDS, get: get, apply: apply,
+        setPreset: setPreset, setSpeed: setSpeed, presetDef: presetDef, speedDef: speedDef};
+})();

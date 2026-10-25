@@ -236,6 +236,12 @@ try{
 }catch(e){}
 /* 初始：隐藏，进入全屏沉浸 */
 setBars(false);
+/* 动效预设（灵动/绚烂）：进场窗口内给消息挂级联浮现，1.6s 后摘除——
+   只在进场时播一次，之后发消息/重渲染不重播（CSS 侧按 .entering 命中） */
+try{
+  log.classList.add("entering");
+  setTimeout(()=>{ try{ log.classList.remove("entering"); }catch(e){} }, 1600);
+}catch(e){}
 /* 兼容旧测试钩子：__setHeadHidden(true)=隐藏，(false)=显示 */
 window.__setHeadHidden = (hide)=>setBars(!hide);
 /* P0-1 首屏死路：进入聊天三栏全收起，输入框/顶栏都不在屏上，唯一的恢复入口

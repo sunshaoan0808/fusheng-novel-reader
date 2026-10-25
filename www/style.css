@@ -305,7 +305,7 @@ body{
    图片加载等场景的锚定 */
 #chatlog.noanchor{overflow-anchor:none;}
 .msg{max-width:100%;}
-.msg:last-child{animation:msgin .28s ease;}
+.msg:last-child{animation:msgin calc(.28s * var(--anim-mult,1)) ease;}
 @keyframes msgin{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
 @media (prefers-reduced-motion:reduce){.msg:last-child{animation:none;}}
 .msg.me{align-self:flex-end;}
@@ -402,7 +402,7 @@ body.chatmode #app{ background:var(--bg); }
   /* 沉浸式显隐：布局变化(marginTop)由 JS 即时切换+同步补偿 scrollTop；
      只给 transform 加 .3s 过渡做滑入滑出，纯视觉、不碰布局，所以补偿精确、
      弱环境下也不闪烁（2026-10-01 曾用 rAF 逐帧补偿布局过渡，实测闪烁，已废弃） */
-  transition:transform .3s ease;
+  transition:transform calc(.3s * var(--anim-mult,1)) ease;
 }
 
 /* P0-1 沉浸态首屏引导：进聊天三栏全收起，屏幕上什么都没有。
@@ -442,13 +442,13 @@ body.chatmode #app{ background:var(--bg); }
 /* 右抽屉 */
 .scrim{
   position:fixed; inset:0; z-index:var(--z-overlay); background:rgba(0,0,0,.55);
-  opacity:0; pointer-events:none; transition:opacity .25s;
+  opacity:0; pointer-events:none; transition:opacity calc(.25s * var(--anim-mult,1));
 }
 .scrim.on{ opacity:1; pointer-events:auto; }
 .drawer{
   position:fixed; top:0; right:0; bottom:0; z-index:var(--z-panel); width:min(300px, 82vw);
   background:var(--bg2); border-left:1px solid var(--line);
-  transform:translateX(102%); transition:transform .28s ease;
+  transform:translateX(102%); transition:transform calc(.28s * var(--anim-mult,1)) ease;
   display:flex; flex-direction:column; padding:18px 16px calc(18px + env(safe-area-inset-bottom));
   overflow-y:auto;
 }
@@ -500,7 +500,7 @@ body.chatmode #chatlog{ min-height:0; }
 .chatbg .bglayer{
   position:absolute; inset:-5%;
   background-size:cover; background-position:center 28%; background-repeat:no-repeat;
-  animation:chatbreathe 26s ease-in-out infinite;
+  animation:chatbreathe calc(26s * var(--anim-mult,1)) ease-in-out infinite;
   will-change:transform;
   transition:filter .25s ease;
 }
@@ -562,7 +562,7 @@ body.chatmode .chatbar{
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(212,162,78,.16);
   padding:8px 8px 8px 16px;
-  transition:transform .3s ease;
+  transition:transform calc(.3s * var(--anim-mult,1)) ease;
 }
 /* 浅色壁纸时三栏文字转深色，保证可读（body.bars-light 由 JS 按背景亮度切换） */
 body.chatmode.bars-light .chathead .cname{ color:#2a2013; }
@@ -822,7 +822,7 @@ background:none; border:0; color:var(--ink); font-size:calc(15px * var(--fs)); t
 /* P0-4 新手引导 */
 .onboard{position:fixed; inset:0; z-index:var(--z-modal); background:rgba(8,6,4,.94);
 display:flex; align-items:center; justify-content:center; padding:24px;
-opacity:0; pointer-events:none; transition:opacity .25s;}
+opacity:0; pointer-events:none; transition:opacity calc(.25s * var(--anim-mult,1));}
 .onboard.on{opacity:1; pointer-events:auto;}
 .obcard{width:min(340px, 92vw); background:var(--bg2); border:1px solid var(--line);
 border-radius:18px; padding:28px 24px 20px; text-align:center;}
@@ -1272,18 +1272,18 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder{color:var(
 .menubtn{display:inline-flex; align-items:center; justify-content:center;}
 
 /* ============ 视图进入动效 ============ */
-#view > *:not(.drawer):not(.scrim){animation:viewin .22s ease;}
+#view > *:not(.drawer):not(.scrim){animation:viewin calc(.22s * var(--anim-mult,1)) ease;}
 @keyframes viewin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
 
 /* ============ 角色卡片交错入场 ============ */
-.chargrid .charcard{animation:cardin .3s ease backwards;}
-.chargrid .charcard:nth-child(2){animation-delay:.04s;}
-.chargrid .charcard:nth-child(3){animation-delay:.08s;}
-.chargrid .charcard:nth-child(4){animation-delay:.12s;}
-.chargrid .charcard:nth-child(5){animation-delay:.16s;}
-.chargrid .charcard:nth-child(6){animation-delay:.2s;}
-.chargrid .charcard:nth-child(7){animation-delay:.24s;}
-.chargrid .charcard:nth-child(8){animation-delay:.28s;}
+.chargrid .charcard{animation:cardin calc(.3s * var(--anim-mult,1)) ease backwards;}
+.chargrid .charcard:nth-child(2){animation-delay:calc(.04s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(3){animation-delay:calc(.08s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(4){animation-delay:calc(.12s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(5){animation-delay:calc(.16s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(6){animation-delay:calc(.2s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(7){animation-delay:calc(.24s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(8){animation-delay:calc(.28s * var(--anim-mult,1));}
 @keyframes cardin{from{opacity:0; transform:translateY(12px) scale(.98);} to{opacity:1; transform:none;}}
 
 /* ============ 骨架屏 shimmer ============ */
@@ -1296,8 +1296,8 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder{color:var(
 
 /* ================= 穿越 P0 ================= */
 .travmodes{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
-.travmode{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:var(--r);padding:16px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:transform .12s ease,border-color .12s ease;animation:cardin .45s ease both;position:relative;overflow:hidden;box-shadow:var(--shadow-s)}
-.travmode:nth-child(2){animation-delay:.06s}.travmode:nth-child(3){animation-delay:.12s}.travmode:nth-child(4){animation-delay:.18s}
+.travmode{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:var(--r);padding:16px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:transform .12s ease,border-color .12s ease;animation:cardin calc(.45s * var(--anim-mult,1)) ease both;position:relative;overflow:hidden;box-shadow:var(--shadow-s)}
+.travmode:nth-child(2){animation-delay:calc(.06s * var(--anim-mult,1))}.travmode:nth-child(3){animation-delay:calc(.12s * var(--anim-mult,1))}.travmode:nth-child(4){animation-delay:calc(.18s * var(--anim-mult,1))}
 .travmode .tm-icon{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;
   border-radius:12px;background:rgba(212,162,78,.10);border:1px solid rgba(212,162,78,.25);color:var(--gold-soft);}
 .travmode .tm-name{font-family:var(--serif);font-size:calc(16px * var(--fs));font-weight:600;color:var(--ink);}
@@ -1356,7 +1356,7 @@ body[data-font="kai"] .bubble{font-family:"Kaiti SC","STKaiti","KaiTi","TW-Kai",
 .simbar{display:flex;align-items:center;gap:8px;font-size:calc(12px * var(--fs));color:var(--muted);
   background:var(--barbg-solid, #14110d);border-bottom:1px solid var(--line);padding:6px 12px;cursor:pointer;line-height:1.6;
   flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none; /* 单行横滑：首屏只占一行 */
-  transition:transform .3s ease; /* 跟随顶栏一起滑入滑出，纯视觉过渡 */
+  transition:transform calc(.3s * var(--anim-mult,1)) ease; /* 跟随顶栏一起滑入滑出，纯视觉过渡 */
   position:relative;z-index:var(--z-base); /* 浮于 .chatbg 之上：与 chatwrap 同层，否则被背景盖住只剩空白带 */}
 .simbar::-webkit-scrollbar{display:none}
 .simbar .simchip{flex:none}
@@ -1792,7 +1792,7 @@ body.chatmode.immersive #asst_fab{ bottom:calc(16px + env(safe-area-inset-bottom
 /* 推剧情选项弹窗：替代原生 confirm，风格与应用统一 */
 .pushmask{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:200;
   display:flex;align-items:center;justify-content:center;padding:32px;
-  animation:pushfade .18s ease;}
+  animation:pushfade calc(.18s * var(--anim-mult,1)) ease;}
 .pushcard{background:var(--card);border:1px solid var(--line);border-radius:16px;
   padding:20px;width:100%;max-width:320px;box-shadow:0 12px 40px rgba(0,0,0,.5);
   animation:pushpop .22s cubic-bezier(.2,1.4,.4,1);}
@@ -1915,3 +1915,41 @@ body.chatmode.immersive .immstrip{
 body.chatmode.immersive .immstrip .immstrip-ph{ flex:1; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 body.chatmode.immersive .immstrip .immstrip-go{ display:flex; color:var(--gold); opacity:.8; }
 body.chatmode.immersive #chatlog{ padding-bottom:64px; }
+
+/* ============ 动效预设（RP_MOTION：html[data-motion] 切换，--anim-mult 调速） ============ */
+/* 静止：全部动画/过渡压到近零（保留功能，只去掉运动） */
+html[data-motion="still"] *, html[data-motion="still"] *::before, html[data-motion="still"] *::after{
+  animation-duration:.01ms !important; animation-iteration-count:1 !important;
+  transition-duration:.01ms !important;
+}
+/* 灵动/绚烂：进聊天时最近 20 条消息依次浮现（entering 由 attachHeadHide 进场时挂、1.6s 后摘；
+   只挂进场窗口，平时发消息/重渲染不重播，不会重演历史闪烁） */
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(-n+20),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(-n+20){
+  animation:msgin calc(.3s * var(--anim-mult,1)) ease both;
+}
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(1),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(1){ animation-delay:calc(.162s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(2),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(2){ animation-delay:calc(.144s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(3),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(3){ animation-delay:calc(.126s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(4),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(4){ animation-delay:calc(.108s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(5),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(5){ animation-delay:calc(.09s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(6),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(6){ animation-delay:calc(.072s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(7),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(7){ animation-delay:calc(.054s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(8),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(8){ animation-delay:calc(.036s * var(--anim-mult,1)); }
+html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(9),
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(9){ animation-delay:calc(.018s * var(--anim-mult,1)); }
+/* 绚烂：页面缩放淡入 + 消息带轻微缩放 + 背景呼吸更明显更快 */
+html[data-motion="vivid"] #view > *:not(.drawer):not(.scrim){ animation:viewin2 calc(.3s * var(--anim-mult,1)) ease; }
+@keyframes viewin2{ from{opacity:0; transform:translateY(10px) scale(.985);} to{opacity:1; transform:none;} }
+html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(-n+20){ animation-name:msgin2; }
+@keyframes msgin2{ from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:none;} }
+html[data-motion="vivid"] .chatbg .bglayer{ animation-name:chatbreathe2; animation-duration:calc(18s * var(--anim-mult,1)); }
+@keyframes chatbreathe2{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.12);} }
