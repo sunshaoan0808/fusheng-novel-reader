@@ -123,6 +123,17 @@ t("保存全局图自动选用自定义", run("RP_THEME.getBgMode()") === "custo
 t("跟随主题时全局图不压主题", run("RP_THEME.setBgMode('theme')") === "theme" && run("pickChatBgURL()") === "bg/chat_night.jpg");
 t("切回自定义全局图再生效", run("RP_THEME.setBgMode('custom')") === "custom" && run("pickChatBgURL()") === "data:image/jpeg;base64,GGG");
 await runA("await clearGlobalWallpaper()"); run("RP_THEME.setBgMode('theme')");
+
+/* ---------- 单聊主题壁纸（2026-10-25：不上传图也能选主题壁纸） ---------- */
+await runA("await saveGlobalWallpaper('data:image/jpeg;base64,GGG')"); /* 来源=自定义 */
+await runA("await saveWallpaperTheme('songyan')");
+t("单聊主题壁纸: 解析为黛青渐变", (()=>{ const r = run("resolveChatBg()"); return r && r.type === "gradient" && r.id === "daiqing"; })());
+t("单聊主题壁纸: 图URL为空走渐变", run("pickChatBgURL()") === "");
+await runA("await saveWallpaperTheme('moye')");
+t("单聊墨夜壁纸: 跳过来源层回默认图", run("pickChatBgURL()") === "bg/chat_night.jpg");
+await runA("await clearWallpaperUI()");
+t("清除单聊主题壁纸: 回退全局自定义", run("pickChatBgURL()") === "data:image/jpeg;base64,GGG");
+await runA("await clearGlobalWallpaper()"); run("RP_THEME.setBgMode('theme')");
 run("globalWallpaperEditor()");
 t("全局编辑器标题", /全局壁纸/.test(run("titleEl.innerHTML")));
 run("wallpaperEditor()");

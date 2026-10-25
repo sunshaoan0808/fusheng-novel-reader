@@ -170,10 +170,11 @@ window.DimState = DimState;
    dataURL 在上传时已压缩到最长边 1080px JPEG，不会撑爆存储 */
 const wallStoreKey = ()=> "nd_wallpaper_" + chatHistKey();
 let WALL_MEM = {}; /* k -> {url, dim(0-70), blur(0-12)} */
-/* 兼容老版本存的纯字符串 */
+/* 兼容老版本存的纯字符串。单聊壁纸两种形态：{url} 上传图 / {wpTheme} 选用某套主题的壁纸 */
 function normWall(v){
 if(!v) return null;
 if(typeof v === "string") return v.indexOf("data:") === 0 ? {url:v, dim:0, blur:0} : null;
+if(v && v.wpTheme) return {wpTheme:String(v.wpTheme), dim:Math.min(70, +v.dim || 0), blur:Math.min(12, +v.blur || 0)};
 return (v && v.url) ? {url:v.url, dim:Math.min(70, +v.dim || 0), blur:Math.min(12, +v.blur || 0)} : null;
 }
 function getWallOpts(){ return normWall(WALL_MEM[chatHistKey()]); }
@@ -203,7 +204,17 @@ return getWallOpts();
 function resolveChatBg(){
 const own = getWallOpts();
 if(own && own.url) return {type:"img", url:own.url, opts:own, upload:true};
+let skipSource = false;
+if(own && own.wpTheme){
+/* 单聊钉住某套主题的壁纸：与全局当前主题无关；选墨夜（auto）= 跳过来源层直接卡图/默认图 */
+let tspec = null;
+try{ if(typeof RP_THEME !== "undefined") tspec = RP_THEME.def(own.wpTheme).wp; }catch(e){}
+if(tspec && tspec.kind === "gradient") return {type:"gradient", id:tspec.id};
+if(tspec && tspec.kind === "image" && tspec.url) return {type:"img", url:tspec.url, opts:null};
+if(tspec) skipSource = true;
+}
 let spec = null;
+if(!skipSource){
 try{ if(typeof RP_THEME !== "undefined") spec = RP_THEME.effectiveWp(); }catch(e){}
 if(!spec) spec = {kind:"upload"}; /* 无主题系统的环境（老页/测试）保持老行为：全局图即默认 */
 if(spec && spec.kind === "upload"){
@@ -214,6 +225,7 @@ if(!spec){ try{ const t = RP_THEME.def(RP_THEME.get()); spec = t.custom ? {kind:
 }
 if(spec && spec.kind === "gradient") return {type:"gradient", id:spec.id};
 if(spec && spec.kind === "image" && spec.url) return {type:"img", url:spec.url, opts:null};
+}
 try{
 if(CHAT.mode === "traverse" && typeof RP_TRAVERSE !== "undefined"){
 const trav = RP_TRAVERSE.get(CHAT.travId); if(trav && trav.bg) return {type:"img", url:trav.bg, opts:null};
@@ -239,6 +251,10 @@ try{ css = RP_THEME.WP_GRADIENTS[r.id].css; }catch(e){}
 layer.style.backgroundImage = css || "";
 layer.style.filter = "";
 clearBarColors();
+/* 渐变背景不叠立绘：清掉上一张图背景留下的立绘层，免得切过来还挂着 */
+try{ const cel = document.getElementById("chatbgchar");
+if(cel){ cel.dataset.url = ""; cel.style.backgroundImage = ""; cel.classList.remove("on");
+const bg = cel.parentNode; if(bg && bg.classList) bg.classList.remove("has-por"); } }catch(e){}
 return;
 }
 const url = r.url;
@@ -303,12 +319,39 @@ srcCard = `<div class="card"><div class="kv">背景来源：<b>${escH(srcTxt)}</
 <div class="hint">切主题时壁纸跟着主题换；自定义壁纸只有被选用时才压过主题。</div></div>`;
 }catch(e){}
 }
+/* 预览区三态：上传图 / 选用的主题壁纸 / 未单独设置 */
+let previewHTML;
+if(cur){
+previewHTML = `<img id="wall_preview" src="${cur}" style="max-width:100%;border-radius:8px;filter:${wallFilterCSS(o)}" alt="当前壁纸">`;
+}else if(o && o.wpTheme && typeof RP_THEME !== "undefined"){
+try{
+const td = RP_THEME.def(o.wpTheme), twp = td.wp || {kind:"auto"};
+const sw = twp.kind === "gradient" ? RP_THEME.WP_GRADIENTS[twp.id].css : `url("bg/chat_night.jpg") center/cover`;
+previewHTML = `<div style="height:180px;border-radius:8px;background:${sw};display:flex;align-items:flex-end;justify-content:center;padding:10px"><span style="background:rgba(0,0,0,.45);color:#f2e8d5;padding:2px 10px;border-radius:99px;font-size:calc(12px * var(--fs))">当前：${escH(td.name)}主题的壁纸（${escH(RP_THEME.wallpaperLabel(twp))}）</span></div>`;
+}catch(e){ previewHTML = ""; }
+}
+if(!previewHTML) previewHTML = `<div style="padding:24px;color:var(--ink-faint)">当前使用默认壁纸<br><span style="font-size:calc(12px * var(--fs))">上传后可调暗度和模糊</span></div>`;
+/* 单聊可选主题壁纸（全局编辑器不显示：全局层走背景来源） */
+let themeWpHTML = "";
+if(_wallStore === "chat" && typeof RP_THEME !== "undefined"){
+try{
+const chips = RP_THEME.THEMES.map(t=>{
+const wp = t.wp || {kind:"auto"};
+const sw = wp.kind === "gradient" ? RP_THEME.WP_GRADIENTS[wp.id].css
+         : wp.kind === "image" ? `url("${wp.url}") center/cover`
+         : `url("bg/chat_night.jpg") center/cover`;
+const on = o && o.wpTheme === t.id;
+return `<button class="btn ${on ? "" : "ghost"}" style="display:flex;align-items:center;gap:8px" onclick="setChatWallThemeUI('${jq(t.id)}')"><span style="width:26px;height:26px;border-radius:8px;background:${sw};flex:none"></span>${escH(t.name)}壁纸</button>`;
+}).join("");
+themeWpHTML = `<div class="field"><label>主题壁纸（选一套主题的背景，不用上传图）</label><div class="btnrow" style="flex-wrap:wrap">${chips}</div></div>`;
+}catch(e){}
+}
 view.innerHTML = `<button class="back" onclick="__backAction()">${icon("back")} 返回</button>
 ${srcCard}
 <div class="card" style="text-align:center">
-${cur ? `<img id="wall_preview" src="${cur}" style="max-width:100%;border-radius:8px;filter:${wallFilterCSS(o)}" alt="当前壁纸">`
-      : `<div style="padding:24px;color:var(--ink-faint)">当前使用默认壁纸<br><span style="font-size:calc(12px * var(--fs))">上传后可调暗度和模糊</span></div>`}
+${previewHTML}
 </div>
+${themeWpHTML}
 ${cur ? `<div class="field"><label>暗度 <span id="wall_dim_v">${dim}%</span></label>
 <input type="range" id="wall_dim" min="0" max="70" value="${dim}" oninput="wallOptUI()"></div>
 <div class="field"><label>模糊 <span id="wall_blur_v">${blur}px</span></label>
@@ -324,8 +367,22 @@ window.scrollTo(0,0);
 };
 window.saveWallpaper = async (url, opts)=>{
 const k = chatHistKey();
+if(!url){ /* 无图调用（滑杆回写）落在主题壁纸条目上时，只合并参数不换形态 */
+const cur = normWall(WALL_MEM[k]);
+if(cur && cur.wpTheme){ cur.dim = Math.min(70, +(opts && opts.dim) || 0); cur.blur = Math.min(12, +(opts && opts.blur) || 0);
+WALL_MEM[k] = cur;
+try{ if(typeof RP_STORE!=="undefined") await RP_STORE.setItemAsync(wallStoreKey(), JSON.stringify(cur)); }catch(e){}
+return; }
+}
 const o = Object.assign({url:url, dim:0, blur:0}, opts || {});
 o.dim = Math.min(70, +o.dim || 0); o.blur = Math.min(12, +o.blur || 0);
+WALL_MEM[k] = o;
+try{ if(typeof RP_STORE!=="undefined") await RP_STORE.setItemAsync(wallStoreKey(), JSON.stringify(o)); }catch(e){}
+};
+/* 单聊选用某套主题的壁纸（不上传图也能换背景） */
+window.saveWallpaperTheme = async (themeId)=>{
+const k = chatHistKey();
+const o = {wpTheme:String(themeId), dim:0, blur:0};
 WALL_MEM[k] = o;
 try{ if(typeof RP_STORE!=="undefined") await RP_STORE.setItemAsync(wallStoreKey(), JSON.stringify(o)); }catch(e){}
 };
@@ -406,7 +463,7 @@ try{ if(typeof RP_STORE!=="undefined") await RP_STORE.removeItemAsync(GLOBAL_WAL
 /* 壁纸编辑器：单聊 / 全局共用一套 UI，store 决定读写与返回 */
 const _wallStores = {
 chat:{ title:"🖼️ 聊天壁纸", sub:"只换这个聊天的背景，存在本机",
-  hint:"图片会压缩到最长边 1080px 后存到本机，只影响当前聊天。单聊、群聊、穿越各用各的壁纸。图太亮看不清字时，调高暗度或加一点模糊。",
+  hint:"可以直接选用任意一套主题的壁纸，也可以自己上传图片（压缩到最长边 1080px 后存到本机），只影响当前聊天。单聊、群聊、穿越各用各的壁纸。图太亮看不清字时，调高暗度或加一点模糊。",
   get:()=>getWallOpts(), save:(u,o)=>saveWallpaper(u,o),
   clear:async ()=>{ const k = chatHistKey(); WALL_MEM[k] = null;
     try{ if(typeof RP_STORE!=="undefined") await RP_STORE.removeItemAsync(wallStoreKey()); }catch(e){} },
@@ -418,6 +475,12 @@ global:{ title:"🖼️ 全局壁纸", sub:"你上传的自定义壁纸，选用
 };
 let _wallStore = "chat";
 window.globalWallpaperEditor = ()=>wallpaperEditor("global");
+/* 单聊选用主题壁纸 */
+window.setChatWallThemeUI = async (tid)=>{
+await saveWallpaperTheme(tid);
+try{ paintChatBg(); }catch(e){}
+wallpaperEditor("chat");
+};
 /* 背景来源切换：跟随主题 / 自定义壁纸（全局上传图） */
 window.bgSrcUI = (m)=>{
 try{ if(typeof RP_THEME !== "undefined") RP_THEME.setBgMode(m); }catch(e){}
