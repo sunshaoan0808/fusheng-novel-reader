@@ -416,7 +416,14 @@ let TW = {timer:null, key:"", idx:-1, mid:""};
  * （长文 ~110 帧 × 45ms ≈ 5 秒，气泡 innerHTML 反复重写 = 用户实报的「打开就狂闪」）。
  * 本会话内新到达的消息（新开局的开场白、刚收到的回复）不在登记里，照常播放。 */
 let __twSeenChats = {};
-function twStop(){ if(TW.timer){ clearInterval(TW.timer); TW.timer = null; } }
+function twStop(){ if(TW.timer){ clearInterval(TW.timer); TW.timer = null; }
+try{
+if(typeof document !== "undefined"){
+document.body.classList.remove("tw-active");
+const tys = document.querySelectorAll(".msg.typing");
+for(let i=0;i<tys.length;i++) tys[i].classList.remove("typing");
+}
+}catch(e){} }
 /* 立即打断完成：停掉定时器并整页重渲染出全文 */
 window.twFinish = ()=>{ if(!TW.timer) return; twStop(); renderChat(); };
 function twStart(idx, bodyText, cardHTML, mid){
@@ -431,7 +438,11 @@ TW.idx = idx;
 TW.mid = mid || "";
 /* 首帧立即置空+光标，避免 45ms 后才改造成的全文闪烁 */
 const el0 = document.getElementById("smsg-"+idx);
-if(el0){ const b0 = el0.querySelector(".bubble"); if(b0) b0.innerHTML = `<span class="twcur"></span>`; }
+if(el0){ const b0 = el0.querySelector(".bubble"); if(b0) b0.innerHTML = `<span class="twcur"></span>`;
+/* 播放态瘦身：摘阴影 + 冻结背景呼吸（见 ui42.css .msg.typing）——带模糊阴影的文字
+ * 每帧整段重栅格、底下背景还在呼吸缩放，真机上就是闪个不停（用户定位） */
+el0.classList.add("typing"); }
+try{ document.body.classList.add("tw-active"); }catch(e){}
 TW.timer = setInterval(()=>{
 fi++;
 const done = fi >= frames.length;

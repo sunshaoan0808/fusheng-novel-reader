@@ -344,6 +344,8 @@ if(!bar) return;
 bar.innerHTML = chatbarInner(STREAMING);
 /* v42-10: 开始等回复 → 「X正在提笔…」；结束（完成/停止/出错都走 finally）→ 移除 */
 if(STREAMING) showPenWait(); else hidePenWait();
+/* 流式期间同样冻结背景呼吸，减少半透明气泡下方的持续重采样（与打字机同因） */
+try{ document.body.classList.toggle("tw-active", !!on); }catch(e){}
 }
 /* 当前是否在流式生成中（供页面重建/测试查询） */
 window.__isStreaming = ()=> STREAMING;
