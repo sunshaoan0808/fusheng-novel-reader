@@ -438,7 +438,7 @@ view.innerHTML = `
 ${chatBgHTML()}
 <div class="chathead" id="chathead">
 <button class="backbtn" onclick="exitChat()">‹</button>
-<div class="avatar">${esc((CHAT.name||"?")[0])}</div>
+${avatarHTML(CHAT.runId, CHAT.name)}
 <div class="chead-main"><div class="cname">${esc(CHAT.name)}<span class="aimark">AI</span></div>
 <div class="cstat">${run.novel?`<span>${esc(run.novel)}</span>`:""}<span id="chapter_hbadge" style="display:none;font-size:calc(11px * var(--fs));color:var(--gold);border:1px solid var(--line-soft);border-radius:999px;padding:1px 8px;cursor:pointer" onclick="chapterPicker()"></span><button onclick="toggleDrawer(false);openAlbum('${jq(CHAT.runId)}','${jq(CHAT.name)}')"><span class="mement">${icon("brain",15)} ${memN}条记忆</span>›</button></div></div>
 <button class="menubtn" onclick="toggleChatSearch()" title="搜索聊天记录">${icon("search")}</button>
@@ -457,7 +457,7 @@ ${chatBgHTML()}
 <h3>切换角色</h3>
 <div class="whorow" data-xfade>
 ${cs.map(c=>`<button class="whoami ${c.runId===CHAT.runId&&c.name===CHAT.name?"active":""}" data-swrun="${esc(c.runId)}" data-swname="${esc(c.name)}">
-<div class="avatar sm">${esc(c.name[0])}</div>
+${avatarHTML(c.runId, c.name, "sm")}
 <div><div class="name">${esc(c.name)}</div><div class="kv">${esc(c.novel)}</div></div>
 </button>`).join("")}
 </div>

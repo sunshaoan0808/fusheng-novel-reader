@@ -12,7 +12,7 @@ const ms = CHAT.members;
 const k = chatHistKey();
 const gkey = ms.slice().sort().join("_");
 const gorder = RP_GROUP.getOrder(CHAT.runId, gkey);
-const stack = ms.slice(0,4).map(n=>`<div class="avatar sm stacka">${esc(n[0])}</div>`).join("");
+const stack = ms.slice(0,4).map(n=>avatarHTML(CHAT.runId, n, "sm stacka")).join("");
 await warmWallpaper(); await warmGlobalWall(); /* 先读用户壁纸，避免先闪默认图 */
 view.innerHTML = `
 ${chatBgHTML()}
@@ -42,7 +42,7 @@ ${chatBgHTML()}
 <h3>群聊成员 · 点名字定下一个人说</h3>
 ${ms.map(n=>{const tv=RP_GROUP.getTalk(CHAT.runId,n);
 return `<div class="gmember"><button class="whoami ${CHAT.forcedSpeaker===n?"active":""}" onclick="forceSpeaker('${jq(n)}')">
-<div class="avatar sm">${esc(n[0])}</div>
+${avatarHTML(CHAT.runId, n, "sm")}
 <div><div class="name">${esc(n)}${CHAT.forcedSpeaker===n?" · 下一个说":""}</div></div>
 </button><div class="talkrow"><span>发言欲</span><input type="range" min="0" max="100" step="5" value="${tv}" oninput="setTalkVal('${jq(n)}',this.value)"><b>${tv}</b></div></div>`;}).join("")}
 <h3>角色关系 · 注入群聊 prompt</h3>

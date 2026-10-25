@@ -1858,7 +1858,7 @@ function soulPickTarget(){
   view.innerHTML = `<button class="back" onclick="showTraverse()">${icon("back")} 返回</button>
   <div class="chargrid">${cs.map(c=>`
     <button type="button" class="charcard" onclick="soulAnchors('${jq(c.runId)}','${jq(c.name)}')">
-      <div class="avatar ${charCoverCls(c.name)}">${esc(c.name[0])}</div>
+      ${avatarHTML(c.runId, c.name, charCoverCls(c.name))}
       <div class="ccname">${esc(c.name)}</div><div class="ccnovel">${esc(c.novel)}</div>
     </button>`).join("")}</div><div style="height:40px"></div>`;
   window.scrollTo(0,0);
@@ -2503,7 +2503,7 @@ window.isekaiPickSrc = ()=>{
   <div class="hint">把这个角色送进另一部作品的世界。</div>
   <div class="chargrid">${cs.map(c=>`
     <button type="button" class="charcard" onclick="isekaiPickDst('${jq(c.runId)}','${jq(c.name)}')">
-      <div class="avatar ${charCoverCls(c.name)}">${esc(c.name[0])}</div>
+      ${avatarHTML(c.runId, c.name, charCoverCls(c.name))}
       <div class="ccname">${esc(c.name)}</div><div class="ccnovel">${esc(c.novel)}</div>
     </button>`).join("")}</div><div style="height:40px"></div>`;
   window.scrollTo(0,0);
@@ -2595,7 +2595,7 @@ window.partyPickMainSoul = (kind, id)=>{
   view.innerHTML = `<button class="back" onclick="partyPickMain('${jq(kind)}','${jq(id)}')">${icon("back")} 返回</button>
   <div class="chargrid">${cs.map((c,ix)=>`
     <button type="button" class="charcard" onclick="partyPickMainSoulGo('${jq(kind)}','${jq(id)}',${jq(ix)})">
-      <div class="avatar ${charCoverCls(c.name)}">${esc(c.name[0])}</div>
+      ${avatarHTML(c.runId, c.name, charCoverCls(c.name))}
       <div class="ccname">${esc(c.name)}</div><div class="ccnovel">${esc(c.novel)}</div>
     </button>`).join("")}</div><div style="height:40px"></div>`;
   window.scrollTo(0,0);
@@ -2630,7 +2630,7 @@ window.partyPickComps = (kind, id, main)=>{
   <div class="hint">主身份：${esc(main.mode==="soul"?main.name:((main.wish||"")+"（肉身）")||"肉身")}</div>
   <div class="chargrid">${cs.map((c,ix)=>`
     <button type="button" class="charcard" id="pc_${ix}" onclick="partyToggleComp(${jq(ix)})">
-      <div class="avatar ${charCoverCls(c.name)}">${esc(c.name[0])}</div>
+      ${avatarHTML(c.runId, c.name, charCoverCls(c.name))}
       <div class="ccname">${esc(c.name)}</div><div class="ccnovel">${esc(c.novel)}</div>
     </button>`).join("")}</div>
   <div class="btnrow" style="position:sticky;bottom:70px"><button class="btn" style="flex:1" onclick="partyStart('${jq(kind)}','${jq(id)}')">出发！</button></div>

@@ -123,7 +123,10 @@ function tplAt(src, from, opts) {
  *   替换串的 label/color 来自固定映射或正则约束的 [a-z0-9_-]+, title 再过一道 esc）。
  *   2026-10 P2 补外在行时新增 4 处 renderAnnotated 插值触发闸门 —— 包装器本身
  *   可证明安全, 正确的修法是把出口登记进来, 不是抬基线(抬基线=闸门报废)。 */
-const SAFE = /(esc|jq\(|jqJ\(|icon\(|md\(|renderAnnotated\(|encodeURI|toFixed|Number\(|parseInt\()/;
+/* + avatarHTML()/chatAvatarHTML()（app_ui.js，2026-10-25 头像接线时登记）：函数内
+ *   全部插值只有 url 与首字，二者都过 esc()；cls 形参的全部调用点传字面量或
+ *   charCoverCls 的哈希类名（cc0–cc3），无用户数据。可证明安全，同 renderAnnotated 例。 */
+const SAFE = /(esc|jq\(|jqJ\(|icon\(|md\(|renderAnnotated\(|avatarHTML\(|chatAvatarHTML\(|encodeURI|toFixed|Number\(|parseInt\()/;
 
 function scanP1() {
   let totalExpr = 0, safe = 0, numeric = 0, risky = 0;

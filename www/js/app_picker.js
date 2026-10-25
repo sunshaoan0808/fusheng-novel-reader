@@ -138,7 +138,7 @@ return {c:c, last:(st && st.last) || 0, s:(st && st.s) || 0}; })
 function railHTML(title, cs){
 return `<h2 class="sec">${title}</h2><div class="rail">` + cs.map(c=>{
 return `<div class="railcard" onclick="chatWith('${jq(c.runId)}','${jq(c.name)}')">`
-+ `<div class="avatar">${esc((c.name || "?")[0])}</div>`
++ avatarHTML(c.runId, c.name)
 + `<div class="rn">${esc(c.name)}</div>`
 + `<div class="rk">${esc(c.novel || "")}</div></div>`;
 }).join("") + `</div>`;

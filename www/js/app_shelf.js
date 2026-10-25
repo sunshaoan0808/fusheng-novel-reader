@@ -162,7 +162,7 @@ let GROUP_CTX = {runId:null, members:[], label:"", back:null};
 /* 群聊可选成员卡片(两个入口共用渲染): pool 已是 {name, novel} 列表 */
 function groupPickCards(pool){
   return pool.map(p=>`<label class="pickcard"><input type="checkbox" value="${esc(p.name)}">
-<div class="avatar sm">${esc(p.name[0])}</div><div class="name">${esc(p.name)}</div>
+${avatarHTML(null, p.name, "sm")}<div class="name">${esc(p.name)}</div>
 ${p.novel?`<div class="meta">${esc(p.novel)}</div>`:""}</label>`).join("");
 }
 window.groupPicker = ()=>{
@@ -294,9 +294,9 @@ r.co_occurrence_count?`<span class="badge">同现 ${r.co_occurrence_count} 次</
 ].join("");
 return `<div class="rel">
 <div class="rel-top">
-<div class="avatar">${esc((r.source_character||"")[0]||"人")}</div>
+${avatarHTML(null, r.source_character)}
 <div style="flex:1"><div class="pair">${esc(r.source_character)} ↔ ${esc(r.target_character)}</div></div>
-<div class="avatar">${esc((r.target_character||"")[0]||"人")}</div>
+${avatarHTML(null, r.target_character)}
 </div>
 <div class="sum">${esc(r.relationship_summary||"")}</div>
 ${bar("信任",m.trust_level)}${bar("好感",m.affection_level)}${bar("冲突",m.conflict_potential)}

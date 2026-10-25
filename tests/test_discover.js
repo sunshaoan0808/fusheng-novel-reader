@@ -54,7 +54,8 @@ function mkCtx(){
     fs.readFileSync(WWW + "/rp/escutil.js", "utf8") /* P0-1: 提取的函数用 jq() */
     + pickConst("BADGE_DEFS")
     + pick(["badgeLabel","cardBadges","cardOpenings","cardTags","isChipTag","charTagsOf",
-            "tagCountsOf","recentPlayed","shuffle","railHTML","chipsHTML"]),
+            "tagCountsOf","recentPlayed","shuffle","railHTML","chipsHTML",
+            "charPortrait","charAvatarUrl","avatarHTML"]),
     ctx);
   return ctx;
 }

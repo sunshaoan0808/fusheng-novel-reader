@@ -245,7 +245,7 @@ if(m){ m.remove(); return; }
 if(CHAT.mode!=="group" || !(CHAT.members||[]).length) return;
 m = document.createElement("div"); m.id = "atmenu"; m.className = "atmenu";
 m.innerHTML = `<div class="athint">＠ 谁先回？</div>` + CHAT.members.map(n=>{
-return `<button onclick="atMention('${jq(n)}')"><div class="avatar sm">${esc(n[0])}</div><span>${esc(n)}</span></button>`;
+return `<button onclick="atMention('${jq(n)}')">${avatarHTML(CHAT.runId, n, "sm")}<span>${esc(n)}</span></button>`;
 }).join("");
 const bar = document.querySelector(".chatbar");
 (bar || document.body).appendChild(m);

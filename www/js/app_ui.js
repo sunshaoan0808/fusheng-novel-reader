@@ -31,12 +31,36 @@ function charPortrait(runId, name){
   try{ url = charImg(novel, name); }catch(e){}
   return url ? {url: url, light: UI_LIGHT_ART.has(url), own: false} : null;
 }
-/* 小头像：卡自带头像用图，内置整幅插画（人在画里只占一角）裁成 24px 只剩一团线，改用印章式首字 */
+/* 内置头像（data/avatars.js CHARAVATAR）：小说名解析与 charPortrait 同链（卡→INDEX→allChars） */
+function charAvatarUrl(runId, name){
+  try{
+    const m = window.CHARAVATAR || {};
+    let card = null;
+    try{ if(typeof RP !== "undefined" && RP.findCard) card = RP.findCard(runId, name); }catch(e){}
+    let novel = (card && card.novel) || "";
+    if(!novel){ const r = (INDEX || []).find(x => x.run_id === runId); if(r) novel = r.novel; }
+    if(!novel){ const c = (allChars() || []).find(x => x.name === name && (!runId || x.runId === runId)) ||
+                          (allChars() || []).find(x => x.name === name); if(c) novel = c.novel; }
+    return m[(novel || "") + "|" + (name || "")] || "";
+  }catch(e){ return ""; }
+}
+/* 小头像：卡自带图优先，其次内置方形头像（data/avatars），都没有才回落印章式首字。
+   （内置整幅插画不直接裁小图：人在画里只占一角，24px 只剩一团线，所以另备头像图。） */
 function chatAvatarHTML(runId, name, cls){
   const p = name ? charPortrait(runId, name) : null;
   const ch = esc(String(name || "?")[0]);
   if(p && p.own) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(p.url)}" alt="" loading="lazy" onerror="this.remove()">${ch}</span>`;
+  const av = name ? charAvatarUrl(runId, name) : "";
+  if(av) return `<span class="mav ${cls || ""}" aria-hidden="true"><img src="${esc(av)}" alt="" loading="lazy" onerror="this.remove()">${ch}</span>`;
   return `<span class="mav ${cls || ""}" aria-hidden="true">${ch}</span>`;
+}
+/* 大头像（.avatar 圆角方形）：与 chatAvatarHTML 同优先级，图盖住金底、加载失败摘除回落首字 */
+function avatarHTML(runId, name, cls){
+  const p = name ? charPortrait(runId, name) : null;
+  const ch = esc(String(name || "?")[0]);
+  const url = (p && p.own) ? p.url : (name ? charAvatarUrl(runId, name) : "");
+  if(url) return `<div class="avatar ${cls || ""}"><img src="${esc(url)}" alt="" loading="lazy" onerror="this.remove()">${ch}</div>`;
+  return `<div class="avatar ${cls || ""}">${ch}</div>`;
 }
 /* AI 消息名牌：头像 + 名字（单聊/群聊/穿越都显示；穿越的「世界」用卷轴图标） */
 function chatWhoHTML(name){

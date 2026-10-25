@@ -220,7 +220,9 @@ body{
   font-family:var(--serif); font-size:calc(19px * var(--fs)); color:#1a1408;
   background:linear-gradient(135deg,var(--gold-soft),var(--gold));
   box-shadow:var(--shadow-s);
+  position:relative; overflow:hidden; /* 头像图绝对定位盖住金底，失败摘除回落首字 */
 }
+.avatar img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 22%; }
 .avatar.sm{width:32px; height:32px; font-size:calc(15px * var(--fs));}
 .name{font-size:calc(15px * var(--fs)); font-weight:600;}
 .kv{font-size:calc(12px * var(--fs)); color:var(--ink-faint); margin-top:2px;}
