@@ -1151,6 +1151,40 @@ async function requestChange(pkgId, name){
   };
 }
 
+/* 审计问题一键转改动单：读包内存档的审计结果（auditor 落盘的 audits 数据，
+ * 此前只有写没有读），组句走 proposeChange 生成提案，复用改动单确认/应用流程。 */
+async function auditFix(pkgId, name, idx){
+  var audits = DISTILL_PACKAGE.getData(pkgId, "audits") || {};
+  var rec = audits[name];
+  var iss = rec && rec.issues && rec.issues[idx];
+  var v = document.getElementById("view");
+  if(!iss){
+    alert("这条审计记录已不存在（可能重跑过审计），请重新审计");
+    return;
+  }
+  var req = DISTILL_AUDITOR.fixRequest(iss);
+  v.innerHTML = `<h2 class="sec">✏️ 按审计修订 · ${esc(name)}</h2>
+    <div class="card">
+      <div style="font-size:calc(13px * var(--fs));margin-bottom:8px">审计问题：${esc(iss.desc)}</div>
+      <div id="d_change_msg" style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">AI 分析中...</div>
+      <div class="btnrow" style="margin-top:12px">
+        <button class="btn" data-dact="openPackage" data-did="${pkgId}">取消</button>
+      </div>
+    </div>`;
+  var msg = document.getElementById("d_change_msg");
+  try{
+    var result = await DISTILL_CHANGE.proposeChange(pkgId, name, req, function(m){ msg.textContent = m; });
+    if(!result.impacts.length){
+      msg.textContent = "AI 认为无需改动字段（问题可能涉及不可改字段，或已不存在）。";
+      return;
+    }
+    _pendingChange = {pkgId: pkgId, name: name, result: result};
+    showChangeImpacts();
+  }catch(e){
+    msg.textContent = "失败: " + e.message;
+  }
+}
+
 function showChangeImpacts(){
   var p = _pendingChange;
   if(!p) return;
@@ -1584,15 +1618,16 @@ var api = {show: show, openPackage: openPackage, openCharacter: openCharacter, s
       if(r.status && r.status !== "ok"){
         html += `<div style="font-size:calc(13px * var(--fs));color:#e74c3c;margin-top:4px">未完成：${esc(r.error || r.status)}</div>`;
       }
-      (r.issues || []).forEach(function(iss){
+      (r.issues || []).forEach(function(iss, ii){
         html += `<div style="font-size:calc(13px * var(--fs));color:var(--ink-faint);margin-top:4px">• [${iss.severity}] ${esc(iss.desc)}</div>`;
+        html += `<div style="margin:2px 0 8px"><button class="btn" data-dact="auditFix" data-did="${id}" data-dname="${escA(name)}" data-didx="${ii}">按此修订</button></div>`;
       });
       if((r.pass !== null) && !(r.issues || []).length) html += `<div style="font-size:calc(13px * var(--fs));color:var(--ink-faint)">无问题</div>`;
       html += `</div>`;
     });
     html += `<button class="btn" data-dact="openPackage" data-did="${id}">返回</button>`;
     v.innerHTML = html;
-  }, exportPkg: exportPkg, deletePackage: deletePackageFlow, regenOpenings: regenOpenings};
+  }, auditFix: auditFix, exportPkg: exportPkg, deletePackage: deletePackageFlow, regenOpenings: regenOpenings};
 
 /* 点击事件委托（XSS 修复 2026-10-13）：替代全部内联 onclick 字符串模板。
  * 动态值走 data-* 属性（escA 做 HTML 属性转义，含双引号）；dataset 读出即原文，
@@ -1619,6 +1654,7 @@ function onDelegatedClick(e){
       case "showProvenance": api.showProvenance(d.did, d.dname); break;
       case "showWorldbook": api.showWorldbook(d.did); break;
       case "runAudit": api.runAudit(d.did); break;
+      case "auditFix": api.auditFix(d.did, d.dname, idx); break;
       case "runProbes": api.runProbes(d.did); break;
       case "exportPkg": api.exportPkg(d.did); break;
       case "qaAnswer": api.qaAnswer(d.dqid, d.dv); break;

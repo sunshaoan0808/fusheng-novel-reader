@@ -319,6 +319,50 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
       calls.every(c => typeof c[0] === "number" && typeof c[1] === "number" && typeof c[2] === "string"));
   }
 
+  /* ── D8c 审计→改动单闭环（2026-11-03）：审计结果此前只有写没有读，
+   * 「按此修订」把问题组句喂给 proposeChange 生成提案、确认后落卡。 ── */
+  {
+    const sb = sandbox();
+    load(sb, ["distill_llm.js", "distill_package.js", "distill_auditor.js", "distill_change.js"]);
+    const P = sb.DISTILL_PACKAGE;
+    const pkg = P.createPackage("测试书");
+    pkg.characters = [{ name: "甲", importance: 5 }];
+    P.updatePackage(pkg);
+    P.saveCharacterCard(pkg.id, "甲", { name: "甲", _distill: {
+      core_identity: "书生", core_traits: "冷漠孤僻，却又热情好客" } });
+
+    let changeReqSeen = "";
+    sb.DISTILL_LLM.chat = (msgs) => {
+      const sys = msgs[0].content;
+      if (sys.indexOf("审计员") >= 0) return Promise.resolve({ content:
+        "{\"issues\": [{\"type\": \"contradiction\", \"field\": \"core_traits\", \"severity\": \"high\", \"desc\": \"性格前后矛盾：既冷漠又热情\"}], \"pass\": false}", model: "stub" });
+      if (sys.indexOf("编辑助手") >= 0) {
+        changeReqSeen = JSON.parse(msgs[1].content).request;
+        return Promise.resolve({ content:
+          "{\"impacts\": [{\"field\": \"core_traits\", \"reason\": \"消除矛盾\", \"new_value\": \"冷漠孤僻，不善交际\"}], \"summary\": \"统一性格\"}", model: "stub" });
+      }
+      return Promise.reject(new Error("未预期的调用"));
+    };
+
+    await sb.DISTILL_AUDITOR.auditAll(pkg.id, ["甲"], {});
+    const stored = P.getData(pkg.id, "audits");
+    t("D8c 审计结果落盘可读回", !!stored && !!stored["甲"] && stored["甲"].issues.length === 1);
+
+    const req = sb.DISTILL_AUDITOR.fixRequest(stored["甲"].issues[0]);
+    t("D8c fixRequest 组句含问题描述与定位字段",
+      req.indexOf("性格前后矛盾") >= 0 && req.indexOf("core_traits") >= 0 && req.indexOf("contradiction") >= 0);
+
+    const prop = await sb.DISTILL_CHANGE.proposeChange(pkg.id, "甲", req, function(){});
+    t("D8c 改动单收到的正是审计组句", changeReqSeen === req);
+    t("D8c 提案命中矛盾字段", prop.impacts.length === 1 && prop.impacts[0].field === "core_traits");
+
+    sb.DISTILL_CHANGE.applyChange(pkg.id, "甲", prop.impacts);
+    const card2 = P.getCharacterCard(pkg.id, "甲");
+    t("D8c 确认后落卡且标 [inference]",
+      card2._distill.core_traits.indexOf("冷漠孤僻，不善交际") === 0 &&
+      card2._distill.core_traits.indexOf("[inference]") >= 0);
+  }
+
   /* ── D9 字段接线与标注剥离 ─────────────────────────────────── */
   {
     const sb = sandbox();

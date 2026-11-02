@@ -73,8 +73,24 @@ results[charNames[i]] = await audit(pkgId, charNames[i], innerOpts);
 return results;
 }
 
+/* 审计问题 → 改动单请求文本（纯函数，可测）。
+ * 审计结果此前只写不读：审完关掉页面等于白审。UI 的「按此修订」按钮
+ * 拿这段文本走 DISTILL_CHANGE.proposeChange 生成修订提案，用户确认后落卡。 */
+function fixRequest(issue){
+issue = issue || {};
+var parts = ["修订审计发现的问题"];
+var tag = [issue.type, issue.severity].filter(Boolean).join("/");
+if(tag) parts[0] += "（" + tag + "）";
+parts[0] += "：" + (issue.desc || "");
+var req = parts[0];
+if(issue.field) req += "（审计定位字段：" + issue.field + "）";
+req += "。请只针对这一问题修订相关字段，消除矛盾或过度推断，保持档案其余设定与原文实证不变。";
+return req;
+}
+
 return {
 audit: audit,
-auditAll: auditAll
+auditAll: auditAll,
+fixRequest: fixRequest
 };
 })();
