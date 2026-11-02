@@ -305,6 +305,18 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     sb.DISTILL_LLM.chat = () => Promise.resolve({ content: "抱歉，我无法审计", model: "stub" });
     const a2 = await sb.DISTILL_AUDITOR.audit(pkg.id, "甲", {});
     t("D8 非 JSON 审计结果不算通过", a2.pass === null && a2.status === "unparsed");
+
+    /* D8b 进度口径（2026-11-02 回归）：auditAll 的 onProgress 必须是 (i, n, msg) 三参，
+     * 内层 audit() 的字符串口径不得透传，否则 UI 进度行印出 undefined。 */
+    sb.DISTILL_PACKAGE.saveCharacterCard(pkg.id, "乙", { name: "乙", _distill: { core_identity: "商人" } });
+    sb.DISTILL_LLM.chat = () => Promise.resolve({ content: "{\"issues\": [], \"pass\": true}", model: "stub" });
+    const calls = [];
+    await sb.DISTILL_AUDITOR.auditAll(pkg.id, ["甲", "乙"], {
+      onProgress: function (i, n, m) { calls.push([i, n, m]); }
+    });
+    t("D8b auditAll 进度只来自外层（每人一次）", calls.length === 2);
+    t("D8b 进度三参齐全（无 undefined 串出）",
+      calls.every(c => typeof c[0] === "number" && typeof c[1] === "number" && typeof c[2] === "string"));
   }
 
   /* ── D9 字段接线与标注剥离 ─────────────────────────────────── */

@@ -62,9 +62,13 @@ async function auditAll(pkgId, charNames, opts){
 opts = opts || {};
 var onProgress = opts.onProgress || function(){};
 var results = {};
+/* 内层 audit() 的进度是纯字符串口径（"审计 X..."），与 UI 的 (i, n, msg) 三参口径不同：
+ * opts 原样透传会让内层那句覆盖进度行、序号/总数印成 undefined（2026-11-02 截图）。
+ * auditAll 自己已逐人报进度，转交时摘掉 onProgress。 */
+var innerOpts = Object.assign({}, opts, {onProgress: function(){}});
 for(var i = 0; i < charNames.length; i++){
 onProgress(i + 1, charNames.length, "审计 " + charNames[i]);
-results[charNames[i]] = await audit(pkgId, charNames[i], opts);
+results[charNames[i]] = await audit(pkgId, charNames[i], innerOpts);
 }
 return results;
 }
