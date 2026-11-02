@@ -237,12 +237,14 @@ function checkInner(pkgId){
       {id: "plot", level: "warn", msg: "剧情层不完整"});
   }
 
-  // 综合评分
-  var score = 0;
+  // 综合评分: 归一化——pass 记满、warn 记半、fail 记 0, 按实际检查项数折算百分制。
+  // (旧公式「每项 +20、封顶 100」在检查项加到 10+ 后饱和: 5 个 pass 即满分,
+  //  出现过「判定 ❌ 却 100 分」的矛盾面板, 2026-11-02 改。)
+  var earned = 0;
   checks.forEach(function(c){
-    score += c.level === "pass" ? 20 : c.level === "warn" ? 10 : 0;
+    earned += c.level === "pass" ? 1 : c.level === "warn" ? 0.5 : 0;
   });
-  score = Math.min(100, score);
+  var score = checks.length ? Math.round(earned / checks.length * 100) : 0;
   var level = "pass";
   if(checks.some(function(c){ return c.level === "fail"; })) level = "fail";
   else if(checks.some(function(c){ return c.level === "warn"; })) level = "warn";

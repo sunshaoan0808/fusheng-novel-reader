@@ -107,6 +107,23 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("D1 内部异常被转成 fail 检查项（不再整块空白）",
       !!err && err.level === "fail" && err.checks[0].id === "internal");
     P.getPackage = savedPkg;
+
+    /* D1b 计分归一化（2026-11-02 回归）：旧公式每 pass +20 封顶 100，
+     * 检查项加到 10+ 后 5 个 pass 即饱和，出现「判定 fail 却 100 分」。
+     * 全 pass 的包加一条无锚定引用（1 个 fail 项）后，分数必须 <100
+     * 且等于归一化值 round(pass 数 / 总项数 * 100)。 */
+    P.saveData(pkg.id, "unanchored", [{ character: "林黛玉", quote: "原文不存在的引用" }]);
+    const r2 = Q.check(pkg.id);
+    const nPass = r2.checks.filter(c => c.level === "pass").length;
+    const nWarn = r2.checks.filter(c => c.level === "warn").length;
+    const expectScore = Math.round((nPass + nWarn * 0.5) / r2.checks.length * 100);
+    t("D1b 含 fail 项时分数 <100（旧公式恒 100）",
+      r2.level === "fail" && r2.score < 100);
+    t("D1b 分数 = 归一化折算值", r2.score === expectScore);
+    P.saveData(pkg.id, "unanchored", []);
+    const r3 = Q.check(pkg.id);
+    t("D1b 全 pass 时仍为 100 分",
+      r3.checks.every(c => c.level === "pass") && r3.score === 100);
   }
 
   /* ── D6 字段口径同源 ─────────────────────────────────────────── */
