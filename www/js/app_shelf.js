@@ -113,6 +113,9 @@ function charCoverCls(name){ let h=0; const s2=String(name||"?"); for(let i=0;i<
 /* P2-26：alt 原本一律空串，读屏只会念一串"图片"。有真画像就给名字；
    默认剪影（avatar_default.jpg）是纯装饰 —— 名字就在下方正文里，标 aria-hidden 不重复朗读。
    注：这段注释不能塞进下面 return 的 `+` 链中间 —— 注释两侧的 `+` 会被解析成一元正号。 */
+/* 2026-11-03 图主导重排（用户看选角页截图拍板）：封面加高成主角，名字与统计
+ * 压在封面底部渐变上（.covermeta），正文只留一行钩子 + 操作按钮；
+ * 没有钩子也没有按钮时不渲染正文，卡片就是纯封面，不留空黑。 */
 function charCardHTML(o){
 return `<div class="charcard">`
 + (o.oncard?`<button type="button" class="charcard-hit" aria-label="${esc(o.name)}" onclick="${o.oncard}"></button>`:"")
@@ -120,12 +123,14 @@ return `<div class="charcard">`
 + (o.tag?`<div class="tag">${esc(o.tag)}</div>`:"")
  + (o.img?`<img class="charimg" src="${esc(o.img)}" alt="${esc(o.name)}的画像" loading="lazy" onerror="this.src='bg/avatar_default.jpg'">`
         :`<img class="charimg" src="bg/avatar_default.jpg" alt="" aria-hidden="true">`)
-+ `</div>`
-+ `<div class="charbody"><div class="n">${esc(o.name)}</div>`
++ `<div class="covermeta"><div class="n">${esc(o.name)}</div>`
 + (o.stat?`<div class="statline">${esc(o.stat)}</div>`:"")
-+ `<div class="s"${o.sum ? ` title="${esc(o.sum)}"` : ""}>${esc(o.sum||"")}</div>`
++ `</div></div>`
++ ((o.sum || o.ops) ? `<div class="charbody">`
++ (o.sum?`<div class="s" title="${esc(o.sum)}">${esc(o.sum)}</div>`:"")
 + (o.ops?`<div class="ops">${o.ops}</div>`:"")
-+ `</div></div>`;
++ `</div>` : "")
++ `</div>`;
 }
 // 角色卡画像: 查 window.CHARIMG (www/data/charimg.js), 无图返回 ""
 function charImg(novel, name){
