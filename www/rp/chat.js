@@ -171,8 +171,12 @@ async function tts(cfg, text, model, voice){
 }
 async function stream(cfg, messages, opts, onToken){
   opts = opts || {};
+  /* 2026-11-22: 此前 buildRequest 只传 temperature, max_tokens/top_p 被丢弃,
+   * 流式聊天(默认路径)的「回复长度」设置形同虚设, 长度全凭网关默认。
+   * 实测成功轮次仅 209~275 字。现透传 opts 的 topP/maxTokens。 */
   var q = adapterFor().buildRequest(cfg, messages,
-    {temperature: opts.temperature, stream: true});
+    {temperature: opts.temperature, stream: true,
+     topP: opts.topP, maxTokens: opts.maxTokens});
   var r = await fetch(q.url, {method: "POST", headers: q.headers,
     body: JSON.stringify(q.body), signal: opts.signal});
   if(!r.ok) throw new Error("接口返回 " + r.status);
@@ -805,7 +809,8 @@ async function send(runId, name, text, opts){
         {topP: opts.topP, maxTokens: opts.maxTokens});
     } else {
       reply = await RP_NET.stream(cfg, b.messages,
-        {temperature: opts.temperature, signal: opts.signal}, opts.onToken);
+        {temperature: opts.temperature, signal: opts.signal,
+         topP: opts.topP, maxTokens: opts.maxTokens}, opts.onToken);
     }
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
@@ -987,7 +992,8 @@ async function regenerate(runId, name, opts){
   b.stats.hasDirector = false;
   if(opts.onSystem) opts.onSystem(b.preview, b.stats);
   var reply = await RP_NET.stream(cfg, b.messages,
-    {temperature: (opts.temperature || 0.9) + 0.15, signal: opts.signal}, opts.onToken);
+    {temperature: (opts.temperature || 0.9) + 0.15, signal: opts.signal,
+     topP: opts.topP, maxTokens: opts.maxTokens}, opts.onToken);
   /* PPA 二遍对齐: regenerate 同样走对齐 (无导演轮, 只看关键词/档位) */
   var ppaReR = null;
   try{
@@ -1199,7 +1205,8 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
         {topP: opts.topP, maxTokens: opts.maxTokens});
     } else {
       reply = await RP_NET.stream(cfg, b.messages,
-        {temperature: opts.temperature, signal: opts.signal}, opts.onToken);
+        {temperature: opts.temperature, signal: opts.signal,
+         topP: opts.topP, maxTokens: opts.maxTokens}, opts.onToken);
     }
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
@@ -1357,7 +1364,8 @@ async function sendTraverse(travId, text, opts){
       reply = await RP_NET.complete(cfg, b.messages, opts.temperature);
     } else {
       reply = await RP_NET.stream(cfg, b.messages,
-        {temperature: opts.temperature, signal: opts.signal}, opts.onToken);
+        {temperature: opts.temperature, signal: opts.signal,
+         topP: opts.topP, maxTokens: opts.maxTokens}, opts.onToken);
     }
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
