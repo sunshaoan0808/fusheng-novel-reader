@@ -395,7 +395,18 @@ function plotRef(outline){
  * - NPC(user/mtype npc + speaker): 标【名字】, 群聊里用户代 NPC 发言
  * - 群聊 assistant: 保持 "名字：" 前缀 */
 function mapHistory(h){
-  return (h || []).map(function(m){
+  /* 2026-11-22 兜底: 错误提示/空回复占位不进模型上下文。它们是给用户看的
+   * 界面信息, 当成 assistant 发言喂回去会污染后续每一轮(实测: 网关抖动
+   * 留下一条「(空回复)」后, 模型带着假历史越聊越歪)。ghost 标记是新口径;
+   * 内容特征过滤兼顾已存档的老记录。 */
+  return (h || []).filter(function(m){
+    if(!m || m.ghost) return false;
+    if(m.role === "assistant"){
+      var c = String(m.content || "").trim();
+      if(c === "(空回复)" || c.indexOf("⚠️ 出错了") === 0) return false;
+    }
+    return true;
+  }).map(function(m){
     var c = m.content;
     if(m.role === "assistant" && m.speaker) c = m.speaker + "：" + c;
     else if(m.role === "user" && m.mtype === "narr") c = "【旁白】" + c;
@@ -542,6 +553,13 @@ function findCard(runId, name){
 function newMsg(role, content){
   return {mid: nextMsgId(), role: role, content: content, ts: Date.now(),
           candidates: role === "assistant" ? [content] : undefined, ci: 0};
+}
+
+/* 错误提示消息: 照常显示给用户, 但打 ghost 标记, 不进模型上下文 */
+function errNotice(text){
+  var m = newMsg("assistant", text);
+  m.ghost = true;
+  return m;
 }
 
 /* P0-1: prompt.js 三池预算用的记忆上下文 (cardId 取不到则 renderBudgeted 内回退 runId_name) */
@@ -803,24 +821,47 @@ async function send(runId, name, text, opts){
 
   var reply = "";
   var ctrl = {aborted: false};
-  try {
+  /* 2026-11-22 兜底(用户批准): 网关抖动不再一轮报销 ——
+   * (1) 一个字都没吐就报错(429/503 这类多半是瞬时故障): 等 1.2s 自动重试一次;
+   *     已吐出部分内容才失败的不重试(避免 UI 活气泡内容翻倍)。
+   * (2) 接口返回空回复: 同样重试一次; 再空就不把占位符当正文存档,
+   *     只留一条 ghost 提示(显示给用户, 不进模型上下文)。 */
+  var gotToken = false;
+  var onTokWrap = opts.onToken ? function(t){ gotToken = true; opts.onToken(t); } : undefined;
+  async function acquire(){
     if(opts.stream === false){
-      reply = await RP_NET.complete(cfg, b.messages, opts.temperature, null,
+      return await RP_NET.complete(cfg, b.messages, opts.temperature, null,
         {topP: opts.topP, maxTokens: opts.maxTokens});
-    } else {
-      reply = await RP_NET.stream(cfg, b.messages,
-        {temperature: opts.temperature, signal: opts.signal,
-         topP: opts.topP, maxTokens: opts.maxTokens}, opts.onToken);
     }
-  } catch(e){
-    if(e && e.name === "AbortError"){ ctrl.aborted = true; }
-    else {
-      h.push(newMsg("assistant", "⚠️ 出错了：" + e.message +
-        "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
-      return {history: h, aborted: false, stats: b.stats};
+    return await RP_NET.stream(cfg, b.messages,
+      {temperature: opts.temperature, signal: opts.signal,
+       topP: opts.topP, maxTokens: opts.maxTokens}, onTokWrap);
+  }
+  function isEmptyReply(r){ return !r || !String(r).trim() || String(r).trim() === "(空回复)"; }
+  var lastErr = null;
+  for(var attempt = 0; attempt < 2; attempt++){
+    if(attempt === 1) await new Promise(function(res){ setTimeout(res, 1200); });
+    gotToken = false;
+    try {
+      reply = await acquire();
+      lastErr = null;
+      if(!isEmptyReply(reply)) break;
+    } catch(e){
+      if(e && e.name === "AbortError"){ ctrl.aborted = true; break; }
+      lastErr = e;
+      if(gotToken) break; /* 已吐出部分内容: 不重试, 走原报错路径 */
     }
   }
   if(ctrl.aborted) return {history: h, aborted: true, stats: b.stats};
+  if(lastErr){
+    h.push(errNotice("⚠️ 出错了：" + lastErr.message +
+      "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
+    return {history: h, aborted: false, stats: b.stats};
+  }
+  if(isEmptyReply(reply)){
+    h.push(errNotice("⚠️ 接口返回了空回复（已自动重试一次）。可以稍后再发，或换个模型试试。"));
+    return {history: h, aborted: false, stats: b.stats};
+  }
 
   // OOC 检测：命中则把规则名告诉模型，重试一次；失败原文标 OOC 存档
   if(opts.oocOn !== false){
@@ -1211,7 +1252,7 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
     else {
-      h.push(newMsg("assistant", "⚠️ 出错了：" + e.message +
+      h.push(errNotice("⚠️ 出错了：" + e.message +
         "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
       return {stats: b.stats, failed: true};
     }
@@ -1370,7 +1411,7 @@ async function sendTraverse(travId, text, opts){
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
     else {
-      h.push(newMsg("assistant", "⚠️ 出错了：" + e.message +
+      h.push(errNotice("⚠️ 出错了：" + e.message +
         "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
       return {history: h, aborted: false, stats: b.stats};
     }
