@@ -2024,6 +2024,12 @@ html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(9){ animation-de
 /* 绚烂：页面缩放淡入 + 消息带轻微缩放 + 背景呼吸更明显更快 */
 html[data-motion="vivid"] #view > *:not(.drawer):not(.scrim){ animation:viewin2 calc(.3s * var(--anim-mult,1)) ease; }
 @keyframes viewin2{ from{opacity:0; transform:translateY(10px) scale(.985);} to{opacity:1; transform:none;} }
+/* 美化癸·方向感转场(2026-11-23): data-navdir 由 app_core 的手势推断设置(450ms 自清)。
+ * 放在动效预设之后: 与 vivid 的 #view 规则同分时靠后胜出; still 预设带 !important 仍可全局压停。 */
+@keyframes viewin-fwd{ from{opacity:0; transform:translateX(18px);} to{opacity:1; transform:none;} }
+@keyframes viewin-back{ from{opacity:0; transform:translateX(-18px);} to{opacity:1; transform:none;} }
+html[data-navdir="fwd"] #view > *:not(.drawer):not(.scrim){ animation:viewin-fwd calc(.24s * var(--anim-mult,1)) ease; }
+html[data-navdir="back"] #view > *:not(.drawer):not(.scrim){ animation:viewin-back calc(.24s * var(--anim-mult,1)) ease; }
 html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(-n+20){ animation-name:msgin2; }
 @keyframes msgin2{ from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:none;} }
 html[data-motion="vivid"] .chatbg .bglayer{ animation-name:chatbreathe2; animation-duration:calc(18s * var(--anim-mult,1)); }

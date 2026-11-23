@@ -130,5 +130,43 @@ t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
   t("浅色主题质感收一档", css.indexOf('html[data-theme="xuanzhi"] .chatbg::after') >= 0);
 }
 
+/* (8) 2026-11-23 美化癸·方向感转场(菜单最后一件大件) */
+{
+  const core = fs.readFileSync(path.join(WWW, "js/app_core.js"), "utf8");
+  t("方向关键帧齐备", css.indexOf("@keyframes viewin-fwd") >= 0 && css.indexOf("@keyframes viewin-back") >= 0);
+  t("fwd/back 规则存在", css.indexOf('html[data-navdir="fwd"] #view') >= 0 && css.indexOf('html[data-navdir="back"] #view') >= 0);
+  t("方向规则排在 vivid 之后(同分靠后胜出)",
+    css.indexOf('html[data-navdir="fwd"] #view') > css.indexOf('html[data-motion="vivid"] #view'));
+  t("系统返回键设 back", /__onBackPressed = \(\)=>\{\s*try\{\s*__setNavDir\("back"\)/.test(core));
+  t("手势推断监听齐备", core.indexOf('t.closest(".backbtn")') >= 0
+    && core.indexOf('".charcard, .bw-card, .travmode, .railcard"') >= 0);
+  t("底栏切页清中性", core.indexOf('__setNavDir(""); setNav(b.dataset.nav)') >= 0);
+  /* __setNavDir 行为实测: 抽函数 + DOM 桩 */
+  const mFn = core.match(/let __navDirTimer = 0;\nfunction __setNavDir\(d\)\{[\s\S]*?\n\}/);
+  t("__setNavDir 可抽取", !!mFn);
+  if(mFn){
+    const attrs = {};
+    const ctx = {
+      window: { matchMedia: null },
+      document: { documentElement: {
+        setAttribute: (k, v)=>{ attrs[k] = v; },
+        removeAttribute: (k)=>{ delete attrs[k]; },
+      } },
+      setTimeout, clearTimeout, console,
+    };
+    ctx.matchMedia = ()=>({ matches: false });
+    ctx.window.matchMedia = ctx.matchMedia;
+    vm.createContext(ctx);
+    vm.runInContext(mFn[0] + "\nthis.__f = __setNavDir;", ctx);
+    ctx.__f("fwd");
+    t("fwd 落属性", attrs["data-navdir"] === "fwd");
+    ctx.__f("");
+    t("空串清属性", !("data-navdir" in attrs));
+    ctx.matchMedia = ()=>({ matches: true });
+    ctx.__f("back");
+    t("减少动态时不设方向", !("data-navdir" in attrs));
+  }
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

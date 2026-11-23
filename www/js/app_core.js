@@ -12,8 +12,29 @@ let INDEX = [], RUN = null, TAB = "chars", NAV = "product";
 /* 每个页面登记自己的"返回"动作; 顶层页面为 null(此时按返回键直接退出 App)。
    原生层 onBackPressed 会先调 window.__onBackPressed(), 返回 true 表示已消费。 */
 let __backAction = null;
+/* 美化癸·方向感转场(2026-11-23): 前进右滑入 / 后退左滑入, 顶层切栏保持中性淡入。
+ * 方向由手势层推断: 系统返回键与 .backbtn 点击 = back; 卡片入口点击 = fwd;
+ * 底栏切页显式清中性。data-navdir 属性 450ms 后自动清除, 一次手势只影响紧接着的渲染;
+ * 系统减少动态时不设方向; data-motion=still 的全局规则会把时长压到近零, 无需另判。 */
+let __navDirTimer = 0;
+function __setNavDir(d){
+  try{
+    if(d && window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches) d = "";
+    const el = document.documentElement;
+    if(d) el.setAttribute("data-navdir", d); else el.removeAttribute("data-navdir");
+    clearTimeout(__navDirTimer);
+    if(d) __navDirTimer = setTimeout(()=>{ try{ el.removeAttribute("data-navdir"); }catch(e){} }, 450);
+  }catch(e){}
+}
+try{ document.addEventListener("click", (ev)=>{
+  const t = ev.target;
+  if(!t || !t.closest) return;
+  if(t.closest(".backbtn")){ __setNavDir("back"); return; }
+  if(t.closest(".charcard, .bw-card, .travmode, .railcard")) __setNavDir("fwd");
+}, true); }catch(e){}
 window.__onBackPressed = ()=>{
   try{
+    __setNavDir("back");
     const dr = document.getElementById("drawer");
     if(dr && dr.classList.contains("on")){ toggleDrawer(false); return true; }
     if(typeof __backAction === "function"){ __backAction(); return true; }
@@ -95,7 +116,7 @@ else if(n==="distill"){
 }
 }
 mainnav.querySelectorAll("button").forEach(b=>
-b.addEventListener("click", ()=>setNav(b.dataset.nav)));
+b.addEventListener("click", ()=>{ __setNavDir(""); setNav(b.dataset.nav); }));
 
 async function boot(){
 const D = window.__DATA__;
