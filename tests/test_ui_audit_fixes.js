@@ -177,5 +177,12 @@ t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
   t("深色主题旁白原样保留", /\.bubble\.segd \.seg-nar\{\s*color:var\(--ink-dim\)/.test(ui42));
 }
 
+/* (10) 2026-11-23 浅色壁纸渐变罩修正(用户真机截图: 上下黑灰遮挡带) */
+{
+  t("深色渐变罩原样保留", /\.chatbg \.bgshade\{[^}]*rgba\(6,5,4,\.84\) 100%\)/.test(css));
+  t("浅色主题渐变罩覆盖存在", css.indexOf('html[data-theme="tianqing"] .chatbg .bgshade') >= 0);
+  t("浅色罩是米白托底", /qiuxiang"\] \.chatbg \.bgshade\{[^}]*rgba\(252,250,243,\.55\)/.test(css));
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

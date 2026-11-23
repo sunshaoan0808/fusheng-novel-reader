@@ -527,6 +527,19 @@ body.chatmode #chatlog{ min-height:0; }
     rgba(6,5,4,.80) 0%, rgba(6,5,4,.22) 20%, rgba(6,5,4,0) 38%,
     rgba(6,5,4,0) 60%, rgba(6,5,4,.34) 82%, rgba(6,5,4,.84) 100%);
 }
+/* 浅色主题修正(2026-11-23 用户真机实报): 上面那层罩是按深色壁纸设计的近黑罩,
+ * 压到天青等浅色壁纸上就成了上下两条黑灰遮挡带 —— 罩是固定层, 文字滚动时
+ * 从带子底下过, 遮挡感最强。浅色 5 套主题换浅色托底: 给顶栏/输入栏托底的
+ * 目的不变, 极性反过来(米白罩, 强度同步收一档)。 */
+html[data-theme="xuanzhi"] .chatbg .bgshade,
+html[data-theme="qingci"] .chatbg .bgshade,
+html[data-theme="tianqing"] .chatbg .bgshade,
+html[data-theme="taoyao"] .chatbg .bgshade,
+html[data-theme="qiuxiang"] .chatbg .bgshade{
+  background:linear-gradient(180deg,
+    rgba(252,250,243,.55) 0%, rgba(252,250,243,.14) 20%, rgba(252,250,243,0) 38%,
+    rgba(252,250,243,0) 60%, rgba(252,250,243,.20) 82%, rgba(252,250,243,.60) 100%);
+}
 /* L2: 状态机驱动的压暗层（菜单打开时加深） */
 .chatbg .bgdim{
   position:absolute; inset:0; background:#000; opacity:0;
