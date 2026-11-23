@@ -1904,7 +1904,7 @@ body.chatmode.immersive #asst_fab{ bottom:calc(16px + env(safe-area-inset-bottom
 /* Tier1 接线三期：气泡下结算条 + 世界模拟条立绘舞台 chips */
 .wirebar{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
 .wirechip{font-size:calc(11px * var(--fs));padding:3px 9px;border-radius:999px;
-  border:1px solid var(--gold-deep);color:var(--ink-soft);background:rgba(255,255,255,.42);white-space:nowrap;}
+  border:1px solid var(--gold-deep);color:var(--ink-dim);background:rgba(255,255,255,.42);white-space:nowrap;}
 .wirechip.favor{color:#7a4b12;border-color:#c9973f;background:rgba(216,178,90,.18);font-weight:600;}
 .wirechip.check{color:#33526b;border-color:#7d9db5;background:rgba(125,157,181,.14);}
 .wirechip.cg{color:#5d3a6e;border-color:#a37fc0;background:rgba(163,127,192,.14);}

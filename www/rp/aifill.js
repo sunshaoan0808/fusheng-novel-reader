@@ -66,9 +66,21 @@ return who + "：" + String(m.content || "").slice(0, 200);
 function personaCtx(){
 try{
 var p = {};
-try{ p = JSON.parse(localStorage.getItem("nd_persona") || "{}");}catch(e){}
+/* 2026-11-23 审计修复: 原先读裸键 nd_persona —— 人设模块早已改存
+ * nd_persona_global / nd_persona_<runId>(RP_PERSONA), 裸键无人写入,
+ * 代笔提示词里的[玩家人设]段一直是空的。改走 RP_PERSONA.resolve
+ * (本聊覆盖 > 全局), 模块不在时回落读全局键。 */
+try{
+  if(typeof RP_PERSONA !== "undefined"){
+    var rid = (typeof CHAT !== "undefined" && CHAT && CHAT.runId) ? CHAT.runId : null;
+    p = RP_PERSONA.resolve(rid) || {};
+  } else {
+    p = JSON.parse(localStorage.getItem("nd_persona_global") || "{}");
+  }
+}catch(e){}
 var bits = [];
 if(p.name) bits.push("名字：" + p.name);
+if(p.called) bits.push("希望被称呼：" + p.called);
 if(p.desc) bits.push("自我介绍：" + p.desc);
 if(p.extra) bits.push("补充：" + p.extra);
 return bits.join("；");
