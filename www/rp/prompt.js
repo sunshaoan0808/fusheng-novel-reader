@@ -363,9 +363,14 @@ var NARRATOR_INSTR = "【叙事者模式】你同时承担叙事与扮演双重�
  * 歪路：靠环境/细节/角色反应写够，绝不靠替玩家行动凑字（与第 6 条同向）。 */
 "9. 篇幅：每轮回复要有小说段落的体量，叙事与台词合计以 400 字上下为底线，不要一两句就收尾（玩家只问了一句短话、或正处短促交锋时可例外）。写够体量靠环境描写、细节和在场角色的反应与互动，绝不靠替玩家行动、替玩家表态来凑字。";
 
+/* 经典预设篇幅下限(2026-11-23): 与叙事者第 9 条同口径。此前篇幅要求只活在
+ * NARRATOR_INSTR 里, 经典序聊天没有任何下限。只挂 classic 的 lengthFloor 标记,
+ * lite/immers 不动(lite 本来就是要短)。凑字歪路照旧堵死: 靠描写与反应, 不靠代写。 */
+var LENGTH_FLOOR_INSTR = "【篇幅】每轮回复要有段落体量，叙事与台词合计以 400 字上下为底线，不要一两句就收尾（玩家只问了一句短话、或正处短促交锋时可例外）。写够体量靠环境描写、细节和角色的反应与互动，绝不靠替玩家行动、替玩家表态来凑字。";
+
 /* P1-1 预设: 分段顺序/开关/预算比例可配置 (Risu 式预设, 不做 ST 拖拽) */
 var PRESETS = {
-  classic: {name: "经典序", desc: "完整人设，适合长上下文",
+  classic: {name: "经典序", desc: "完整人设，适合长上下文", lengthFloor: true,
     order: {identity: 5, scene: 5.5, persona: 6, sysprompt: 7, ooc: 9, tags: 8, core: 10, arc: 15, memory: 20, speech: 30, appearance: 45, flair: 35, examples: 40, background: 50, relations: 60, lore: 70},
     loreRatio: 0.2},
   lite: {name: "精简序", desc: "去背景/示例，省 token，适合小上下文",
@@ -557,6 +562,7 @@ function buildMessages(card, ctx, budget){
     post = postInstructions(name, ctx.pov, ctx.person);
     if(card.postHistoryInstructions) post += "\n" + String(card.postHistoryInstructions).trim();
     post = subMacros(post, name, ctx.personaName);
+    if(preset.lengthFloor) post += "\n" + LENGTH_FLOOR_INSTR;
     messages.push({role: "system", content: post});
     sysText = messages.map(function(mm){ return "[" + mm.role + "]\n" + mm.content; }).join("\n\n");
   }else{
@@ -578,6 +584,7 @@ function buildMessages(card, ctx, budget){
   /* P0 卡兼容: 卡片 post_history_instructions 拼到 post-history 位置 (ST 语义: 历史之后、生成之前) */
   if(card.postHistoryInstructions) post += "\n" + String(card.postHistoryInstructions).trim();
   post = subMacros(post, name, ctx.personaName);
+  if(preset.lengthFloor) post += "\n" + LENGTH_FLOOR_INSTR;
   messages.push({role: "system", content: post});
   /* P0 卡兼容 v3: depth_prompt 按 depth 插到历史中 (ST 语义: 距末尾 depth 条消息处) */
   if(card.depthPrompt && card.depthPrompt.prompt){
