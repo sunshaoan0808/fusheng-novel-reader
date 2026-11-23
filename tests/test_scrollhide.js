@@ -188,6 +188,36 @@ run("renderChat(true)");
 t("renderChat(true): 发消息强制回底", log.scrollTop === log.scrollHeight);
 })();
 
+// ---------- 模拟条创建顺序: attach 时还不存在, renderSimBar 后创建 ----------
+// 真实顺序(showChat): attachHeadHide() 先跑, 那时 #simbar 不存在;
+// renderChat 里的 renderSimBar 才创建它。旧 harness 的 getElementById 会
+// 自动生成元素, 把这个顺序问题掩盖了 —— 本块临时恢复真实语义(null)再测。
+// 旧代码下: 创建即摆 flex 占位(断言1红); 只修创建不修 setBars 时断言2红。
+(function(){
+const head = mkEl(); head.parentNode = {insertBefore(){}};
+const log = mkEl(); Object.assign(log, {scrollHeight: 3000, scrollTop: 2400, clientHeight: 600});
+els["chathead"] = head; els["chatlog"] = log; els["__chatbar"] = mkEl();
+delete els["simbar"];
+let simEl = null;
+const origGet = document.getElementById;
+const origCreate = document.createElement;
+document.getElementById = (id)=> id === "simbar" ? simEl : origGet(id);
+document.createElement = ()=>{ simEl = mkEl(); return simEl; };
+document.body = {classList: {add(){}, remove(){}, toggle(){}, contains(){ return false; }}};
+run("attachHeadHide()"); /* 此刻 simbar 不存在: 显隐名单里没有它 */
+run("window.RP_WORLDSIM = {enabled: () => true, briefHTML: () => ''};");
+try{ run("if(typeof CHAT !== 'undefined' && CHAT) CHAT.mode = 'single';"); }catch(e){}
+run("renderSimBar()");   /* 真实创建点 */
+document.getElementById = origGet;
+document.createElement = origCreate;
+t("late-sim: 创建时正值沉浸, 不摆 flex 占位", !!simEl && simEl.style.display === "none");
+els["simbar"] = simEl; /* 创建后回归常规查询路径, setBars 现查应找到同一个 */
+run("window.__setHeadHidden(false)");
+t("late-sim: 呼出栏位时被现查收编, 跟随显示", !!simEl && simEl.style.display === "");
+run("window.__setHeadHidden(true)");
+t("late-sim: 再藏时跟随隐藏, 不留占位", !!simEl && simEl.style.display === "none");
+})();
+
 /* 2026-11-23 真机实报: 沉浸态日志顶边顶到屏幕顶, 上滑首行被状态栏黑条切掉
  * (viewport-fit=cover; 顶栏可见时靠自身 safe-area 内边距护住, 藏起来就没人护)。
  * 沉浸时 #chatlog 顶边必须让开安全区。 */

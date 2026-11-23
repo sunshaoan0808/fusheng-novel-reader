@@ -209,6 +209,11 @@ const bars = [head, sim, ctx, ws, scen].filter(Boolean);
 let barsVisible = true;
 function setBars(v){
   barsVisible = !!v;
+  /* simbar 由 renderSimBar 在 attach 之后才创建(点名时还没出生), 每次现查收编,
+   * 否则它永远不在显隐名单里: 沉浸时只能靠 CSS transform 滑走外壳、占位留下,
+   * 消息区被顶下去一行、首行被切(2026-11-23 真机实报, 掷骰气泡)。 */
+  const simLate = document.getElementById("simbar");
+  if(simLate && bars.indexOf(simLate) < 0) bars.push(simLate);
   bars.forEach(el=>{ el.style.display = barsVisible ? "" : "none"; });
   if(bar) bar.style.display = barsVisible ? "" : "none";
   if(document.body && document.body.classList)

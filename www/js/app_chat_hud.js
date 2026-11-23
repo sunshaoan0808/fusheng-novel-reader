@@ -88,7 +88,11 @@ function renderSimBar(){
     bar.addEventListener("click", ()=>simEditor());
     head.parentNode.insertBefore(bar, head.nextSibling);
   }
-  bar.style.display = "flex";
+  /* 沉浸接线(2026-11-23 真机实报): 本条在 attachHeadHide 点名之后才创建,
+   * 不在它的显隐名单里 —— 创建/刷新时必须自己看栏位状态。沉浸中摆 flex
+   * 会留一条约 31px 的空占位, 把消息区顶下去、切掉首行(掷骰气泡实报);
+   * 呼出栏位时 setBars 会现查收编(见 app_picker), 这里只需管好出生这一刻。 */
+  bar.style.display = (window.__barsVisible === false) ? "none" : "flex";
   /* 导演标识：只显示风格，不剧透具体指令 */
   var dirChip = "";
   try{ if(typeof RP_DIRECTOR!=="undefined") dirChip = RP_DIRECTOR.briefHTML(simChatKey()); }catch(e){}
