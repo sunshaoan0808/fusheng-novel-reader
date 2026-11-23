@@ -165,6 +165,57 @@ t("迁移不丢水位", ost.up_to_msg_id === "m9" && ost.up_to === 10);
 let bOld = RP_MEM.renderBudgeted("old1", "己", 600, {query: "之前发生了什么"});
 t("迁移后展示正常", bOld.text.indexOf("一起逛街") >= 0);
 
+/* ---------- 三库编辑/作废 + factsOf 收最新版（2026-11-24） ---------- */
+RP_MEM.save("sv", "庚", {mood: null, short: [], long: "", up_to: 0, migrated3: true,
+profile3: [], event3: [], record3: []});
+const sf = RP_MEM.addFact("sv", "庚", {text: "手动补充的习惯", cat: "偏好"});
+t("addFact 成功", sf.ok === true);
+const ef = RP_MEM.editFact("sv", "庚", sf.id, {text: "改后的习惯", cat: "怪癖"});
+const gfA = RP_MEM.getFacts(RP_MEM.get("sv", "庚"));
+t("editFact 后 getFacts 只见最新版（回归：曾新旧两版并列）", ef.ok === true && gfA.manual.length === 1 && gfA.manual[0].text === "改后的习惯");
+t("factsChars 按最新版计（回归：曾翻倍）", RP_MEM.factsChars(RP_MEM.get("sv", "庚")) === "改后的习惯".length);
+const nVerBefore = RP_APEX.versionsOf(RP_MEM.get("sv", "庚").profile3, sf.id).length;
+t("delFact 改走作废：当前视图消失、版本历史保留", RP_MEM.delFact("sv", "庚", sf.id) === true
+&& RP_MEM.getFacts(RP_MEM.get("sv", "庚")).manual.length === 0
+&& RP_APEX.versionsOf(RP_MEM.get("sv", "庚").profile3, sf.id).length === nVerBefore + 1
+&& RP_APEX.latestOf(RP_MEM.get("sv", "庚").profile3).filter(p=>p.id === sf.id)[0].void === true);
+/* 稳定事实（非 Facts）编辑/作废 */
+let stSv = RP_MEM.get("sv", "庚");
+stSv.profile3.push(RP_APEX.appendVersion(stSv.profile3, "p3", 50, {text: "她住在潇湘馆", fromPin: true, updatedAt: Date.now()}, true));
+RP_MEM.save("sv", "庚", stSv);
+t("稳定事实可编辑且追加版本", RP_MEM.editStoreEntry("sv", "庚", "profile3", 50, {text: "她住在蘅芜苑"}).ok === true
+&& RP_APEX.latestOf(RP_MEM.get("sv", "庚").profile3).filter(p=>p.id === 50)[0].text === "她住在蘅芜苑"
+&& RP_APEX.versionsOf(RP_MEM.get("sv", "庚").profile3, 50).length === 2);
+t("稳定事实拒绝空内容", RP_MEM.editStoreEntry("sv", "庚", "profile3", 50, {text: "  "}).ok === false);
+t("Facts 条目不走 editStoreEntry", RP_MEM.editStoreEntry("sv", "庚", "profile3", sf.id, {text: "x"}).ok === false);
+/* 事件编辑/作废 + 分析合并不救活 */
+let stSv2 = RP_MEM.get("sv", "庚");
+stSv2.event3.push(RP_APEX.appendVersion(stSv2.event3, "e3", 60, {topic: "雨夜送伞", t_anchor: "三月初三", state: "她把伞给了你", updatedAt: Date.now()}, true));
+RP_MEM.save("sv", "庚", stSv2);
+t("事件可编辑（主题/状态）", RP_MEM.editStoreEntry("sv", "庚", "event3", 60, {topic: "雨夜送伞", state: "她把伞给了你，自己淋湿"}).ok === true
+&& RP_APEX.latestOf(RP_MEM.get("sv", "庚").event3).filter(e=>e.id === 60)[0].state.indexOf("淋湿") >= 0);
+t("事件作废成功", RP_MEM.voidStoreEntry("sv", "庚", "event3", 60) === true
+&& RP_APEX.latestOf(RP_MEM.get("sv", "庚").event3).filter(e=>e.id === 60)[0].void === true);
+const ps3 = RP_MEM.parseState3(JSON.stringify({drop: false, profile: [], facts: [], record: [],
+event: [{topic: "雨夜送伞", t_anchor: "三月初三", state: "后续发展"}]}), RP_MEM.get("sv", "庚"), null);
+const ev60 = RP_APEX.latestOf(ps3.event3).filter(e=>e.id === 60)[0];
+t("分析合并跳过作废事件（不救活）", !!ev60 && ev60.void === true);
+t("作废事件不以新条目复活", !RP_APEX.latestOf(ps3.event3).some(e=>!e.void && e.topic === "雨夜送伞"));
+/* 记录编辑/作废 + 召回与 prompt 排除 */
+let stSv3 = RP_MEM.get("sv", "庚");
+stSv3.record3.push(RP_APEX.appendVersion(stSv3.record3, "r3", 70, {gist: "宝钗去过梨香院", msg_from: 1, msg_to: 2}, true));
+RP_MEM.save("sv", "庚", stSv3);
+t("记录可编辑", RP_MEM.editStoreEntry("sv", "庚", "record3", 70, {gist: "宝钗没去过梨香院"}).ok === true
+&& RP_APEX.latestOf(RP_MEM.get("sv", "庚").record3).filter(r=>r.id === 70)[0].gist === "宝钗没去过梨香院");
+const rec1 = RP_APEX.retrieveApex("sv", "庚", "宝钗去过梨香院吗", ["宝钗"], 5);
+t("未作废记录可召回", !!rec1 && rec1.cands.some(c=>c.entry.id === 70));
+t("记录作废成功", RP_MEM.voidStoreEntry("sv", "庚", "record3", 70) === true);
+const rec2 = RP_APEX.retrieveApex("sv", "庚", "宝钗去过梨香院吗", ["宝钗"], 5);
+t("作废记录不再召回", !!rec2 && !rec2.cands.some(c=>c.entry.id === 70));
+const bSv = RP_MEM.renderBudgeted("sv", "庚", 600, {query: "宝钗"});
+t("作废记录不进 prompt 组装", bSv.text.indexOf("梨香院") < 0);
+t("未知库名拒绝", RP_MEM.editStoreEntry("sv", "庚", "nope", 1, {text: "x"}).ok === false && RP_MEM.voidStoreEntry("sv", "庚", "nope", 1) === false);
+
 console.log("apex: " + pass + " pass, " + fail + " fail");
 process.exit(fail? 1: 0);
 })().catch(e=>{ console.log("HARNESS ERROR", e); process.exit(1);});

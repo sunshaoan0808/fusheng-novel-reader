@@ -60,5 +60,8 @@ const chatSrc2 = fs.readFileSync(path.join(WWW, "rp", "chat.js"), "utf8");
 t("chat.js 四路把 sceneCard 存到消息", (chatSrc2.match(/\.scene = wire\w+\.sceneCard/g) || []).length === 4);
 const ui42Css2 = fs.readFileSync(path.join(WWW, "ui42.css"), "utf8");
 t("ui42 有 scenetpl 样式", ui42Css2.indexOf(".scenetpl") >= 0);
+/* 三库编辑/作废接线（2026-11-24）：相册三库有编辑/删除按钮与表单，列表滤作废 */
+const albSrc = fs.readFileSync(path.join(WWW, "js", "app_memory.js"), "utf8");
+t("相册三库接了 storeForm/storeDel 且滤作废", albSrc.indexOf("storeForm('profile3'") >= 0 && albSrc.indexOf("storeForm('event3'") >= 0 && albSrc.indexOf("storeForm('record3'") >= 0 && albSrc.indexOf("storeDel('record3'") >= 0 && albSrc.indexOf("x.void") >= 0 && albSrc.indexOf("window.storeSave") >= 0);
 console.log(`ui42_seg: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

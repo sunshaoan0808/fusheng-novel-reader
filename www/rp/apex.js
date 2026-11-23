@@ -136,7 +136,7 @@ st = st || {};
 var idx = {};
 function add(arr, store){
 latestOf(arr).forEach(function(e){
-if(!e) return;
+if(!e || e.void) return;
 var ps = extractPersons(entryText(store, e), vocab);
 ps.forEach(function(p){
 (idx[p] = idx[p] || []).push({store: store, id: e.id, vid: e.vid, v: e.v || 1, entry: e});
@@ -228,7 +228,7 @@ try{
 if(typeof RP_MEM === "undefined") return null;
 var st = RP_MEM.get(runId, name);
 if(!st) return null;
-var recs = latestOf(st.record3).filter(function(r){ return r &&!r.legacy && r.gist;});
+var recs = latestOf(st.record3).filter(function(r){ return r &&!r.legacy &&!r.void && r.gist;});
 if(!recs.length) return {cands: [], conflicts: [], qPersons: []};
 vocab = vocab || [];
 var qPersons = extractPersons(query, vocab);

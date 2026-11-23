@@ -81,9 +81,9 @@ return `<div class="tl-item${m.pin?" gold":""}"><div class="card alb-event${m.pi
 + `</div></div></div>`;
 };
 const apexAlb = (typeof RP_APEX !== "undefined") && (getRpCfg().apex !== false) && !!(st && st.migrated3);
-const P3alb = apexAlb ? RP_APEX.latestOf(st.profile3) : ((st && st.profile3) || []);
-const E3alb = apexAlb ? RP_APEX.latestOf(st.event3) : ((st && st.event3) || []);
-const R3alb = apexAlb ? RP_APEX.latestOf(st.record3) : ((st && st.record3) || []);
+const P3alb = (apexAlb ? RP_APEX.latestOf(st.profile3) : ((st && st.profile3) || [])).filter(x=>!(x && x.void));
+const E3alb = (apexAlb ? RP_APEX.latestOf(st.event3) : ((st && st.event3) || [])).filter(x=>!(x && x.void));
+const R3alb = (apexAlb ? RP_APEX.latestOf(st.record3) : ((st && st.record3) || [])).filter(x=>!(x && x.void));
 /* 第 3 项: profile3 relationship 段分段渲染 (stage/boundaries/type/communicationPreferences/currentLocation) */
 const relSeg = (p)=>{
 const r = p && p.relationship; if(!r) return "";
@@ -124,7 +124,7 @@ const apexHist = (arr, id, fmt)=>{
   if(!apexAlb || typeof RP_APEX === "undefined") return "";
   const vers = RP_APEX.versionsOf(arr || [], id);
   if(vers.length <= 1) return "";
-  const olds = vers.slice(0, -1).reverse().map(v=>`<div class="alb-fact" style="opacity:.62">v${v.v||1} · ${esc(fmt(v))}</div>`).join("");
+  const olds = vers.slice(0, -1).reverse().map(v=>`<div class="alb-fact" style="opacity:.62">v${v.v||1} · ${v.void?"（已作废）":""}${esc(fmt(v))}</div>`).join("");
   return `<details class="alb-hist"><summary>历史版本（${vers.length - 1}）</summary>${olds}</details>`;
 };
 /* Tier2 #14: 事件分型筛选 (对标星野记忆 card kind); Tier2 #10: 永久记忆按钮 */
@@ -137,7 +137,7 @@ return `<div class="alb-fact">· ${esc((e.t_anchor?e.t_anchor+" ":"")+(e.topic||
 + ` <span class="badge">${kind}</span>`
 + (e.perm?` <span class="badge warn">${icon("pin",11)} 永久</span>`:"")
 + `${(e.merged||0)>1?` <span class="badge">合并×${e.merged}</span>`:""}${(e.v||1)>1?` <span class="badge">v${e.v}</span>`:""}`
-+ `<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="toggleEventPerm(${jq(e.id)})">${e.perm?"取消永久":"设为永久"}</button></div></div>`
++ `<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="toggleEventPerm(${jq(e.id)})">${e.perm?"取消永久":"设为永久"}</button><button class="btn ghost" onclick="storeForm('event3',${jq(e.id)})">编辑</button><button class="btn danger" onclick="storeDel('event3',${jq(e.id)})">删除</button></div></div>`
 + apexHist(st.event3,e.id,x=>(x.t_anchor?x.t_anchor+" ":"")+(x.topic||"")+(x.state?" —— "+x.state:""));
 };
 view.innerHTML = `<button class="back" onclick="albumBack()">${icon("back")} 返回</button>
@@ -149,12 +149,12 @@ ${memStatusHtml}
 + ((st && st.migrated3)
 ? `<h2 class="sec">三库记忆（LeanMem 分流）</h2>`
 + `<div class="card"><div class="alb-time">画像库 · 稳定事实 ${P3stable.length} 条${apexAlb ? "（版本链）" : ""}</div>`
-+ (P3stable.map(p=>`<div class="alb-fact">· ${esc(p.text||"")}${relSeg(p)}${(p.v||1)>1?` <span class="badge">v${p.v}</span>`:""}</div>`+apexHist(st.profile3,p.id,x=>x.text||"")).join("")||'<div class="empty">暂无</div>') + `</div>`
++ (P3stable.map(p=>`<div class="alb-fact">· ${esc(p.text||"")}${relSeg(p)}${(p.v||1)>1?` <span class="badge">v${p.v}</span>`:""}<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="storeForm('profile3',${jq(p.id)})">编辑</button><button class="btn danger" onclick="storeDel('profile3',${jq(p.id)})">删除</button></div></div>`+apexHist(st.profile3,p.id,x=>x.text||"")).join("")||'<div class="empty">暂无</div>') + `</div>`
 + `<div class="card"><div class="alb-time">事件库 · 带时间锚 ${E3alb.length} 条（可演化合并）${apexAlb ? "（版本链）" : ""}</div>`
 + kindChips
 + (E3shown.slice().reverse().map(e=>ev3Card(e)).join("")||'<div class="empty">暂无</div>') + `</div>`
 + `<div class="card"><div class="alb-time">记录库 · 原文索引 ${R3alb.filter(r=>!r.legacy).length} 条（只追加不改写）${apexAlb ? "（版本链）" : ""}</div>`
-+ (R3alb.filter(r=>!r.legacy).slice().reverse().map(r=>`<div class="alb-fact">· ${esc(r.gist||"")}${(r.msg_from||r.msg_to)?` <span style="opacity:.6">（原文 ${esc(r.msg_from||"?")}→${esc(r.msg_to||"")}）</span>`:""}${(r.v||1)>1?` <span class="badge">v${r.v}</span>`:""}</div>`+apexHist(st.record3,r.id,x=>x.gist||"")).join("")||'<div class="empty">暂无</div>') + `</div>`
++ (R3alb.filter(r=>!r.legacy).slice().reverse().map(r=>`<div class="alb-fact">· ${esc(r.gist||"")}${(r.msg_from||r.msg_to)?` <span style="opacity:.6">（原文 ${esc(r.msg_from||"?")}→${esc(r.msg_to||"")}）</span>`:""}${(r.v||1)>1?` <span class="badge">v${r.v}</span>`:""}<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="storeForm('record3',${jq(r.id)})">编辑</button><button class="btn danger" onclick="storeDel('record3',${jq(r.id)})">作废</button></div></div>`+apexHist(st.record3,r.id,x=>x.gist||"")).join("")||'<div class="empty">暂无</div>') + `</div>`
 + factsHtml
 : "")
 + `<div class="hint">记忆日记：聊天中自动抽取的点滴按时间倒序排列；置顶的是永久记忆，AI 永远优先记住。</div>`
@@ -275,6 +275,46 @@ renderAlbum();
 window.factDel = (fid)=>{
 if(!confirm("确定删除这条事实吗？此操作不可撤销。\nAre you sure you want to delete this Smart Fact? This action cannot be undone.")) return;
 RP_MEM.delFact(ALBUM.runId, ALBUM.name, fid);
+renderAlbum();
+};
+/* 三库条目编辑/作废（2026-11-24）：画像稳定事实/事件/记录。编辑与作废都走
+ * RP_MEM 的版本链追加，旧版留在历史版本里；记录库只作废、不真删。 */
+window.storeForm = (store, id)=>{
+const runId = ALBUM.runId, nm = ALBUM.name;
+__backAction = ()=>renderAlbum();
+document.body.classList.remove("chatmode","immersive");
+const st = RP_MEM.get(runId, nm) || {};
+const arr = (typeof RP_APEX !== "undefined" && RP_APEX.on()) ? RP_APEX.latestOf(st[store] || []) : (st[store] || []);
+const e = arr.find(x=>x && x.id == id && !x.void);
+if(!e){ alert("条目不存在"); return; }
+const titles = {profile3: "编辑稳定事实", event3: "编辑事件", record3: "编辑记录"};
+titleEl.innerHTML = icon("books")+" "+titles[store]; subEl.textContent = nm;
+let fields = "";
+if(store === "profile3")
+  fields = `<div class="field"><label>内容</label><textarea id="sf_text" rows="3">${esc(e.text||"")}</textarea></div>`;
+else if(store === "event3")
+  fields = `<div class="field"><label>时间锚</label><input id="sf_anchor" value="${esc(e.t_anchor||"")}"></div>`
+  + `<div class="field"><label>主题</label><input id="sf_topic" value="${esc(e.topic||"")}"></div>`
+  + `<div class="field"><label>状态</label><textarea id="sf_state" rows="3">${esc(e.state||"")}</textarea></div>`;
+else
+  fields = `<div class="field"><label>记录</label><textarea id="sf_text" rows="3">${esc(e.gist||"")}</textarea></div>`;
+view.innerHTML = `<button class="back" onclick="renderAlbum()">${icon("back")} 返回事件簿</button>
+<div class="card">${fields}
+<div class="btnrow"><button class="btn" onclick="storeSave('${store}',${jq(id)})">保存</button></div></div>`;
+window.scrollTo(0,0);
+};
+window.storeSave = (store, id)=>{
+let opt;
+if(store === "profile3") opt = {text: $("#sf_text").value};
+else if(store === "record3") opt = {gist: $("#sf_text").value};
+else opt = {topic: $("#sf_topic").value, state: $("#sf_state").value, t_anchor: $("#sf_anchor").value};
+const r = RP_MEM.editStoreEntry(ALBUM.runId, ALBUM.name, store, id, opt);
+if(!r.ok){ alert(r.err === "empty" ? "内容不能为空。" : "保存失败，请重试。"); return; }
+renderAlbum();
+};
+window.storeDel = (store, id)=>{
+if(!confirm(store === "record3" ? "作废这条记录？作废后不会再被想起，历史版本仍可查。" : "删除这条？当前列表移除，历史版本仍可查。")) return;
+RP_MEM.voidStoreEntry(ALBUM.runId, ALBUM.name, store, id);
 renderAlbum();
 };
 /* ============ 记忆转小说 (对标猫箱记忆转小说: 记忆事件 → 小说体阅读) ============ */

@@ -1,20 +1,20 @@
 {
   "note": "XSS 防线基线 2026-10-18（审计建议4 固化）。数量只许降不许升。",
   "P1": {
-    "totalExpr": 902,
-    "safe": 603,
+    "totalExpr": 906,
+    "safe": 605,
     "numeric": 29,
-    "risky": 270,
+    "risky": 272,
     "byFile": {
-      "app.js": 214,
+      "app.js": 216,
       "rp/distill_playground.js": 2,
       "rp/distill_ui.js": 54
     }
   },
   "P2": {
-    "inline": 537,
-    "withTpl": 213,
-    "withJq": 205,
+    "inline": 549,
+    "withTpl": 224,
+    "withJq": 216,
     "withEsc": 0,
     "noJq": 8
   },

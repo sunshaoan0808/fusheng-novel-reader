@@ -102,7 +102,11 @@ function mergeStructFields(dst, src, fields){
 function isFactEntry(p){ return !!(p && p.fact); }
 function factsOf(st){
   var p3 = (st && st.profile3) || [];
-  return p3.filter(isFactEntry);
+  /* APEX 开时必须先收最新版再筛（2026-11-24 实测缺陷：editFact 追加 v2 后，
+   * getFacts 把新旧两版都当事实返回、factsChars 翻倍，相册事实区新旧并列）；
+   * 作废（void）条目不算事实。 */
+  if(_apexW()) p3 = RP_APEX.latestOf(p3);
+  return p3.filter(function(p){ return isFactEntry(p) && !(p && p.void); });
 }
 function factsChars(st){
   var n = 0;
@@ -222,6 +226,9 @@ return null;
 }
 var p3 = (prev.profile3 || []).slice(), e3 = (prev.event3 || []).slice(), r3 = (prev.record3 || []).slice();
 var apexW = (typeof RP_APEX !== "undefined") && RP_APEX.on(); // APEX-MEM: 开则只追加版本, 关则覆盖式旧行为
+/* 用户作废过的条目（最新版带 void）分析合并时跳过，不许模型下一轮又给救活 */
+function _voidIds(arr){ var s = {}; if(apexW) RP_APEX.latestOf(arr).forEach(function(e){ if(e && e.void) s[e.id] = 1; }); return s; }
+var p3Void = _voidIds(p3), e3Void = _voidIds(e3);
 /* appendVersion 会把 payload 的字段盖到版本对象上, id 必须走 logicalId 参数, 故剥掉 */
 function p3payload(rec){ var o = {}; for(var k in rec) if(k !== "id") o[k] = rec[k]; return o; }
 if(!o.drop){
@@ -232,11 +239,14 @@ var tx, rel = null;
 if(it && typeof it === "object"){ tx = String(it.text || "").slice(0, 120); rel = pickStructFields(it.relationship, REL_FIELDS, 60); }
 else tx = String(it || "").slice(0, 120);
 if(!tx) return;
-var found = -1;
+var found = -1, foundVoid = false;
 for(var i = 0; i < p3.length; i++){
 var e = String(p3[i].text || "");
-if(e && (e.indexOf(tx) >= 0 || tx.indexOf(e) >= 0)){ found = i; break; }
+if(e && (e.indexOf(tx) >= 0 || tx.indexOf(e) >= 0)){
+if(p3Void[p3[i].id]) foundVoid = true; else { found = i; break; }
 }
+}
+if(found < 0 && foundVoid) return; /* 命中作废条目：用户已删，模型重报也不收 */
 function p3rec(base, isNew){
 var rec = {id: base.id, fromPin: !!base.fromPin, text: tx, updatedAt: Date.now()};
 var oldRel = pickStructFields(base.relationship, REL_FIELDS, 60);
@@ -287,8 +297,10 @@ var state = String(ev.state || "").slice(0, 120);
 var kind = normKind(ev.kind); /* #14 分型标签 */
 var sf = pickStructFields(ev, EVENT_STRUCT_FIELDS, 80);
 if(!topic && !state) return;
-var m = null;
-for(var i = 0; i < e3.length; i++) if(eventSimilar(e3[i], topic)){ m = e3[i]; break; }
+var m = null, mVoid = false;
+for(var i = 0; i < e3.length; i++){ if(!eventSimilar(e3[i], topic)) continue;
+if(e3Void[e3[i].id]) mVoid = true; else if(!m) m = e3[i]; }
+if(!m && mVoid) return; /* 命中作废事件：用户已删，模型重报也不收 */
 if(m){
 var ns = ((m.state ? m.state + "；" : "") + state).slice(0, 200);
 var mg = {topic: m.topic, t_anchor: m.t_anchor || ta, state: ns, merged: (m.merged || 1) + 1, kind: kind || m.kind || ""};
@@ -540,6 +552,11 @@ if(apex){ var _ae = RP_APEX.ensure(st); st = _ae.st; if(_ae.changed) save(runId,
 var P3 = apex ? RP_APEX.latestOf(st.profile3) : (st.profile3 || []);
 var E3 = apex ? RP_APEX.latestOf(st.event3) : (st.event3 || []);
 var R3 = apex ? RP_APEX.latestOf(st.record3) : (st.record3 || []);
+if(apex){ /* 作废条目不进 prompt（2026-11-24 三库可编辑配套） */
+P3 = P3.filter(function(e){ return !(e && e.void); });
+E3 = E3.filter(function(e){ return !(e && e.void); });
+R3 = R3.filter(function(e){ return !(e && e.void); });
+}
 var iron = getIronLaw(runId, name, opts.cardId);
 var short = (st.short || []).slice();
 var pinned = short.filter(function(m){ return m.pin; }).reverse();  // 新→旧
@@ -935,9 +952,82 @@ return {ok: true};
 function delFact(runId, name, id){
 var st = get(runId, name);
 if(!st || !st.profile3) return false;
+if(_apexW()){
+/* 口径统一（2026-11-24）：APEX 开时删除 = 追加作废版本，历史留痕，
+ * 不再像旧版这样把全部版本一并抹掉（与 editFact 的追加语义对齐）。 */
+var cur = _latestEntry(st, "profile3", id);
+if(!cur || !cur.fact || cur.void) return false;
+return voidStoreEntry(runId, name, "profile3", id);
+}
 var n0 = st.profile3.length;
 st.profile3 = st.profile3.filter(function(p){ return !(p && p.id == id && p.fact); });
 if(st.profile3.length === n0) return false;
+save(runId, name, st);
+return true;
+}
+
+/* 三库条目编辑/作废（2026-11-24 用户拍板补齐）：画像库稳定事实 / 事件库 / 记录库。
+ * 编辑与作废都走 APEX 版本链追加（旧版留痕、相册可翻历史）；APEX 关时退回
+ * 原地改/直接移除的旧行为。记录库按设计只追加，它的删除就是作废（void 版本），
+ * 检索、prompt 组装、相册展示都跳过作废条目（见 factsOf/renderBudgeted/retrieveApex）。 */
+var STORE_PREFIX = {profile3: "p3", event3: "e3", record3: "r3"};
+function _latestEntry(st, store, id){
+var arr = (st && st[store]) || [];
+var list = _apexW() ? RP_APEX.latestOf(arr) : arr;
+for(var i = 0; i < list.length; i++) if(list[i] && list[i].id == id) return list[i];
+return null;
+}
+function _carryPayload(cur){
+var o = {}, k;
+for(k in cur) if(["vid", "v", "ts", "supersedes", "void"].indexOf(k) < 0) o[k] = cur[k];
+return o;
+}
+function editStoreEntry(runId, name, store, id, opt){
+if(!STORE_PREFIX[store]) return {ok: false, err: "store"};
+var st = get(runId, name);
+if(!st || !st[store]) return {ok: false, err: "none"};
+var cur = _latestEntry(st, store, id);
+if(!cur || cur.void) return {ok: false, err: "none"};
+var payload = _carryPayload(cur);
+if(store === "profile3"){
+if(cur.fact) return {ok: false, err: "fact"}; /* Facts 走 editFact（带字数上限） */
+var text = String((opt && opt.text) || "").trim().slice(0, 120);
+if(!text) return {ok: false, err: "empty"};
+payload.text = text;
+} else if(store === "event3"){
+var topic = String(opt && opt.topic !== undefined ? opt.topic : (cur.topic || "")).trim().slice(0, 40);
+var state = String(opt && opt.state !== undefined ? opt.state : (cur.state || "")).trim().slice(0, 120);
+if(!topic && !state) return {ok: false, err: "empty"};
+payload.topic = topic; payload.state = state;
+if(opt && opt.t_anchor !== undefined) payload.t_anchor = String(opt.t_anchor).trim().slice(0, 40);
+} else {
+var gist = String((opt && opt.gist) || "").trim().slice(0, 120);
+if(!gist) return {ok: false, err: "empty"};
+payload.gist = gist;
+}
+payload.updatedAt = Date.now();
+var arr = st[store].slice();
+if(_apexW()) arr.push(RP_APEX.appendVersion(arr, STORE_PREFIX[store], cur.id, payload, false));
+else for(var i = 0; i < arr.length; i++) if(arr[i] && arr[i].id == id){ for(var k2 in payload) arr[i][k2] = payload[k2]; break; }
+st[store] = arr;
+save(runId, name, st);
+return {ok: true};
+}
+function voidStoreEntry(runId, name, store, id){
+if(!STORE_PREFIX[store]) return false;
+var st = get(runId, name);
+if(!st || !st[store]) return false;
+var cur = _latestEntry(st, store, id);
+if(!cur || cur.void) return false;
+var arr = st[store].slice();
+if(_apexW()){
+var payload = _carryPayload(cur);
+payload.void = true; payload.updatedAt = Date.now();
+arr.push(RP_APEX.appendVersion(arr, STORE_PREFIX[store], cur.id, payload, false));
+} else {
+arr = arr.filter(function(e){ return !(e && e.id == id); });
+}
+st[store] = arr;
 save(runId, name, st);
 return true;
 }
@@ -974,8 +1064,8 @@ short.forEach(function(m){ if(m.pin) pinned++; });
 var apexS = leanmemOn() && (typeof RP_APEX !== "undefined") && RP_APEX.on();
 var cntP = 0, cntE = 0, cntR = 0;
 if(st){
-if(apexS){ cntP = RP_APEX.latestOf(st.profile3).length;
-cntE = RP_APEX.latestOf(st.event3).length; cntR = RP_APEX.latestOf(st.record3).length; }
+if(apexS){ cntP = RP_APEX.latestOf(st.profile3).filter(function(e){ return !(e && e.void); }).length;
+cntE = RP_APEX.latestOf(st.event3).filter(function(e){ return !(e && e.void); }).length; cntR = RP_APEX.latestOf(st.record3).filter(function(e){ return !(e && e.void); }).length; }
 else { cntP = (st.profile3 || []).length; cntE = (st.event3 || []).length; cntR = (st.record3 || []).length; }
 }
 return {events: short.length, pinned: pinned, shortN: short.length,
@@ -997,6 +1087,7 @@ FACT_CATS: FACT_CATS, FACTS_MAX_CHARS: FACTS_MAX_CHARS,
 EVENT_STRUCT_FIELDS: EVENT_STRUCT_FIELDS, REL_FIELDS: REL_FIELDS,
 isFactEntry: isFactEntry, factsOf: factsOf, factsChars: factsChars, getFacts: getFacts,
 addFact: addFact, editFact: editFact, delFact: delFact,
+editStoreEntry: editStoreEntry, voidStoreEntry: voidStoreEntry,
 /* 借鉴清单 Tier2 S 级小项 */
 MSG_PIN_MAX: MSG_PIN_MAX, msgPinLimitMsg: msgPinLimitMsg, pinEduText: pinEduText,
 pinEduSeen: pinEduSeen, pinEduMark: pinEduMark, chatPinCount: chatPinCount,
