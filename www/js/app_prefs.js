@@ -668,10 +668,15 @@ if(oc){ body = m.content.replace(oc.full, "").trim(); cardHTML = optCardHTML(oc,
 }
 const isHit = !!__hitSet && __hitSet.has(idx);
 const isCur = isHit && SEARCH.hits[SEARCH.cur]===idx;
+/* OOC 存档标记摘条（2026-11-23）：标记做小标签贴在气泡顶，正文照常分排（三样式通用）。
+ * 剥离要在 md/分排之前做，否则标记会混进正文；已存档的老消息同样在渲染时剥离，
+ * 历史记录本身不动。单聊/群聊走同一 renderChat，改一处即全覆盖。 */
+const oocTag = (m.role==="assistant" && typeof parseOocTag === "function") ? parseOocTag(body) : null;
+if(oocTag) body = oocTag.rest;
 /* v42: AI 消息按旁白/对白分排（见 js/app_ui.js chatSegHTML） */
-const segOn = chatSegEligible(m);
+const segOn = chatSegEligible({role: m.role, content: body});
 const _mdh = hlRestore(md(hlSearchRaw(body)));
-const rendered = (segOn ? chatSegHTML(_mdh) : _mdh) + cardHTML;
+const rendered = (oocTag ? `<div class="ooc-tag">${esc(oocTag.tag)}</div>` : "") + (segOn ? chatSegHTML(_mdh) : _mdh) + cardHTML;
 /* M4: 长文本折叠（Talkie FoldTextView，阈值 600 字） */
 const needFold = body.length > 600;
 const bubbleInner = needFold

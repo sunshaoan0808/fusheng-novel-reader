@@ -212,11 +212,26 @@ function chatSegHTML(html){
   if(!blocks.length) return `<div class="seg seg-dlg">${html}</div>`;
   return blocks.map(b => `<div class="seg seg-${b.t}">${b.s}</div>`).join("");
 }
-/* 哪些 AI 消息走分排：系统性提示（⚠️ 出错 / 【OOC / （已停止生成））保持原气泡 */
+/* OOC 存档标记：重试失败后原文以「【OOC 存档·原因】正文」存进历史。
+ * 标记只是系统贴条，不是正文：摘出来单独做小标签（见 renderChat），
+ * 剩下的正文照常走旁白/对白分排 —— 否则无框样式下整条糊成一面墙
+ * （2026-11-23 用户真机实报 v85）。reason 里可能带（）如「时代泄漏（手机）」，
+ * 但不含 】，故以 】 为界切分。 */
+function parseOocTag(content){
+  const s = String(content || "");
+  const m = /^【OOC 存档·([^】]*)】/.exec(s);
+  if(!m) return null;
+  return {tag: m[0], reason: m[1], rest: s.slice(m[0].length)};
+}
+/* 哪些 AI 消息走分排：系统性提示（⚠️ 出错 / （已停止生成））保持原气泡；
+ * OOC 存档消息按摘掉标记后的正文判定（只剩标记、正文为空时仍不分排）。 */
 function chatSegEligible(m){
   if(!m || m.role !== "assistant") return false;
-  const c = String(m.content || "");
-  return c.indexOf("⚠️") !== 0 && c.indexOf("【OOC") !== 0 && c.indexOf("（已停止") !== 0;
+  let c = String(m.content || "");
+  const ooc = parseOocTag(c);
+  if(ooc) c = ooc.rest;
+  if(!c.trim()) return false;
+  return c.indexOf("⚠️") !== 0 && c.indexOf("（已停止") !== 0;
 }
 
 /* ---------- 2. 角色页：大立绘头图 + 一句台词 + 性格关键词 ---------- */

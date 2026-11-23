@@ -82,6 +82,10 @@ html[data-theme="qiuxiang"] .bubble.segd .seg-nar{
 .msg.typing .seg-dlg{ -webkit-backdrop-filter:none; backdrop-filter:none; }
 body.tw-active .chatbg .bglayer{ animation-play-state:paused; }
 .bubble.segd .seg p{ margin:.35em 0; } .bubble.segd .seg p:first-child{ margin-top:0; } .bubble.segd .seg p:last-child{ margin-bottom:0; }
+/* OOC 存档小标签（2026-11-23）：从正文摘出的标记贴在气泡顶，小字药丸，不抢正文 */
+.bubble .ooc-tag{ display:inline-block; font-size:calc(11px * var(--fs)); line-height:1.6;
+  color:var(--ink-dim); border:1px solid rgba(212,162,78,.4); border-radius:999px;
+  padding:1px 9px; margin-bottom:6px; }
 body.chatmode.bars-light .bubble.segd .seg-nar{ color:#4a3d24; text-shadow:0 1px 3px rgba(255,255,255,.6); }
 
 /* ===== 2. 角色页：大立绘头图 + 台词 + 性格词 + 常驻「开始对话」 ===== */
@@ -340,7 +344,11 @@ html[data-msgstyle="frameless"] body.chatmode .bubble{
   background:transparent; border-color:transparent; box-shadow:none; }
 html[data-msgstyle="frameless"] .bubble.segd .seg-dlg{
   background:transparent; border-color:transparent; box-shadow:none;
-  border-radius:0; padding:2px 6px 2px 12px; }
+  border-radius:0; padding:2px 6px 2px 12px;
+  /* 无框加强区分(2026-11-23 用户实报「叙事和对话不分了」后拍板): 框可以不要,
+   * 分界不能没 —— 对白补一道金左线, 与旁白的淡墨线+文楷成对: 金线=在说话,
+   * 墨线=在叙述, 扫一眼就分得开, 仍是无框的连续文本流。 */
+  border-left:2px solid color-mix(in srgb, var(--gold) 55%, transparent); }
 html[data-msgstyle="glass"] body.chatmode .bubble,
 html[data-msgstyle="glass"] .bubble.segd .seg-dlg{
   background:color-mix(in srgb, var(--card) 52%, transparent);

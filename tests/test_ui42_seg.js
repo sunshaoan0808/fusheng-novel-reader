@@ -30,6 +30,15 @@ t("系统性提示不走分排", !vm.runInContext('chatSegEligible({role:"assist
   && vm.runInContext('chatSegEligible({role:"assistant",content:"「好」"})', ctx)
   && !vm.runInContext('chatSegEligible({role:"user",content:"「好」"})', ctx));
 
+/* OOC 存档（2026-11-23 用户真机实报 v85）：标记摘条后正文照常分排，三样式通用 */
+const oocParsed = JSON.parse(vm.runInContext('JSON.stringify(parseOocTag("【OOC 存档·时代泄漏（手机）】她抬眼。"))', ctx));
+t("parseOocTag 摘出原因与正文", oocParsed.reason === "时代泄漏（手机）" && oocParsed.rest === "她抬眼。");
+t("parseOocTag 非 OOC 消息返回 null", vm.runInContext('parseOocTag("「你来了。」")', ctx) === null);
+t("OOC 存档消息按摘条后正文判定分排", vm.runInContext('chatSegEligible({role:"assistant",content:"【OOC 存档·时代泄漏（手机）】她抬眼。「你来了。」"})', ctx)
+  && !vm.runInContext('chatSegEligible({role:"assistant",content:"【OOC 存档·时代泄漏】"})', ctx));
+t("OOC 存档正文分排：旁白/对白切开", JSON.stringify(kinds("<p>她抬眼看你。</p><p>「你来了。」</p>")) === '["nar","dlg"]'
+  && seg("<p>她抬眼看你。</p><p>「你来了。」</p>").indexOf("OOC") < 0);
+
 /* v42-2 角色页：台词 / 性格词取自卡上已有字段 */
 const Q = (c) => vm.runInContext("JSON.stringify(cardQuote(" + JSON.stringify(c) + "))", ctx);
 const TT = (c) => vm.runInContext("JSON.stringify(cardTraitTags(" + JSON.stringify(c) + "))", ctx);
