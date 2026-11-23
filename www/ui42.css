@@ -29,6 +29,9 @@ body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
   background:linear-gradient(135deg,var(--gold-soft),var(--gold)); box-shadow:0 0 0 1px rgba(212,162,78,.45); }
 .mav img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:50% 20%; }
 .mav.mav-ic{ background:rgba(34,30,25,.8); color:var(--gold); }
+/* 美化乙(2026-11-23): 名牌上的朱砂印章点 */
+.whoav .seal{ width:8px; height:8px; border-radius:2px; flex:none;
+  background:linear-gradient(135deg,#c0392b,#a93226); box-shadow:0 1px 4px rgba(0,0,0,.5); }
 .msg.me .who.whoav{ justify-content:flex-end; }
 
 /* 分排容器：气泡本身退成透明容器，样式落到每个块上 */

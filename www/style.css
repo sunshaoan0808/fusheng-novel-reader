@@ -315,8 +315,12 @@ body{
 .bubble{
   /* P2-7：冷白叠色 rgba(255,255,255,*) 在暖墨底上是"另一套灰"。改用 --ink 本身的
      暖色叠色，浓度不变 —— 视觉重量一样，色相回到暖灰家族里。 */
-  background:rgba(236,228,211,.05); border:1px solid rgba(236,228,211,.07); border-radius:12px;
-  box-shadow:none; padding:10px 16px; font-size:calc(16px * var(--fs)); line-height:24px; word-break:break-word;
+  /* 美化乙(2026-11-23): 纵深 —— 自上而下的微渐变 + 暖影 + 顶部一条受光高光,
+     底色仍走 --ink 暖叠色家族(P2-7 口径不变), 行高 24→26 长读更松。 */
+  background:linear-gradient(180deg, rgba(236,228,211,.075), rgba(236,228,211,.045));
+  border:1px solid rgba(236,228,211,.10); border-radius:14px;
+  box-shadow:0 4px 14px rgba(0,0,0,.28), inset 0 1px 0 rgba(242,221,171,.05);
+  padding:10px 16px; font-size:calc(16px * var(--fs)); line-height:26px; word-break:break-word;
   transition:transform .12s ease, border-color .12s ease;
 }
 .bubble:active{transform:scale(.985);}
@@ -327,7 +331,7 @@ body{
 .bubble h1,.bubble h2,.bubble h3{font-size:calc(17px * var(--fs)); line-height:26px; margin:.5em 0 .3em; color:var(--gold-soft); font-weight:700;}
 .bubble h1:first-child,.bubble h2:first-child,.bubble h3:first-child{margin-top:0;}
 .bubble blockquote{margin:.4em 0; padding:2px 0 2px 10px; border-left:2px solid rgba(212,162,78,.4); color:rgba(236,228,211,.78); font-style:italic;}
-.msg.me .bubble{background:rgba(212,162,78,.13); border-color:rgba(212,162,78,.20); color:#f4ead2;}
+.msg.me .bubble{background:linear-gradient(135deg, rgba(212,162,78,.20), rgba(212,162,78,.10)); border-color:rgba(212,162,78,.30); color:#f4ead2;}
 .typing{align-self:flex-start; padding:8px 4px; display:flex; gap:4px; align-items:center;
   font-size:calc(12px * var(--fs)); color:var(--ink-faint);}
 .typing i{width:6px; height:6px; border-radius:50%; background:var(--gold); opacity:.4;
@@ -521,6 +525,15 @@ body.chatmode #chatlog{ min-height:0; }
 body[data-dimstate="sheet"] .chatbg .bgdim{ opacity:.5; }
 body[data-dimstate="sheet"] .chatbg .bglayer{ filter:brightness(.65) saturate(.85); }
 @media (prefers-reduced-motion:reduce){ .chatbg .bglayer{ animation:none; } }
+/* 美化甲(2026-11-23): 质感层 —— 两团墨晕(鎏金/石青) + 宣纸噪点, 压在壁纸之上、内容之下。
+ * 深浅主题通用(聊天底走 .chatbg 层栈, 与主题无关); 纯 CSS/SVG 零素材, 噪点 alpha 极低不抢字。 */
+.chatbg::after{
+  content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  background:
+    radial-gradient(90% 34% at 18% -4%, rgba(212,162,78,.20) 0%, rgba(212,162,78,0) 55%),
+    radial-gradient(70% 30% at 88% 8%, rgba(127,176,165,.14) 0%, rgba(127,176,165,0) 60%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
 /* 顶栏半透明悬浮，露出背景；背景色跟随聊天壁纸主色（--barbg-head 由 JS 取色写入） */
 body.chatmode .chathead{
   background:var(--barbg-head, rgba(13,11,9,.58));
@@ -994,24 +1007,33 @@ button.charcard{padding:0; font:inherit; color:inherit; text-align:left; width:1
 /* 按下时压的是卡片本身，命中层不能再跟着缩一次（全局 button:active 有 scale） */
 button.charcard-hit:active{transform:none !important;}
 .charcover{height:186px; display:flex; align-items:center; justify-content:center; position:relative; overflow:hidden;}
-.charcover .charimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%;}
+.charcover .charimg{position:absolute; inset:0; width:100%; height:100%; object-fit:cover; object-position:center 30%;
+  animation:charimg-in .35s ease both;}
+/* 美化丁(2026-11-23): 封面淡入, 不再硬闪; 数字等宽防跳动 */
+@keyframes charimg-in{ from{ opacity:0; } }
+@media (prefers-reduced-motion:reduce){ .charcover .charimg{ animation:none; } }
+#ctxbar, .statline, .spec .v{ font-variant-numeric:tabular-nums; }
 /* 详情页画像: 完整展示画作, 不裁切 */
 .charhero{display:block; width:100%; max-height:340px; object-fit:contain; background:var(--bg2);
   border-radius:14px; margin-bottom:12px; border:1px solid rgba(236,228,211,.10);}
 .charcover .big{font-family:var(--serif); font-size:calc(44px * var(--fs)); color:rgba(255,248,235,.92);
   text-shadow:0 2px 12px rgba(0,0,0,.5);}
 .charcover .tag{position:absolute; top:8px; left:8px; font-size:calc(12px * var(--fs)); color:#f5ecd8;
-  background:rgba(0,0,0,.45); border:1px solid rgba(236,228,211,.22);
-  border-radius:var(--r-badge); padding:2px 9px; backdrop-filter:blur(4px);
+  background:rgba(10,8,5,.38); border:1px solid rgba(242,221,171,.25);
+  border-radius:999px; padding:2px 10px; backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
   max-width:calc(100% - 16px); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
-.charbody{padding:8px 10px 10px;}
+.charbody{padding:10px 10px 10px; position:relative;}
+/* 美化丙(2026-11-23): 卡身顶部一道渐隐金线, 把封面与文字段落缝起来 */
+.charbody::before{content:""; position:absolute; top:0; left:10px; width:34px; height:2px;
+  border-radius:2px; background:linear-gradient(90deg, var(--gold), rgba(212,162,78,0));}
 .charbody .s{font-size:calc(12px * var(--fs)); color:var(--ink-faint); line-height:1.5;
   display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;}
 /* 图主导重排（2026-11-03）：名字与统计压在封面底部渐变上 */
 .covermeta{position:absolute; left:0; right:0; bottom:0; z-index:1; pointer-events:none;
-  padding:30px 10px 8px;
-  background:linear-gradient(180deg, rgba(10,8,4,0) 0%, rgba(10,8,4,.52) 52%, rgba(10,8,4,.85) 100%);}
-.covermeta .n{font-size:calc(17px * var(--fs)); font-weight:700; font-family:var(--serif);
+  padding:38px 10px 8px;
+  background:linear-gradient(180deg, rgba(10,8,4,0) 0%, rgba(10,8,4,.34) 38%, rgba(10,8,4,.62) 68%, rgba(10,8,4,.92) 100%);}
+.covermeta .n{font-size:calc(18px * var(--fs)); font-weight:700; font-family:var(--serif);
+  letter-spacing:.05em; text-wrap:balance;
   color:#fff6e3; line-height:1.25; text-shadow:0 1px 8px rgba(0,0,0,.65);}
 /* 游玩统计行：开局次数·平均轮数（单行，金色，压在封面渐变上） */
 .covermeta .statline{font-size:calc(11px * var(--fs)); color:var(--gold-soft); margin-top:2px; line-height:1.4;

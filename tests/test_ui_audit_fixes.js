@@ -57,5 +57,31 @@ t("a11y 兜底观察者在", a11y.indexOf("MutationObserver") >= 0 && a11y.index
 t("a11y 类名表含 backbtn", a11y.indexOf('"backbtn","返回"') >= 0);
 t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
 
+/* (6) 2026-11-23 美化四组落地(甲质感/乙纵深/丙卡面/丁细节) */
+{
+  const ui42 = fs.readFileSync(path.join(WWW, "ui42.css"), "utf8");
+  const appUi = fs.readFileSync(path.join(WWW, "js/app_ui.js"), "utf8");
+  /* 甲: chatbg 质感层 */
+  t("chatbg 有质感层 ::after", css.indexOf(".chatbg::after") >= 0);
+  t("质感层含噪点 SVG", css.indexOf("feTurbulence") >= 0);
+  t("质感层含墨晕渐变", /\.chatbg::after[^}]*radial-gradient\(90% 34%/.test(css));
+  /* 乙: 气泡纵深 + 印章点 */
+  t("AI 气泡改渐变+暖影", /\.bubble\{[^}]*linear-gradient\(180deg[^}]*box-shadow:0 4px 14px/.test(css));
+  t("AI 气泡行高 26", /\.bubble\{[^}]*line-height:26px/.test(css));
+  t("用户气泡斜向金渐变", /\.msg\.me \.bubble\{[^}]*linear-gradient\(135deg/.test(css));
+  t("名牌渲染印章点", appUi.indexOf('class="seal"') >= 0);
+  t("印章点样式在 ui42", /\.whoav \.seal\{[^}]*#c0392b/.test(ui42));
+  /* 丙: 选角卡 */
+  t("封面渐变压到 .92", css.indexOf("rgba(10,8,4,.92) 100%") >= 0);
+  t("来源徽标毛玻璃胶囊", /\.charcover \.tag\{[^}]*border-radius:999px[^}]*blur\(8px\)/.test(css));
+  t("卡身金线 ::before", /\.charbody::before\{[^}]*linear-gradient\(90deg, var\(--gold\)/.test(css));
+  t("卡名带字距", /\.covermeta \.n\{[^}]*letter-spacing:\.05em/.test(css));
+  /* 丁: 细节包 */
+  t("封面淡入动画", css.indexOf("@keyframes charimg-in") >= 0 && /\.charcover \.charimg\{[^}]*animation:charimg-in/.test(css));
+  t("淡入有 reduced-motion 兜底", /prefers-reduced-motion:reduce\)\{ \.charcover \.charimg\{ animation:none; \} \}/.test(css));
+  t("数字等宽规则", css.indexOf("font-variant-numeric:tabular-nums") >= 0);
+  t("卡名标题 balance", /\.covermeta \.n\{[^}]*text-wrap:balance/.test(css));
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

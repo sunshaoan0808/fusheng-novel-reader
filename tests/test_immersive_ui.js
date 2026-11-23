@@ -149,8 +149,10 @@ src.indexOf("showWho") >= 0 && src.indexOf('showWho?whoHTML:""') >= 0
 
 /* ---------- S1/S2/S3/S7/S8: 气泡 CSS ---------- */
 /* P0-28：字号改写成 calc(Npx * var(--fs))，断言跟着改成"16px 基准 × 倍率" */
-ok("S1 字号行高: 16px 基准/24px 行高", /font-size:calc\(16px \* var\(--fs\)\); line-height:24px/.test(css));
-ok("S2 圆角12px 无阴影", css.indexOf("border-radius:12px") >= 0 && /\.bubble\{[^}]*box-shadow:none/.test(css));
+/* S1/S2 于 2026-11-23 按用户拍板的「美化乙·气泡纵深」改版: 行高 24→26、圆角 12→14、
+ * 无阴影 → 暖影+微渐变。旧钉版(扁平无影)是上一轮设计裁定, 已被预览对照取代。 */
+ok("S1 字号行高: 16px 基准/26px 行高", /font-size:calc\(16px \* var\(--fs\)\); line-height:26px/.test(css));
+ok("S2 圆角14px 带暖影", /\.bubble\{[^}]*border-radius:14px/.test(css) && /\.bubble\{[^}]*box-shadow:0 4px 14px/.test(css));
 ok("S3 内边距 10px 16px", css.indexOf("padding:10px 16px") >= 0);
 /* P2-7: AI 气泡由冷白 rgba(255,255,255,.05) 改为暖墨 rgba(236,228,211,.05)
    (浓度不变, 色相归暖灰家族); 用户侧金色 .13 不变 */

@@ -66,7 +66,7 @@ function avatarHTML(runId, name, cls){
 function chatWhoHTML(name){
   if(CHAT.mode === "traverse") return `<div class="who whoav"><span class="mav mav-ic" aria-hidden="true">${icon("scroll", 13)}</span><span class="mname">${esc(name)}</span></div>`;
   const rid = CHAT.runId;
-  return `<div class="who whoav">${chatAvatarHTML(rid, name)}<span class="mname">${esc(name)}</span></div>`;
+  return `<div class="who whoav">${chatAvatarHTML(rid, name)}<span class="seal" aria-hidden="true"></span><span class="mname">${esc(name)}</span></div>`;
 }
 
 /* ---------- v42-10 等待态：「X正在提笔…」 ----------
