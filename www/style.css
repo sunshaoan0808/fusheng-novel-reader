@@ -1999,7 +1999,10 @@ body.chatmode.immersive .immstrip{
   background:rgba(16,14,11,.46); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
   border:1px solid rgba(212,162,78,.18); color:var(--ink-dim);
   font-size:calc(13.5px * var(--fs)); text-align:left; cursor:text;
+  transition:opacity .25s ease, transform .25s ease;
 }
+/* 滑动让路: 滚动中细条淡出让开正文, 停稳后由 JS 摘 .away 放回(与灯泡 .away 同步) */
+body.chatmode.immersive .immstrip.away{ opacity:0; pointer-events:none; transform:translateY(8px); }
 body.chatmode.immersive .immstrip .immstrip-ph{ flex:1; opacity:.85; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 body.chatmode.immersive .immstrip .immstrip-go{ display:flex; color:var(--gold); opacity:.8; }
 body.chatmode.immersive #chatlog{ padding-bottom:64px; }

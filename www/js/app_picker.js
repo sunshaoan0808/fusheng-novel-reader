@@ -326,6 +326,7 @@ log.addEventListener("click", (e)=>{
 }, true);
 /* 滑动隐藏：栏显示时一旦滚动就藏（P2-1: 程序化滚动在抑制窗口内不触发隐藏） */
 let lastST = log.scrollTop;
+let __awayT = 0;
 log.addEventListener("scroll", ()=>{
   const st = log.scrollTop;
   const progScroll = (Date.now() - __progScrollAt) < 120;
@@ -334,6 +335,20 @@ log.addEventListener("scroll", ()=>{
     const ae = document.activeElement;
     const typing = !!ae && /^(INPUT|TEXTAREA)$/.test(ae.tagName || "");
     if(!typing) setBars(false);
+  }
+  /* 滑动让路(2026-11-23 用户实报): 沉浸态常驻的细输入条与小助手灯泡, 滚动中也得藏。
+   * 灯泡的 .away 样式早就写好了, 却从来没人给它加这个类 —— 样式在、接线无, 灯泡纹丝不动;
+   * 细条同理补 .away。停稳 650ms 后一并放回。 */
+  if(Math.abs(st - lastST) > 2){
+    const fab = document.getElementById("asst_fab");
+    const strip = document.getElementById("immstrip");
+    if(fab) fab.classList.add("away");
+    if(strip) strip.classList.add("away");
+    clearTimeout(__awayT);
+    __awayT = setTimeout(()=>{
+      if(fab) fab.classList.remove("away");
+      if(strip) strip.classList.remove("away");
+    }, 650);
   }
   lastST = st;
   const tb = document.getElementById("tobottom");

@@ -184,5 +184,16 @@ t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
   t("浅色罩是米白托底", /qiuxiang"\] \.chatbg \.bgshade\{[^}]*rgba\(252,250,243,\.55\)/.test(css));
 }
 
+/* (11) 2026-11-23 滑动让路(用户实报: 滚动时细输入条与灯泡不隐藏) */
+{
+  const picker = fs.readFileSync(path.join(WWW, "js/app_picker.js"), "utf8");
+  t("灯泡 .away 样式在位", css.indexOf("#asst_fab.away{") >= 0);
+  t("滚动时给灯泡加 away", picker.indexOf('fab.classList.add("away")') >= 0);
+  t("滚动时给细条加 away", picker.indexOf('strip.classList.add("away")') >= 0);
+  t("停稳后摘 away", picker.indexOf('fab.classList.remove("away")') >= 0 && picker.indexOf("650") >= 0);
+  t("细条 away 样式", /\.immstrip\.away\{[^}]*opacity:0/.test(css));
+  t("细条带过渡", /\.immstrip\{[^}]*transition:opacity/.test(css) || /body\.chatmode\.immersive \.immstrip\{[^}]*transition:opacity/.test(css));
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
