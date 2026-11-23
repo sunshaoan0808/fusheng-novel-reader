@@ -591,7 +591,7 @@ if(r.history[li] && r.history[li].role==="assistant"){ try{ ttsMsg(li); }catch(e
 /* P0-3: 读失败时只提示、不写回 */
 let hh = null;
 try{ hh = getHist(k); }catch(e2){ rpToast("聊天记录读取失败"); }
-if(hh){ hh.push({role:"assistant", speaker: (speakers[0]||null), content:`⚠️ 出错了：${e.message}`, ts:Date.now()}); saveHist(k, hh); }
+if(hh){ hh.push({role:"assistant", speaker: (speakers[0]||null), ghost:true, content:(typeof RP!=="undefined" && RP.errText ? RP.errText(e) : `⚠️ 出错了：${e.message}`), ts:Date.now()}); saveHist(k, hh); }
 else{ rpToast("发送失败："+e.message); }
 }finally{
 /* P0-3: 收尾必须执行——setStreaming(false) 进 finally，任何异常都不能让输入框永久锁死 */

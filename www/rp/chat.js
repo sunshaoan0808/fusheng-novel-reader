@@ -7,6 +7,14 @@
 const RP_NET = (function(){
 "use strict";
 
+/* HTTP 错误带上状态码(2026-11-23): 报错文案要按 400/429/5xx 分工,
+ * 状态只嵌在 message 字符串里下游没法可靠分流, 在抛出处挂 .status。 */
+function httpErr(status){
+  var e = new Error("接口返回 " + status);
+  e.status = status;
+  return e;
+}
+
 var adapters = {
   openai: {
     defaultContext: 8192,
@@ -77,7 +85,7 @@ async function continueOnce(cfg, messages, partial, temperature, extra){
                               body: JSON.stringify(q.body),
                               /* P1-2: 透传取消信号（soul 并行等非流式调用也需要可取消） */
                               signal: ex.signal || undefined});
-  if(!r.ok) throw new Error("接口返回 " + r.status);
+  if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var m = d.choices && d.choices[0] && d.choices[0].message;
   return ((m && m.content) || "").trim();
@@ -93,7 +101,7 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
                               body: JSON.stringify(q.body),
                               /* P1-2: 透传取消信号（soul 并行等非流式调用也需要可取消） */
                               signal: ex.signal || undefined});
-  if(!r.ok) throw new Error("接口返回 " + r.status);
+  if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var ch = d.choices && d.choices[0];
   var m = ch && ch.message;
@@ -127,7 +135,7 @@ async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
   var r = await fetch(base + "/chat/completions", {method: "POST",
     headers: {"Content-Type": "application/json", "Authorization": "Bearer " + c.key},
     body: JSON.stringify(body)});
-  if(!r.ok) throw new Error("接口返回 " + r.status);
+  if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var ch = d.choices && d.choices[0];
   var m = ch && ch.message;
@@ -179,7 +187,7 @@ async function stream(cfg, messages, opts, onToken){
      topP: opts.topP, maxTokens: opts.maxTokens});
   var r = await fetch(q.url, {method: "POST", headers: q.headers,
     body: JSON.stringify(q.body), signal: opts.signal});
-  if(!r.ok) throw new Error("接口返回 " + r.status);
+  if(!r.ok) throw httpErr(r.status);
   var reader = r.body.getReader();
   var dec = new TextDecoder();
   var buf = "", full = "", finishReason = null;
@@ -555,6 +563,22 @@ function newMsg(role, content){
           candidates: role === "assistant" ? [content] : undefined, ci: 0};
 }
 
+/* 报错文案按状态码分工(2026-11-23): 此前所有错误只有一句「检查地址/Key/模型/网络」,
+ * 限流和网关故障也这么说, 用户无从判断该等还是该改设置。状态优先读 httpErr 挂的
+ * .status, 老路径错误兜底从文案里解析; 原始信息保留在末尾备查。 */
+function errTextFor(err){
+  var msg = (err && err.message) || String(err || "未知错误");
+  var st = (err && err.status) || 0;
+  if(!st){
+    var m = /(?:接口返回|HTTP)\s*(\d{3})/.exec(msg);
+    if(m) st = parseInt(m[1], 10);
+  }
+  if(st === 400) return "⚠️ 出错了：请求被接口拒绝（400）。多半是模型名不对、或参数不被这个模型支持——去「我的 · 设置」核对模型名，或换个模型试试。\n原始信息：" + msg;
+  if(st === 429) return "⚠️ 出错了：接口限流了（429）。高峰期常见，稍等一会儿再发，或换个模型。\n原始信息：" + msg;
+  if(st >= 500) return "⚠️ 出错了：接口/网关那边出错了（" + st + "），不是你这边的问题，稍后重试即可。\n原始信息：" + msg;
+  return "⚠️ 出错了：" + msg + "\n请检查设置里的 API 地址/Key/模型，以及手机网络。";
+}
+
 /* 错误提示消息: 照常显示给用户, 但打 ghost 标记, 不进模型上下文 */
 function errNotice(text){
   var m = newMsg("assistant", text);
@@ -855,8 +879,7 @@ async function send(runId, name, text, opts){
   }
   if(ctrl.aborted) return {history: h, aborted: true, stats: b.stats};
   if(lastErr){
-    h.push(errNotice("⚠️ 出错了：" + lastErr.message +
-      "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
+    h.push(errNotice(errTextFor(lastErr)));
     return {history: h, aborted: false, stats: b.stats};
   }
   if(isEmptyReply(reply)){
@@ -1255,8 +1278,7 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
     else {
-      h.push(errNotice("⚠️ 出错了：" + e.message +
-        "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
+      h.push(errNotice(errTextFor(e)));
       return {stats: b.stats, failed: true};
     }
   }
@@ -1414,8 +1436,7 @@ async function sendTraverse(travId, text, opts){
   } catch(e){
     if(e && e.name === "AbortError"){ ctrl.aborted = true; }
     else {
-      h.push(errNotice("⚠️ 出错了：" + e.message +
-        "\n请检查设置里的 API 地址/Key/模型，以及手机网络。"));
+      h.push(errNotice(errTextFor(e)));
       return {history: h, aborted: false, stats: b.stats};
     }
   }
@@ -1473,7 +1494,7 @@ async function sendTraverse(travId, text, opts){
 }
 
 return {send: send, regenerate: regenerate, swipe: swipe, sendGroup: sendGroup,
-        sendTraverse: sendTraverse,
+        sendTraverse: sendTraverse, errText: errTextFor,
         greeting: greeting, findCard: findCard, mapHistory: mapHistory, tagUserMsg: tagUserMsg,
         synthRunFor: synthRunFor};
 })();
