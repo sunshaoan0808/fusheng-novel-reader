@@ -484,6 +484,46 @@ parts.push(m.mid||m.id||i, (m.content||"").length, m.rating||0,
 }
 return parts.join("|");
 }
+/* 美化壬: 中式日期分隔文案 —— 农历月日 + 时辰(初/正)。
+ * 时辰口径: 每时辰前一小时为初、后一小时为正; 小时为奇数→初、偶数→正(子时 23 初 / 0 正同理)。
+ * 农历走 Intl chinese 日历; 日名用传统表(初一…廿三…三十), 不用阿拉伯数字。 */
+const __LUNAR_DAYS = ["初一","初二","初三","初四","初五","初六","初七","初八","初九","初十",
+  "十一","十二","十三","十四","十五","十六","十七","十八","十九","二十",
+  "廿一","廿二","廿三","廿四","廿五","廿六","廿七","廿八","廿九","三十"];
+const __SHICHEN = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+function daySepText(ts){
+  const d = new Date(ts);
+  let datePart = "";
+  try{
+    const parts = new Intl.DateTimeFormat("zh-CN", { calendar:"chinese", month:"long", day:"numeric" }).formatToParts(d);
+    let mo = "", dn = 0;
+    parts.forEach(p => { if(p.type === "month") mo = p.value; if(p.type === "day") dn = parseInt(p.value, 10); });
+    if(mo && dn >= 1 && dn <= 30) datePart = mo + __LUNAR_DAYS[dn - 1];
+  }catch(e){}
+  if(!datePart) datePart = (d.getMonth() + 1) + "月" + d.getDate() + "日";
+  const h = d.getHours();
+  const sc = __SHICHEN[Math.floor(((h + 1) % 24) / 2)] + "时" + (h % 2 === 1 ? "初" : "正");
+  return datePart + " · " + sc;
+}
+/* 美化癸: 好感结算数字滚动计数 —— 只动日志里最后一个 .wire-num(即最新一条结算),
+ * renderChat 每次重建都会触发, 但只有最后一条会滚, 老 chip 保持静止。 */
+function animateWireNum(log){
+  try{
+    if(!log || (window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches)) return;
+    const nums = log.querySelectorAll(".wire-num");
+    if(!nums.length) return;
+    const el = nums[nums.length - 1];
+    const from = parseInt(el.getAttribute("data-from"), 10), to = parseInt(el.getAttribute("data-to"), 10);
+    if(isNaN(from) || isNaN(to) || from === to) return;
+    const t0 = performance.now(), dur = 550;
+    const step = (t)=>{
+      const p = Math.min(1, (t - t0) / dur);
+      el.textContent = String(Math.round(from + (to - from) * (1 - Math.pow(1 - p, 3))));
+      if(p < 1) requestAnimationFrame(step);
+    };
+    requestAnimationFrame(step);
+  }catch(e){}
+}
 function renderChat(forceBottom){
 twStop(); /* 新渲染进来（发消息/切tab/新回复）先停掉旧动画 */
 const _k = chatHistKey();
@@ -518,10 +558,22 @@ if(m.role==="assistant" && m.content.indexOf("⚠️")!==0
 });
 /* v37: 命中集合每次渲染只建一次，避免每条消息 indexOf 线性查找 */
 const __hitSet = SEARCH.active ? new Set(SEARCH.hits) : null;
+/* 美化壬: 日期分隔预计算 —— 首条、或与上一条跨天时, 在该条前插分隔 */
+const __sepSet = new Set();
+{
+  let lastDay = "";
+  h.forEach((m, i)=>{
+    if(!m.ts) return;
+    const d = new Date(m.ts);
+    const dk = d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate();
+    if(dk !== lastDay){ __sepSet.add(i); lastDay = dk; }
+  });
+}
 log.innerHTML = h.map((m, idx)=>{
+const __sep = __sepSet.has(idx) ? `<div class="daysep">${esc(daySepText(m.ts))}</div>` : "";
 /* 推剧情触发注记：居中显示，不占气泡 */
 if(m.pushNote){
-  return `<div class="pushnote">${icon("clapperboard",13)} 剧情推进</div>`;
+  return __sep + `<div class="pushnote">${icon("clapperboard",13)} 剧情推进</div>`;
 }
 const mtype = m.mtype || (m.role==="user" ? "player" : "char");
 const who = m.role==="user"
@@ -594,15 +646,16 @@ const conflictBadge = (m._conflicts && m._conflicts.length && !m._conflictResolv
 ? RP_SOUL_CFG.conflictBadgeHTML(m._conflicts, idx) : "";
 /* Tier1 接线结算条：好感变化 / CG / 判定等结构化结果挂在气泡下方 */
 const wireHTML = (m.role==="assistant" && m.wire && typeof RP_WIRING!=="undefined" && RP_WIRING.wireHTML) ? RP_WIRING.wireHTML(m.wire) : "";
-return `<div class="msg ${m.role==="user"?"me":""}${mtype==="narr"?" narr":""}${mtype==="npc"?" npc":""}${isCur?" curhit":""}" id="smsg-${idx}" data-mid="${esc(m.mid||m.id||"")}" onclick="toggleTools(event,${jq(idx)})" oncontextmenu="event.preventDefault();msgMenu(${jq(idx)});return false;" ontouchstart="msgPressStart(event,${jq(idx)})" ontouchend="msgPressEnd()" ontouchmove="msgPressEnd()">`
+return __sep + `<div class="msg ${m.role==="user"?"me":""}${mtype==="narr"?" narr":""}${mtype==="npc"?" npc":""}${isCur?" curhit":""}" id="smsg-${idx}" data-mid="${esc(m.mid||m.id||"")}" onclick="toggleTools(event,${jq(idx)})" oncontextmenu="event.preventDefault();msgMenu(${jq(idx)});return false;" ontouchstart="msgPressStart(event,${jq(idx)})" ontouchend="msgPressEnd()" ontouchmove="msgPressEnd()">`
 + `<div class="msgcol">${showWho?whoHTML:""}<div class="bubble${segOn?" segd":""}${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${wireHTML}${extra}</div>`
 + `</div>`;
-}).join("") || `<div class="empty">还没有对话，打个招呼吧<br><span style="font-size:calc(12px * var(--fs))">试试：你是谁？</span></div>`;
+}).join("") || `<div class="empty"><span class="empty-seal" aria-hidden="true">浮生</span>还没有对话，打个招呼吧<br><span style="font-size:calc(12px * var(--fs))">试试：你是谁？</span></div>`;
 renderCtxBar();
 try{ if(CHAT.mode==="group") paintChatPortrait(); }catch(e){} /* v42: 群聊立绘跟随最近发言者 */
 if(stick){ markProgScroll(); log.scrollTop = log.scrollHeight; }
 renderWsBar();
 renderSimBar();
+animateWireNum(log);
 /* P2 打字机：只对"本会话内新到达的最新一条 AI 消息"做逐字动画；
  * 打开已有聊天时现存消息一律先登记为已见、直接全文呈现（修冷启动重播狂闪） */
 try{

@@ -164,7 +164,9 @@ const W = require("../www/rp/wiring.js");
       { kind: "check", text: "判定（属性 50）：掷出 23，成功" }
     ]
   });
-  assert.ok("wireHTML 好感 chip 带当前值", html.indexOf("林黛玉 好感 +5 · 当前 62") >= 0);
+  /* 2026-11-23 美化癸: 当前值包进 .wire-num(带 data-from/to 供滚动计数), 文案不变 */
+  assert.ok("wireHTML 好感 chip 带当前值", html.indexOf("林黛玉 好感 +5 · 当前 ") >= 0
+    && html.indexOf('<span class="wire-num" data-from="57" data-to="62">62</span>') >= 0);
   assert.ok("wireHTML 好感通知不重复", (html.match(/好感 \+5/g) || []).length === 1);
   assert.ok("wireHTML cg 通知带 ×2", html.indexOf("图鉴 +cg_x ×2") >= 0 && html.indexOf('wirechip cg') >= 0);
   assert.ok("wireHTML 空输入为空串", W.wireHTML(null) === "" && W.wireHTML({ favorChanges: [], notices: [] }) === "");

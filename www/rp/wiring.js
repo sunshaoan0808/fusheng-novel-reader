@@ -387,8 +387,10 @@ var RP_WIRING = (function () {
       if (!wire) return "";
       var parts = [];
       (wire.favorChanges || []).forEach(function (ch) {
+        /* 美化癸(2026-11-23): 当前值包成 .wire-num 并带起止数, 渲染层对最后一条做滚动计数 */
         parts.push('<span class="wirechip favor">' + escHtml(ch.name) + " 好感 " +
-          (ch.delta > 0 ? "+" + ch.delta : String(ch.delta)) + " · 当前 " + ch.total + "</span>");
+          (ch.delta > 0 ? "+" + ch.delta : String(ch.delta)) + " · 当前 " +
+          '<span class="wire-num" data-from="' + (ch.total - ch.delta) + '" data-to="' + ch.total + '">' + ch.total + "</span></span>");
       });
       (wire.notices || []).forEach(function (n) {
         if (!n || n.kind === "favor") return;

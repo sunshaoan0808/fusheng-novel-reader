@@ -140,8 +140,9 @@ body{
 #topbar{
   position:sticky; top:0; z-index:var(--z-nav); padding:14px 18px 12px;
   background:transparent;
-  backdrop-filter:blur(18px); -webkit-backdrop-filter:blur(18px);
-  border-bottom:1px solid var(--line-soft);
+  backdrop-filter:blur(18px) saturate(1.25); -webkit-backdrop-filter:blur(18px) saturate(1.25);
+  /* 美化庚(2026-11-23): 顶栏底边换发丝金线(顶/底栏本就有 blur, 这里补金线与饱和) */
+  border-bottom:1px solid rgba(212,162,78,.18);
 }
 #title{font-family:var(--serif); font-size:calc(21px * var(--fs)); letter-spacing:.14em; color:var(--gold-soft); font-weight:700;}
 #sub{display:block; font-size:calc(11px * var(--fs)); color:var(--ink-faint); letter-spacing:.06em; margin-top:2px;}
@@ -150,7 +151,7 @@ body{
 /* 底部导航 */
 #mainnav{
   position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:640px;
-  display:flex; background:var(--nav-bg); backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+  display:flex; background:var(--nav-bg); backdrop-filter:blur(16px) saturate(1.25); -webkit-backdrop-filter:blur(16px) saturate(1.25);
   border-top:1px solid var(--line-soft); padding:8px 6px calc(8px + env(safe-area-inset-bottom)); z-index:var(--z-nav);
   /* P0-28：字号档位放大后（--fs 1.3），6 个标签的内容宽度会超过 348px。
      标签不折行、不压缩，放不下时整条横滑 —— 折行会把底栏撑成 75px 两行 */
@@ -354,6 +355,15 @@ body{
 .chatbar button:active{transform:scale(.94);}
 .chatbar button:disabled{opacity:.5;}
 .empty{text-align:center; color:var(--ink-faint); font-size:calc(13px * var(--fs)); padding:40px 20px; line-height:2;}
+/* 美化辛(2026-11-23): 聊天空状态的竖排淡印 —— 「浮生」二字作水印题跋 */
+.empty-seal{display:block; writing-mode:vertical-rl; margin:0 auto 16px;
+  font-family:var(--serif); font-size:calc(40px * var(--fs)); font-weight:700;
+  letter-spacing:.35em; color:rgba(212,162,78,.14); user-select:none;}
+/* 美化壬(2026-11-23): 聊天里的中式日期分隔 —— 农历月日 · 时辰, 两侧发丝线 */
+.daysep{display:flex; align-items:center; gap:12px; margin:6px 8px 0;
+  color:var(--ink-faint); font-size:calc(11px * var(--fs)); letter-spacing:.18em; text-align:center;}
+.daysep::before, .daysep::after{content:""; flex:1; height:1px;
+  background:linear-gradient(90deg, transparent, var(--line), transparent);}
 /* 空状态水墨分隔线：一处改，全站空状态生效 */
 .empty::before{content:"";display:block;width:72px;height:1px;margin:0 auto 14px;
   background:linear-gradient(90deg,transparent,var(--gold-deep),transparent);opacity:.7}
@@ -529,15 +539,23 @@ body[data-dimstate="sheet"] .chatbg .bglayer{ filter:brightness(.65) saturate(.8
  * 深浅主题通用(聊天底走 .chatbg 层栈, 与主题无关); 纯 CSS/SVG 零素材, 噪点 alpha 极低不抢字。 */
 .chatbg::after{
   content:""; position:absolute; inset:0; pointer-events:none; opacity:.5;
+  /* 美化子(2026-11-23): 墨晕改走主题变量 —— 鎏金晕跟 --gold、石青晕跟 --green,
+   * 切主题时质感层跟着「换境」, 不再是墨夜写死的一套色。 */
   background:
-    radial-gradient(90% 34% at 18% -4%, rgba(212,162,78,.20) 0%, rgba(212,162,78,0) 55%),
-    radial-gradient(70% 30% at 88% 8%, rgba(127,176,165,.14) 0%, rgba(127,176,165,0) 60%),
+    radial-gradient(90% 34% at 18% -4%, color-mix(in srgb, var(--gold) 20%, transparent) 0%, transparent 55%),
+    radial-gradient(70% 30% at 88% 8%, color-mix(in srgb, var(--green) 14%, transparent) 0%, transparent 60%),
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.45 0 0 0 0 0.35 0 0 0 0.06 0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
 }
+/* 浅色主题下质感层收一档, 免得压字 */
+html[data-theme="xuanzhi"] .chatbg::after, html[data-theme="qingci"] .chatbg::after,
+html[data-theme="tianqing"] .chatbg::after, html[data-theme="taoyao"] .chatbg::after,
+html[data-theme="qiuxiang"] .chatbg::after{ opacity:.38; }
 /* 顶栏半透明悬浮，露出背景；背景色跟随聊天壁纸主色（--barbg-head 由 JS 取色写入） */
 body.chatmode .chathead{
   background:var(--barbg-head, rgba(13,11,9,.58));
   border-bottom:1px solid rgba(212,162,78,.14);
+  /* 美化庚: 聊天顶栏补毛玻璃(此前只有半透明底, 滚动时字会糊在内容上) */
+  backdrop-filter:blur(14px) saturate(1.25); -webkit-backdrop-filter:blur(14px) saturate(1.25);
 }
 /* 兜底：即使 marginTop 收空间失效（如量高为 0），顶栏本身也必须移出视口，
    不留黑条。主收起靠 JS 设 marginTop 负值（正文补位） */
@@ -1015,7 +1033,9 @@ button.charcard-hit:active{transform:none !important;}
 #ctxbar, .statline, .spec .v{ font-variant-numeric:tabular-nums; }
 /* 详情页画像: 完整展示画作, 不裁切 */
 .charhero{display:block; width:100%; max-height:340px; object-fit:contain; background:var(--bg2);
-  border-radius:14px; margin-bottom:12px; border:1px solid rgba(236,228,211,.10);}
+  border-radius:14px; margin-bottom:12px; border:1px solid rgba(236,228,211,.10);
+  /* 美化己(2026-11-23): 装裱 —— 10px 留白作裱边 + 内描金线, 像挂轴上墙 */
+  padding:10px; box-shadow:inset 0 0 0 1px rgba(212,162,78,.28), var(--shadow-s);}
 .charcover .big{font-family:var(--serif); font-size:calc(44px * var(--fs)); color:rgba(255,248,235,.92);
   text-shadow:0 2px 12px rgba(0,0,0,.5);}
 .charcover .tag{position:absolute; top:8px; left:8px; font-size:calc(12px * var(--fs)); color:#f5ecd8;
@@ -1117,7 +1137,8 @@ button.charcard-hit:active{transform:none !important;}
   background:linear-gradient(180deg,var(--gold-deep),var(--line)); border-radius:2px;}
 .tl-item{position:relative; margin-bottom:12px;}
 .tl-item:before{content:""; position:absolute; left:-19px; top:16px; width:10px; height:10px;
-  border-radius:50%; background:var(--bg); border:2px solid var(--gold-deep);}
+  /* 美化己: 时间线节点改墨点 —— 径向渐变模拟墨珠, 不再是空心圈 */
+  border-radius:50%; background:radial-gradient(circle at 35% 32%, #57503f, #171310 72%); border:1px solid var(--gold-deep);}
 .tl-item.gold:before{background:var(--gold); border-color:var(--gold-soft);
   box-shadow:var(--shadow-s);}
 .tl-item .card{margin-bottom:0;}
@@ -1324,6 +1345,12 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder{color:var(
 .chargrid .charcard{animation:cardin calc(.3s * var(--anim-mult,1)) ease backwards;}
 .chargrid .charcard:nth-child(2){animation-delay:calc(.04s * var(--anim-mult,1));}
 .chargrid .charcard:nth-child(3){animation-delay:calc(.08s * var(--anim-mult,1));}
+/* 美化癸(2026-11-23): 入场 stagger 从 3 张延到 8 张 */
+.chargrid .charcard:nth-child(4){animation-delay:calc(.12s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(5){animation-delay:calc(.16s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(6){animation-delay:calc(.20s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(7){animation-delay:calc(.24s * var(--anim-mult,1));}
+.chargrid .charcard:nth-child(8){animation-delay:calc(.28s * var(--anim-mult,1));}
 .chargrid .charcard:nth-child(4){animation-delay:calc(.12s * var(--anim-mult,1));}
 .chargrid .charcard:nth-child(5){animation-delay:calc(.16s * var(--anim-mult,1));}
 .chargrid .charcard:nth-child(6){animation-delay:calc(.2s * var(--anim-mult,1));}
@@ -1647,19 +1674,22 @@ body.chatmode.immersive #scenbar{ min-height:0; }
   border:1px solid var(--line);box-shadow:var(--shadow);cursor:pointer;
   transition:transform .12s ease, border-color .12s ease;}
 .bw-card:active{transform:scale(.97);border-color:var(--gold-deep);}
-.bw-cover{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;}
+.bw-cover{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;animation:charimg-in .35s ease both;}
 .bw-cover-default{position:relative;width:100%;aspect-ratio:3/4;overflow:hidden;}
-.bw-cover-default img{width:100%;height:100%;object-fit:cover;}
+.bw-cover-default img{width:100%;height:100%;object-fit:cover;animation:charimg-in .35s ease both;}
 .bw-cover-default span{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font-family:var(--serif);font-size:calc(18px * var(--fs));font-weight:700;color:var(--gold-soft);
   letter-spacing:.12em;text-shadow:0 2px 12px rgba(0,0,0,.85);padding:8px;text-align:center;}
-.bw-info{padding:10px 12px;}
-.bw-name{font-family:var(--serif);font-size:calc(15px * var(--fs));font-weight:600;color:var(--ink);}
+.bw-info{padding:10px 12px; position:relative;}
+/* 美化戊(2026-11-23): 书架与选角卡成套 —— 信息区顶部同款渐隐金线 */
+.bw-info::before{content:""; position:absolute; top:0; left:12px; width:34px; height:2px;
+  border-radius:2px; background:linear-gradient(90deg, var(--gold), rgba(212,162,78,0));}
+.bw-name{font-family:var(--serif);font-size:calc(15px * var(--fs));font-weight:600;color:var(--ink);letter-spacing:.04em;}
 .bw-meta{font-size:calc(11px * var(--fs));color:var(--ink-faint);margin-top:3px;}
 /* ===== run 详情页封面横幅 ===== */
 .runbanner{position:relative;height:138px;border-radius:14px;overflow:hidden;
   margin-bottom:12px;border:1px solid var(--line-soft);box-shadow:var(--shadow-s)}
-.runbanner img{width:100%;height:100%;object-fit:cover;object-position:center 32%;display:block}
+.runbanner img{width:100%;height:100%;object-fit:cover;object-position:center 32%;display:block;animation:charimg-in .35s ease both}
 .runbanner::after{content:"";position:absolute;inset:0;pointer-events:none;
   background:linear-gradient(180deg,rgba(0,0,0,.06) 0%,transparent 34%,transparent 62%,rgba(0,0,0,.42) 100%)}
 

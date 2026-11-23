@@ -49,10 +49,13 @@ body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
   padding:9px 15px; box-shadow:var(--shadow-s);
 }
 .bubble.segd .seg-dlg:first-child{ border-top-left-radius:5px; }
-/* 旁白：无气泡，弱化灰、略斜，左侧一道淡墨线 */
+/* 旁白：无气泡，弱化灰，左侧一道淡墨线。
+ * 美化壬(2026-11-23): 旁白换霞鹜文楷与对白分家(楷体自带手书感, 不再用斜体硬斜中文字),
+ * 字距微张, 一眼分出「叙述」与「说话」。 */
 .bubble.segd .seg-nar{
-  color:var(--ink-dim); font-style:italic; padding:1px 6px 1px 12px;
+  color:var(--ink-dim); padding:1px 6px 1px 12px;
   border-left:2px solid rgba(179,168,143,.22);
+  font-family:"LXGW WenKai","Noto Serif SC",serif; letter-spacing:.02em;
   font-size:calc(15px * var(--fs)); line-height:24px;
   text-shadow:0 1px 3px rgba(0,0,0,.65);
 }

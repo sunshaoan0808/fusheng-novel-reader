@@ -83,5 +83,52 @@ t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
   t("卡名标题 balance", /\.covermeta \.n\{[^}]*text-wrap:balance/.test(css));
 }
 
+/* (7) 2026-11-23 美化第二批(戊书架/己装裱/庚玻璃/辛空态/壬分隔与旁白/癸动效/子纹样随主题) */
+{
+  const ui42 = fs.readFileSync(path.join(WWW, "ui42.css"), "utf8");
+  const prefs = fs.readFileSync(path.join(WWW, "js/app_prefs.js"), "utf8");
+  const wiring = fs.readFileSync(path.join(WWW, "rp/wiring.js"), "utf8");
+  /* 戊 书架成套 */
+  t("书封淡入", /\.bw-cover\{[^}]*animation:charimg-in/.test(css));
+  t("书架信息区金线", /\.bw-info::before\{[^}]*linear-gradient\(90deg, var\(--gold\)/.test(css));
+  t("run 横幅淡入", /\.runbanner img\{[^}]*animation:charimg-in/.test(css));
+  /* 己 装裱 + 墨点 */
+  t("大图装裱留白+金线", /\.charhero\{[^}]*padding:10px[^}]*inset 0 0 0 1px rgba\(212,162,78/.test(css));
+  t("时间线墨点", /\.tl-item:before\{[^}]*radial-gradient\(circle at 35% 32%/.test(css));
+  /* 庚 玻璃补完 */
+  t("顶栏金线", /#topbar\{[^}]*border-bottom:1px solid rgba\(212,162,78,\.18\)/.test(css));
+  t("聊天顶栏毛玻璃", /body\.chatmode \.chathead\{[^}]*backdrop-filter:blur\(14px\)/.test(css));
+  t("底栏 blur 带饱和", /#mainnav\{[^}]*backdrop-filter:blur\(16px\) saturate/.test(css));
+  /* 辛 空状态题跋 */
+  t("聊天空状态有竖排淡印", prefs.indexOf('class="empty-seal"') >= 0);
+  t("淡印样式竖排", /\.empty-seal\{[^}]*writing-mode:vertical-rl/.test(css));
+  /* 壬 日期分隔 + 旁白楷体 */
+  t("renderChat 预计算分隔集", prefs.indexOf("__sepSet") >= 0 && prefs.indexOf('class="daysep"') >= 0);
+  t("daysep 样式两侧发丝线", /\.daysep::before, \.daysep::after/.test(css));
+  t("旁白换文楷去斜体", /\.seg-nar\{[^}]*LXGW WenKai/.test(ui42) && !/\.seg-nar\{[^}]*font-style:italic/.test(ui42));
+  /* 壬 时辰/农历行为: 从 app_prefs 抽出纯函数实测 */
+  const mBlk = prefs.match(/const __LUNAR_DAYS[\s\S]*?function daySepText\(ts\)\{[\s\S]*?\n\}/);
+  t("daySepText 函数可抽取", !!mBlk);
+  if(mBlk){
+    const ctx = { Intl, Date, console };
+    vm.createContext(ctx);
+    vm.runInContext(mBlk[0] + "\nthis.__f = daySepText;", ctx);
+    const f = ctx.__f;
+    t("23 点是子时初", /子时初$/.test(f(new Date(2026, 10, 23, 23, 30).getTime())));
+    t("0 点是子时正", /子时正$/.test(f(new Date(2026, 10, 23, 0, 30).getTime())));
+    t("13 点是未时初", /未时初$/.test(f(new Date(2026, 10, 23, 13, 0).getTime())));
+    t("14 点是未时正", /未时正$/.test(f(new Date(2026, 10, 23, 14, 0).getTime())));
+    t("日期段是农历表日名", /月(初|十|廿|三十)/.test(f(new Date(2026, 10, 23, 12, 0).getTime())));
+  }
+  /* 癸 动效补完 */
+  t("stagger 延到第 8 张", css.indexOf(".chargrid .charcard:nth-child(8)") >= 0);
+  t("好感数值带起止数据", wiring.indexOf('class="wire-num"') >= 0 && wiring.indexOf('data-from="') >= 0);
+  t("renderChat 调用计数动画", prefs.indexOf("animateWireNum(log)") >= 0);
+  t("计数动画 honor reduced-motion", prefs.indexOf("prefers-reduced-motion: reduce") >= 0);
+  /* 子 纹样随主题 */
+  t("墨晕走主题变量", /\.chatbg::after[^}]*color-mix\(in srgb, var\(--gold\)/.test(css));
+  t("浅色主题质感收一档", css.indexOf('html[data-theme="xuanzhi"] .chatbg::after') >= 0);
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
