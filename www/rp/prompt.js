@@ -588,6 +588,13 @@ function buildMessages(card, ctx, budget){
   }
   }
 
+  /* 本轮增补指令(掷骰判定等, 调用方按本轮消息生成): 与玩家行动铁律同位压尾,
+   * 经典与 ST 两条组装路径都生效; 穿越路径有自己的同名机制, 不走这里。 */
+  if(ctx.extraPrompt){
+    messages.push({role: "system", content: String(ctx.extraPrompt)});
+    post += "\n\n" + String(ctx.extraPrompt);
+  }
+
   return {
     messages: messages,
     stats: {maxCtx: maxCtx, avail: avail, sysTokens: used, histTokens: hUsed,

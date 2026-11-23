@@ -762,6 +762,7 @@ async function send(runId, name, text, opts){
     memory: memPrompt, memTasks: memTasks,
     memBudgeted: memCtxFor(runId, name, card, run.novel, temporal, text, apex),
     arc: arcText,
+    extraPrompt: opts.extraPrompt || "", /* 本轮增补指令(掷骰判定等) */
     history: mapHistory(h),
     persona: RP_PERSONA.renderText(RP_PERSONA.resolve(runId)),
     personaName: (function(){ try{ var p = RP_PERSONA.resolve(runId); return (p && p.name) || ""; }catch(e){ return ""; } })(),
@@ -1015,6 +1016,7 @@ async function regenerate(runId, name, opts){
     memTasks: RP_TASKS.renderPrompt(runId, name, lastUserText),
     memBudgeted: memCtxFor(runId, name, card, run.novel, temporalRe, lastUserText, apexRe),
     arc: arcTextRe,
+    extraPrompt: opts.extraPrompt || "", /* 本轮增补指令(掷骰判定等) */
     history: mapHistory(h.slice(0, upto)),
     persona: RP_PERSONA.renderText(RP_PERSONA.resolve(runId)),
     pov: opts.pov, person: opts.person,
@@ -1181,6 +1183,7 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
     memTasks: RP_TASKS.renderPrompt(runId, speaker, text),
     memBudgeted: memCtxFor(runId, speaker, activeCard, run.novel, temporalSpk, text, apexSpk),
     arc: arcTextSpk,
+    extraPrompt: opts.extraPrompt || "", /* 本轮增补指令(掷骰判定等) */
     history: mapHistory(h),
     persona: RP_PERSONA.renderText(RP_PERSONA.resolve(runId)),
     personaName: (function(){ try{ var p = RP_PERSONA.resolve(runId); return (p && p.name) || ""; }catch(e){ return ""; } })(),

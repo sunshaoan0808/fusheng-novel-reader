@@ -264,6 +264,26 @@ window.wireDiceRoll = ()=>{
   inp.value = /（掷骰：\d+）\s*$/.test(v) ? v.replace(/（掷骰：\d+）\s*$/, tag) : (v ? v + " " + tag : tag);
   inp.focus();
 };
+/* 掷骰判定指令(2026-11-23): 骰签此前只是拼进消息的裸标签, 全链没人向 AI 说明口径与
+ * 档位, 掷了等于没掷(用户实报: 掷出 10, 角色照常按惯性推进、毫无反应)。
+ * 这里按点数定档生成压尾指令, 经 sendOpts.extraPrompt 注入 buildMessages 末尾
+ * (与玩家行动铁律同位)。口径与 rp/check.js 一致: 百分骰, 点小为佳。 */
+function diceTierOf(roll){
+  if(roll <= 5) return "大成功";
+  if(roll <= 35) return "成功";
+  if(roll <= 65) return "部分成功（要付出代价或留下波折）";
+  if(roll <= 95) return "失败";
+  return "大失败";
+}
+window.diceInstrFor = (text)=>{
+  const m = /（掷骰：(\d{1,3})）/.exec(String(text || ""));
+  if(!m) return "";
+  const roll = Math.max(1, Math.min(100, parseInt(m[1], 10)));
+  return "【掷骰判定·必须执行】玩家本轮掷骰 " + roll + "/100，档位：" + diceTierOf(roll) + "。" +
+    "口径：百分骰，点数越小越有利（1-5 大成功、6-35 成功、36-65 部分成功但有代价、66-95 失败、96-100 大失败）。" +
+    "你必须按此档位决定玩家本轮行动的成败与后果，并在剧情中明确体现，禁止无视点数按惯性推进。" +
+    "若玩家只发了骰签没写行动，判定对象是其最近试图推进的那件事。";
+};
 window.toggleAtMenu = (ev)=>{
 if(ev && ev.stopPropagation) ev.stopPropagation();
 let m = document.getElementById("atmenu");
@@ -464,6 +484,7 @@ maxTokens: conciseOn ? Math.min(rcfg.respTokens, 300) : rcfg.respTokens,
 concise: conciseOn,
 optCards: !!rcfg.optCards, optCount: rcfg.optCount, optMood: rcfg.optMood,
 plotOutline: activePlotOutline(), scenario: scenarioInstr(), oocOn: rcfg.ooc,
+extraPrompt: diceInstrFor(text), /* 掷骰判定指令(本轮消息带骰签时才有) */
 sceneText: getSceneText(), /* S-7 高权重场景 */
 chapterIdx: getChapterIdx(), /* 章节进度：角色知识截止 */
 userMtype: CHAT.narrMode ? "narr" : (CHAT.asSpeaker ? "npc" : "player"),
@@ -504,7 +525,7 @@ const r = isGroup
   onUserMsg: sendOpts.onUserMsg, onSystem: sendOpts.onSystem,
   userMtype: CHAT.narrMode ? "narr" : "player",
   ppa: sendOpts.ppa, onAligning: sendOpts.onAligning,
-  extraPrompt: travExtraPrompt(CHAT.travId, text)})
+  extraPrompt: [travExtraPrompt(CHAT.travId, text), diceInstrFor(text)].filter(Boolean).join("\n")})
 : await RP.send(CHAT.runId, CHAT.name, text, sendOpts);
 saveHist(k, r.history);
 /* 走原著线：本轮结束后推进剧情节点（幂等；发送失败/中断不推进） */
