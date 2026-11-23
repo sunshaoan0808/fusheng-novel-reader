@@ -32,6 +32,7 @@ const appjs = fs.readFileSync(path.join(WWW, "app.js"), "utf8");
 }
 t("无框: 聊天泡摘底/边/影", /html\[data-msgstyle="frameless"\] body\.chatmode \.bubble\{\s*background:transparent; border-color:transparent; box-shadow:none/.test(ui42));
 t("无框: 对白段去框且与旁白同缩进", /html\[data-msgstyle="frameless"\] \.bubble\.segd \.seg-dlg\{[^}]*background:transparent[^}]*padding:2px 6px 2px 12px/.test(ui42));
+t("无框: 对白补金左线与旁白墨线成对(加强区分)", /html\[data-msgstyle="frameless"\] \.bubble\.segd \.seg-dlg\{[^}]*border-left:2px solid color-mix\(in srgb, var\(--gold\) 55%, transparent\)/.test(ui42));
 t("毛玻璃: 半透明+模糊", /html\[data-msgstyle="glass"\] body\.chatmode \.bubble,\s*html\[data-msgstyle="glass"\] \.bubble\.segd \.seg-dlg\{[^}]*color-mix\(in srgb, var\(--card\) 52%, transparent\)[^}]*blur\(14px\)/.test(ui42));
 t("毛玻璃: 用户泡带金调+模糊", ui42.indexOf('html[data-msgstyle="glass"] body.chatmode .msg.me .bubble') >= 0);
 t("毛玻璃: 播放中摘模糊防闪烁", /html\[data-msgstyle="glass"\] \.msg\.typing \.bubble,\s*html\[data-msgstyle="glass"\] \.msg\.typing \.bubble\.segd \.seg-dlg\{\s*-webkit-backdrop-filter:none/.test(ui42));
