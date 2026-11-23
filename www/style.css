@@ -91,7 +91,7 @@
   --bg:#12100d; --bg2:#171411; --card:#1d1915; --card2:#23201b;
   --line:#2d2720; --line-soft:#242019;
   --ink:#ece4d3; --ink-dim:#b3a88f; --ink-faint:#9a917e; /* faint 提亮：WCAG 4.5:1 底线 */
-  --gold:#d4a24e; --gold-deep:#a97c2e; --gold-soft:#f2ddab;
+  --gold:#d4a24e; --gold-deep:#ad7f2f; --gold-soft:#f2ddab;
   --red:#d07864; --green:#8fb573;
   /* 语义别名（P0-29/P0-39/P0-3）：这三个变量被引用了十几次却从未定义。
      未定义变量在 computed-value 阶段整体失效 —— color:var(--muted) 不是"透明"，
@@ -1908,6 +1908,14 @@ body.chatmode.immersive #asst_fab{ bottom:calc(16px + env(safe-area-inset-bottom
 .wirechip.favor{color:#7a4b12;border-color:#c9973f;background:rgba(216,178,90,.18);font-weight:600;}
 .wirechip.check{color:#33526b;border-color:#7d9db5;background:rgba(125,157,181,.14);}
 .wirechip.cg{color:#5d3a6e;border-color:#a37fc0;background:rgba(163,127,192,.14);}
+/* 深色主题修正(2026-11-23 对比度排查): 上面三款是按浅底定的深字, 深色主题下
+ * 结算条直接坐在深色壁纸上, 深字沉底看不清。深色 3 套主题换浅字版。 */
+html[data-theme="moye"] .wirechip.favor, html[data-theme="songyan"] .wirechip.favor, html[data-theme="jiangxia"] .wirechip.favor{
+  color:#eec27f;border-color:#a97c2e;background:rgba(216,178,90,.16);}
+html[data-theme="moye"] .wirechip.check, html[data-theme="songyan"] .wirechip.check, html[data-theme="jiangxia"] .wirechip.check{
+  color:#a8c8de;border-color:#5f7f95;background:rgba(125,157,181,.16);}
+html[data-theme="moye"] .wirechip.cg, html[data-theme="songyan"] .wirechip.cg, html[data-theme="jiangxia"] .wirechip.cg{
+  color:#cfa9e8;border-color:#7d5f95;background:rgba(163,127,192,.16);}
 .stagechip{display:inline-flex;align-items:center;gap:5px;flex:none;
   padding:2px 8px 2px 3px;border-radius:999px;border:1px solid var(--gold-deep);background:rgba(255,255,255,.35);}
 .stagechip.on{border-color:#c9973f;background:rgba(216,178,90,.22);}
@@ -1997,7 +2005,9 @@ body.chatmode.immersive .immstrip{
   position:fixed; left:12px; right:72px; bottom:calc(14px + env(safe-area-inset-bottom));
   z-index:var(--z-nav); height:40px; padding:0 8px 0 16px; border-radius:20px;
   background:rgba(16,14,11,.46); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px);
-  border:1px solid rgba(212,162,78,.18); color:var(--ink-dim);
+  /* 药丸本身恒为深色半透明, 文字不能跟主题的 --ink-dim 走: 浅色主题下
+     ink-dim 是深字, 压在深药丸上几乎看不见(2026-11-23 对比度排查)。固定浅字。 */
+  border:1px solid rgba(212,162,78,.18); color:#ddd5bf;
   font-size:calc(13.5px * var(--fs)); text-align:left; cursor:text;
   transition:opacity .25s ease, transform .25s ease;
 }

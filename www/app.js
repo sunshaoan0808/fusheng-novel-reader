@@ -121,7 +121,9 @@ ${themeCardsHTML()}</div>` + `
 <div class="kv">整体缩放界面，聊天泡泡也会变大，即时生效。</div>
 ${fontScaleCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 字体</h3>
 <div class="kv">内置开源字体（霞鹜文楷 / 思源宋体 / 马善政毛笔 / 得意黑），随包分发，离线可用。</div>
-${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("clapperboard",15)} 动效</h3>
+${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文字阴影</h3>
+<div class="kv">旁白、压图标题等文字的阴影浓淡。壁纸花哨时调浓更看得清，不喜欢阴影就关掉。</div>
+<div id="tshadowbox">${tshadowCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("clapperboard",15)} 动效</h3>
 <div class="kv">整体动效风格与速度，纯本地，切换即时生效。</div>
 <div id="motionbox">${motionCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("image",15)} 全局壁纸</h3>
 <div class="kv">聊天背景默认跟随主题；你上传的图是「自定义壁纸」，在编辑器里选用后才压过主题，存在本机。某个聊天单独设过壁纸的不受影响。</div>

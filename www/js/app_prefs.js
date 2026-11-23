@@ -125,6 +125,24 @@ if(wasActive) RP_THEME.apply("moye");
 showSettings();
 }catch(e){}
 };
+/* ---------- 文字阴影（关/柔/浓，RP_TSHADOW） ---------- */
+function tshadowCardsHTML(){
+try{
+if(typeof RP_TSHADOW === "undefined") return "";
+const cur = RP_TSHADOW.get();
+return `<div class="themerow" style="margin-top:8px">` + RP_TSHADOW.LEVELS.map(l=>`
+<div class="themecard${cur===l.id?" on":""}" onclick="setTShadowUI('${jq(l.id)}')">
+<div class="tname">${esc(l.name)}</div><div class="tdesc">${esc(l.desc)}</div></div>`).join("") + `</div>`;
+}catch(e){ return ""; }
+}
+function refreshTShadowBox(){
+const b = document.getElementById("tshadowbox");
+if(b) b.innerHTML = tshadowCardsHTML();
+}
+window.setTShadowUI = (id)=>{
+try{ if(typeof RP_TSHADOW !== "undefined") RP_TSHADOW.apply(id, true); }catch(e){}
+refreshTShadowBox();
+};
 /* 字体组切换（内置开源字体，rp/theme.js RP_FONT；预览用该组标题字体渲染） */
 window.setFontUI = (id)=>{
 try{ if(typeof RP_FONT !== "undefined") RP_FONT.apply(id); }catch(e){}
