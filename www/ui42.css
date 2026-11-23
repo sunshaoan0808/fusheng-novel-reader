@@ -329,3 +329,27 @@ html[data-tshadow="strong"][data-theme="tianqing"] .resume-s,
 html[data-tshadow="strong"][data-theme="taoyao"] .resume-s,
 html[data-tshadow="strong"][data-theme="qiuxiang"] .resume-s{
   text-shadow:0 1px 3px rgba(255,253,245,1), 0 0 10px rgba(255,253,245,.85); }
+
+/* ===== 对话样式三式（2026-11-23 用户拍板「丙」；RP_MSGSTYLE 写 <html data-msgstyle>） =====
+ * bubble 气泡 = 基线原样, 无覆盖。frameless 无框(默认): 角色消息摘底/边/影,
+ * 文字直接落在场景上, 与旁白同为无框, 靠字色深浅分对白/旁白; 用户消息保留
+ * 淡金气泡作区分(.msg.me 规则特异性更高, 不被下面的通杀覆盖)。
+ * glass 毛玻璃: 主题卡色半透明 + 背景模糊, 框融进壁纸; 播放中摘模糊防闪烁
+ * (与既有 .msg.typing 摘 seg-dlg 模糊同一纪律)。 */
+html[data-msgstyle="frameless"] body.chatmode .bubble{
+  background:transparent; border-color:transparent; box-shadow:none; }
+html[data-msgstyle="frameless"] .bubble.segd .seg-dlg{
+  background:transparent; border-color:transparent; box-shadow:none;
+  border-radius:0; padding:2px 6px 2px 12px; }
+html[data-msgstyle="glass"] body.chatmode .bubble,
+html[data-msgstyle="glass"] .bubble.segd .seg-dlg{
+  background:color-mix(in srgb, var(--card) 52%, transparent);
+  border:1px solid color-mix(in srgb, var(--gold) 24%, transparent);
+  box-shadow:0 4px 16px rgba(0,0,0,.14);
+  -webkit-backdrop-filter:blur(14px) saturate(1.25); backdrop-filter:blur(14px) saturate(1.25); }
+html[data-msgstyle="glass"] body.chatmode .msg.me .bubble{
+  background:rgba(212,162,78,.20); border-color:rgba(212,162,78,.30);
+  -webkit-backdrop-filter:blur(14px) saturate(1.25); backdrop-filter:blur(14px) saturate(1.25); }
+html[data-msgstyle="glass"] .msg.typing .bubble,
+html[data-msgstyle="glass"] .msg.typing .bubble.segd .seg-dlg{
+  -webkit-backdrop-filter:none; backdrop-filter:none; }

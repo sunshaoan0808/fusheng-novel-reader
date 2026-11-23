@@ -143,6 +143,24 @@ window.setTShadowUI = (id)=>{
 try{ if(typeof RP_TSHADOW !== "undefined") RP_TSHADOW.apply(id, true); }catch(e){}
 refreshTShadowBox();
 };
+/* ---------- 对话样式（无框/毛玻璃/气泡，RP_MSGSTYLE） ---------- */
+function chatstyleCardsHTML(){
+try{
+if(typeof RP_MSGSTYLE === "undefined") return "";
+const cur = RP_MSGSTYLE.get();
+return `<div class="themerow" style="margin-top:8px">` + RP_MSGSTYLE.LEVELS.map(l=>`
+<div class="themecard${cur===l.id?" on":""}" onclick="setChatStyleUI('${jq(l.id)}')">
+<div class="tname">${esc(l.name)}</div><div class="tdesc">${esc(l.desc)}</div></div>`).join("") + `</div>`;
+}catch(e){ return ""; }
+}
+function refreshChatStyleBox(){
+const b = document.getElementById("chatstylebox");
+if(b) b.innerHTML = chatstyleCardsHTML();
+}
+window.setChatStyleUI = (id)=>{
+try{ if(typeof RP_MSGSTYLE !== "undefined") RP_MSGSTYLE.apply(id, true); }catch(e){}
+refreshChatStyleBox();
+};
 /* 字体组切换（内置开源字体，rp/theme.js RP_FONT；预览用该组标题字体渲染） */
 window.setFontUI = (id)=>{
 try{ if(typeof RP_FONT !== "undefined") RP_FONT.apply(id); }catch(e){}

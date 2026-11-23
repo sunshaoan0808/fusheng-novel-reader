@@ -123,7 +123,9 @@ ${fontScaleCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 
 <div class="kv">内置开源字体（霞鹜文楷 / 思源宋体 / 马善政毛笔 / 得意黑），随包分发，离线可用。</div>
 ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文字阴影</h3>
 <div class="kv">旁白、压图标题等文字的阴影浓淡。壁纸花哨时调浓更看得清，不喜欢阴影就关掉。</div>
-<div id="tshadowbox">${tshadowCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("clapperboard",15)} 动效</h3>
+<div id="tshadowbox">${tshadowCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("chat",15)} 对话样式</h3>
+<div class="kv">角色的话怎么呈现：无框最沉浸（文字直接落在场景上），毛玻璃半透明融进壁纸，气泡区分最分明。</div>
+<div id="chatstylebox">${chatstyleCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("clapperboard",15)} 动效</h3>
 <div class="kv">整体动效风格与速度，纯本地，切换即时生效。</div>
 <div id="motionbox">${motionCardsHTML()}</div></div>` + `\n<div class="setcard"><h3>${icon("image",15)} 全局壁纸</h3>
 <div class="kv">聊天背景默认跟随主题；你上传的图是「自定义壁纸」，在编辑器里选用后才压过主题，存在本机。某个聊天单独设过壁纸的不受影响。</div>

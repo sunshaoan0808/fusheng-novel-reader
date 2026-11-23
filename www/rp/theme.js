@@ -217,6 +217,33 @@ function apply(id, persist){
 try{ apply(get(), false); }catch(e){}
 return {LEVELS: LEVELS, get: get, apply: apply, def: def};
 })();
+/* ============ 对话样式（2026-11-23 用户拍板「丙」：三式可切换，默认无框） ============
+ * frameless 无框(默认): 角色消息去框, 文字直接落在场景上(猫箱/Character.AI 路);
+ * glass 毛玻璃: 半透明 + 背景模糊, 框融进壁纸(SillyTavern 路);
+ * bubble 气泡: 原有金边气泡(基线 CSS 即此式, 本模块不加覆盖)。
+ * 只写 <html data-msgstyle>, 覆盖层在 ui42.css。 */
+var RP_MSGSTYLE = (function(){
+"use strict";
+var KEY = "nd_msgstyle_v1";
+var LEVELS = [
+  {id:"frameless", name:"无框", desc:"默认 · 角色的话直接落在场景上，只有名牌和文字，像读小说"},
+  {id:"glass", name:"毛玻璃", desc:"半透明模糊，框还在但融进壁纸里"},
+  {id:"bubble", name:"气泡", desc:"经典金边气泡，区分最分明"},
+];
+function def(id){ for(var i = 0; i < LEVELS.length; i++) if(LEVELS[i].id === id) return LEVELS[i]; return LEVELS[0]; }
+function get(){
+  try{ var v = localStorage.getItem(KEY); if(v && def(v).id === v) return v; }catch(e){}
+  return "frameless";
+}
+function apply(id, persist){
+  var d = def(id);
+  try{ document.documentElement.setAttribute("data-msgstyle", d.id); }catch(e){}
+  if(persist){ try{ localStorage.setItem(KEY, d.id); }catch(e){} }
+  return d.id;
+}
+try{ apply(get(), false); }catch(e){}
+return {LEVELS: LEVELS, get: get, apply: apply, def: def};
+})();
 /* ============ 字体组（内置开源字体，@font-face 在 style.css） ============
  * 每组 = 标题衬线（--serif）+ 正文（--sans）的搭配；切换写 CSS 变量 + 持久化。
  * 字体子集口径与既有思源宋体一致：GB2312 常用字 + latin 片，woff2 内置离线可用。
