@@ -16,6 +16,22 @@ const getRpCfg = ()=> Object.assign({maxContext:8192, respTokens:2000, summaryMo
   ppaMode:"key", ppaModel:"",
   director:true, directorTier:"sentinel", directorStyle:"slowburn", directorEvery:5, directorStale:8, directorModel:""}, (function(){ try{ return JSON.parse(localStorage.getItem(RPCFG_KEY)||"{}") || {}; }catch(e){ return {}; } })());
 const saveRpCfg = (c)=>{ try{ localStorage.setItem(RPCFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，RP 设置未保存" : "RP 设置保存失败"); }catch(_){} } };
+/* 2026-11-23 一次性迁移: respTokens 旧默认 512 → 2000。
+ * getRpCfg 是「默认值 ← 存量配置」合并, 存量用户在设置里存过整份配置,
+ * 旧默认 512 会一直盖掉新默认, 字数修复对他们静默失效。
+ * 只改恰好等于旧默认的值(视作从未改过); 用户自设的其它值不动。
+ * 迁移标记 _migResp2000 写在配置对象内部(不新增顶层 key, 免得污染
+ * 存储用量统计); 无存量配置时什么都不写 —— 默认值本来就是 2000。 */
+function migrateRpCfgOnce(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(RPCFG_KEY) || "null");
+    if(!raw || raw._migResp2000) return;
+    if(raw.respTokens === 512) raw.respTokens = 2000;
+    raw._migResp2000 = 1;
+    localStorage.setItem(RPCFG_KEY, JSON.stringify(raw));
+  }catch(e){}
+}
+migrateRpCfgOnce();
 /* v37: 解析当前绑定的 ST 预设对象(未绑定返回 null); 传给 prompt 构建做预设组装 */
 function resolveStPreset(){
 try{

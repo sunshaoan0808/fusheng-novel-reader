@@ -146,6 +146,32 @@ saveHist(k, h.slice(0, idx));
 renderChat();
 await sendChatText(userText);
 };
+/* 2026-11-23: 失败提示(ghost)气泡上的「重试」: 截掉那句用户消息及之后的一切
+ * (含 ghost 本人), 走正常发送管线重发 —— 用户不必把话再打一遍。
+ * 做法与 regenMsgAt / editMsgSave 同款; 保留原消息的旁白/代发言身份。 */
+window.retryGhost = async (idx)=>{
+if(STREAMING || document.getElementById("live")){ rpToast("正在生成中，等这条完成再重试"); return; }
+const k = chatHistKey();
+let h = null;
+try{ h = getHist(k); }catch(e){ rpToast("聊天记录读取失败"); return; }
+const m = h[idx];
+if(!m || !m.ghost) return;
+let uidx = -1;
+for(let i = idx - 1; i >= 0; i--){ if(h[i].role === "user"){ uidx = i; break; } }
+if(uidx < 0){ rpToast("找不到要重发的那句话"); return; }
+const after = h.length - 1 - idx;
+if(after > 0){
+if(!confirm(`重试会删掉这条提示后面的 ${after} 条消息，继续吗？`)) return;
+}
+const um = h[uidx];
+saveHist(k, h.slice(0, uidx));
+renderChat();
+const keepNarr = CHAT.narrMode, keepSpk = CHAT.asSpeaker;
+CHAT.narrMode = (um.mtype === "narr");
+CHAT.asSpeaker = um.speaker || null;
+try{ await sendChatText(um.content); }
+finally{ CHAT.narrMode = keepNarr; CHAT.asSpeaker = keepSpk; }
+};
 /* P0-4: 每轮发送独立 AbortController + 代数。旧的单全局 aborter 会被新发送覆盖，
  * 导致上一轮流永远无法取消；代数用于 streamToken 校验"这条 token 属于当前在飞的轮次"。 */
 let __genSeq = 0, __curGen = 0;

@@ -544,7 +544,11 @@ if(memBtn){ try{
       try{ (typeof window.rpTip==="function") ? window.rpTip(_tip, 2600) : _tip(); }catch(e){} }, 1200);
   }
 }catch(e){} }
-if(m.role==="assistant" && idx===lastAI){
+if(m.ghost){
+/* 失败提示: 工具条直接常显「重试/删除」, 不藏在点按后面 */
+extra = `<div class="ghostbar"><button onclick="event.stopPropagation();retryGhost(${jq(idx)})">↻ 重试</button>`
++ `<button onclick="event.stopPropagation();delMsg(${jq(idx)})">删除</button></div>`;
+} else if(m.role==="assistant" && idx===lastAI){
 if(m.candidates && m.candidates.length>1){
 extra += `<div class="swipe" onclick="event.stopPropagation()"><button onclick="swipeMsg(${jq(idx)},-1)">‹</button>`
 + `<span>${(m.ci||0)+1}/${m.candidates.length}</span>`

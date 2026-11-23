@@ -101,6 +101,50 @@ function sendOpts(history){
     t("上下文无假 assistant 发言", !ctx.some(x => x.role === "assistant"));
     t("用户消息仍在上下文", ctx.some(x => x.role === "user"));
   }
+  /* (4) 2026-11-23: 存量设置迁移 —— 旧默认 respTokens 512 → 2000, 只动恰好 512 的 */
+  {
+    const coreSrc = fs.readFileSync(path.join(WWW, "js/app_chat_core.js"), "utf8");
+    const loadCore = (store) => {
+      const ls = { getItem: k => (k in store ? store[k] : null),
+        setItem: (k, v) => { store[k] = String(v); }, removeItem: k => { delete store[k]; } };
+      const ctx = { localStorage: ls, console, setTimeout, clearTimeout,
+        document: { getElementById: () => null, querySelector: () => null, addEventListener: () => {} },
+        navigator: {}, location: {} };
+      ctx.window = ctx; vm.createContext(ctx);
+      vm.runInContext(coreSrc, ctx);
+      return ctx;
+    };
+    const s1 = { nd_rp_cfg_v1: JSON.stringify({ respTokens: 512, temperature: 0.8 }) };
+    const c1 = loadCore(s1);
+    t("存量 512 被迁移到 2000", JSON.parse(s1.nd_rp_cfg_v1).respTokens === 2000);
+    t("迁移不碰其它字段", JSON.parse(s1.nd_rp_cfg_v1).temperature === 0.8);
+    t("迁移后 getRpCfg 读到 2000", vm.runInContext("getRpCfg().respTokens", c1) === 2000);
+    t("迁移标记写在配置内部", JSON.parse(s1.nd_rp_cfg_v1)._migResp2000 === 1);
+    t("迁移不新增顶层 key", Object.keys(s1).length === 1);
+    const s2 = { nd_rp_cfg_v1: JSON.stringify({ respTokens: 1024 }) };
+    loadCore(s2);
+    t("用户自设 1024 不动", JSON.parse(s2.nd_rp_cfg_v1).respTokens === 1024);
+    const s3 = { nd_rp_cfg_v1: JSON.stringify({ respTokens: 512, _migResp2000: 1 }) };
+    loadCore(s3);
+    t("已迁移过的不再覆盖(手动改回 512 受尊重)", JSON.parse(s3.nd_rp_cfg_v1).respTokens === 512);
+    const s4 = {};
+    const c4 = loadCore(s4);
+    t("无存量配置时默认就是 2000", vm.runInContext("getRpCfg().respTokens", c4) === 2000);
+    t("无存量配置时不落任何盘", Object.keys(s4).length === 0);
+  }
+  /* (5) 2026-11-23: ghost 气泡「重试」按钮 —— 渲染分支 + 处理函数接线 */
+  {
+    const prefs = fs.readFileSync(path.join(WWW, "js/app_prefs.js"), "utf8");
+    const plot = fs.readFileSync(path.join(WWW, "js/app_plotline.js"), "utf8");
+    const css = fs.readFileSync(path.join(WWW, "style.css"), "utf8");
+    t("renderChat 有 ghost 专属分支", /if\(m\.ghost\)\{[\s\S]{0,300}ghostbar/.test(prefs));
+    t("ghost 气泡渲染重试按钮", prefs.indexOf("retryGhost(") >= 0);
+    t("retryGhost 已定义", plot.indexOf("window.retryGhost") >= 0);
+    t("retryGhost 截断到用户消息并走 sendChatText",
+      /retryGhost[\s\S]{0,1600}slice\(0, uidx\)[\s\S]{0,400}sendChatText\(um\.content\)/.test(plot));
+    t("retryGhost 有在飞互斥", /retryGhost[\s\S]{0,200}STREAMING/.test(plot));
+    t("ghostbar 样式存在", css.indexOf(".ghostbar") >= 0);
+  }
   console.log(`test_ghost_retry: ${pass} passed, ${fail} failed`);
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log("FATAL", e && e.stack || e); process.exit(1); });

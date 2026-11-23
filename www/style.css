@@ -593,6 +593,12 @@ body.chatmode.bars-light .typing{ color:#6b5c42; }
   border-radius:999px; padding:4px 12px; font-size:calc(12px * var(--fs)); cursor:pointer;
 }
 .msg.me .msgtools{ justify-content:flex-end; }
+/* 失败提示(ghost)气泡下的常显操作行: 重试/删除 */
+.ghostbar{ display:flex; gap:6px; margin-top:6px; flex-wrap:wrap; }
+.ghostbar button{
+  background:rgba(212,162,78,.14); border:1px solid var(--gold-deep); color:var(--gold);
+  border-radius:999px; padding:5px 14px; font-size:calc(12px * var(--fs)); cursor:pointer;
+}
 
 /* S-4 召回指示器：气泡 🧠 角标展开的"这次想起了"面板 */
 .mmhits{ margin-top:6px; padding:8px 10px; border:1px dashed var(--line); border-radius:10px;
