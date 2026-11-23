@@ -175,6 +175,18 @@ function apply(id, keepBg){
   root.setAttribute("data-theme", d.custom ? d.base : id);
   var vars = d.vars, k;
   for(k in vars){ if(Object.prototype.hasOwnProperty.call(vars, k)) root.style.setProperty(k, vars[k]); }
+  /* 原生部件跟随主题: color-scheme 让滚动条/表单控件按明暗渲染,
+   * theme-color 让系统顶栏与页面底色一致; 明暗按 --bg 亮度判定。 */
+  try{
+    var bgm = /^#([0-9a-f]{6})$/i.exec(vars["--bg"] || "");
+    if(bgm){
+      var n = parseInt(bgm[1], 16);
+      var lum = (0.2126 * (n >> 16 & 255) + 0.7152 * (n >> 8 & 255) + 0.0722 * (n & 255)) / 255;
+      root.style.colorScheme = lum < 0.5 ? "dark" : "light";
+      var meta = document.querySelector('meta[name="theme-color"]');
+      if(meta) meta.setAttribute("content", vars["--bg"]);
+    }
+  }catch(e){}
   try{ localStorage.setItem(KEY, id); }catch(e){}
   if(d.custom){ if(d.font){ try{ applyFont(d.font); }catch(e){} } }
   else if(!keepBg) setBgMode("theme"); /* 用户主动切内置主题 = 壁纸跟随主题；init 回放不重置来源 */

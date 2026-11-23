@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12100d">
 <!-- v41 安全：CSP。脚本只许本地文件 + 内联（现有 400+ 处内联 onclick 仍需 unsafe-inline，迁到事件委托后可去掉）；
      禁远程脚本 / object / iframe / worker。connect-src 放宽到 https:/http:，因为 API 地址由用户自配（含局域网 http 模型）。 -->
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; media-src 'self' data: blob: https: http:; font-src 'self' data:; connect-src 'self' data: blob: https: http:; object-src 'none'; frame-src 'none'; child-src 'none'; worker-src 'none'; base-uri 'none'">

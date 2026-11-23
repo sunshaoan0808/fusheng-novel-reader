@@ -599,6 +599,17 @@ body.chatmode.bars-light .typing{ color:#6b5c42; }
   background:rgba(212,162,78,.14); border:1px solid var(--gold-deep); color:var(--gold);
   border-radius:999px; padding:5px 14px; font-size:calc(12px * var(--fs)); cursor:pointer;
 }
+/* 小药丸按钮的命中扩展(同 .aifillbtn 口径): 外观不变, 可点高度撑到 44px */
+.msgtools button, .ghostbar button{ position:relative; }
+.msgtools button::after, .ghostbar button::after{
+  content:""; position:absolute; left:0; right:0; top:50%; height:44px; transform:translateY(-50%);
+}
+/* 可见焦点: a11y 补丁给 div 按钮补了 tabindex/role, 这里补上看得见的焦点环;
+ * :focus-visible 只在键盘/开关导航时触发, 触摸点击不出现。 */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible,
+textarea:focus-visible, [role="button"]:focus-visible{
+  outline:2px solid var(--gold-deep); outline-offset:2px;
+}
 
 /* S-4 召回指示器：气泡 🧠 角标展开的"这次想起了"面板 */
 .mmhits{ margin-top:6px; padding:8px 10px; border:1px dashed var(--line); border-radius:10px;
@@ -611,7 +622,7 @@ body.chatmode.bars-light .typing{ color:#6b5c42; }
   position:fixed; left:50%; bottom:96px; transform:translateX(-50%) translateY(16px);
   background:var(--bg2); border:1px solid var(--gold); color:var(--ink);
   border-radius:12px; padding:10px 18px; font-size:calc(13px * var(--fs)); z-index:var(--z-toast);
-  opacity:0; transition:all .3s; pointer-events:none; max-width:82vw; text-align:center;
+  opacity:0; transition:opacity .3s, transform .3s; pointer-events:none; max-width:82vw; text-align:center;
 }
 .achv-toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
 /* P2-44：`.dim` 原来只写在 `.achv-toast` 作用域里，app.js/soul_config.js 十几处
