@@ -955,6 +955,7 @@ async function send(runId, name, text, opts){
   var am = newMsg("assistant", reply);
   if(wireRes && ((wireRes.favorChanges && wireRes.favorChanges.length) || (wireRes.notices && wireRes.notices.length)))
     am.wire = {favorChanges: wireRes.favorChanges || [], notices: wireRes.notices || []};
+  if(wireRes && wireRes.sceneCard) am.scene = wireRes.sceneCard;
   if(b.stats.memHits && b.stats.memHits.length) am.memHits = b.stats.memHits;
   if(b.stats.loreHits && b.stats.loreHits.length) am.loreHits = b.stats.loreHits;
   h.push(am);
@@ -1090,6 +1091,7 @@ async function regenerate(runId, name, opts){
     last.ci = last.candidates.length - 1;
     last.content = reply;
     if(wireRe) last.wire = {favorChanges: wireRe.favorChanges || [], notices: wireRe.notices || []};
+    if(wireRe && wireRe.sceneCard) last.scene = wireRe.sceneCard;
     last.ts = Date.now();
     /* 游玩统计：重抽只记 token，不记轮数（纯本地，RP_STATS） */
     try{
@@ -1336,6 +1338,7 @@ async function genOneSpeaker(runId, run, members, speaker, text, h, opts, budget
   var msg = newMsg("assistant", reply);
   if(wireG && ((wireG.favorChanges && wireG.favorChanges.length) || (wireG.notices && wireG.notices.length)))
     msg.wire = {favorChanges: wireG.favorChanges || [], notices: wireG.notices || []};
+  if(wireG && wireG.sceneCard) msg.scene = wireG.sceneCard;
   msg.speaker = speaker;
   h.push(msg);
   if(ppaSpkR){ try{ RP_PPA.recordAlign(wsIdSpk, h.length, ppaSpkR.changed); }catch(e){} }
@@ -1487,6 +1490,7 @@ async function sendTraverse(travId, text, opts){
   var amT = newMsg("assistant", reply);
   if(wireT && ((wireT.favorChanges && wireT.favorChanges.length) || (wireT.notices && wireT.notices.length)))
     amT.wire = {favorChanges: wireT.favorChanges || [], notices: wireT.notices || []};
+  if(wireT && wireT.sceneCard) amT.scene = wireT.sceneCard;
   h.push(amT);
   if(ppaTR){ try{ RP_PPA.recordAlign(wsIdT, h.length, ppaTR.changed); }catch(e){} }
   return {history: h, aborted: false, stats: b.stats,

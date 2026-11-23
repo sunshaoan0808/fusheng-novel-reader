@@ -141,4 +141,18 @@ const st = W.ensure("c14", {novel:"水浒传"});
 assert.strictEqual(W.curPlace(st).name, "梁山泊");
 assert.strictEqual(st.era, "宣和");
 });
+t("标记解析认错括号并解析在场/天气名", ()=>{
+const mk = W.parseMarkers("〚+25分钟〛〚地点=市中心医院门诊走廊〛〚在场=杨蓉，周明远〛〚天气=阴〛");
+assert.strictEqual(mk.timeAdd, 25);
+assert.strictEqual(mk.place, "市中心医院门诊走廊");
+assert.strictEqual((mk.present || []).join(","), "杨蓉,周明远");
+assert.strictEqual(mk.weatherName, "阴");
+});
+t("applyReply 剥离错括号标记并推进时间", ()=>{
+W.ensure("c15", {novel:"原创都市"});
+const m0 = W.get("c15").min;
+const r = W.applyReply("c15", "她点点头。〚+25分钟〛", {});
+assert.ok(r.clean.indexOf("〚") < 0 && r.clean.indexOf("25分钟") < 0);
+assert.strictEqual(W.get("c15").min, (m0 + 25) % 1440);
+});
 console.log(`\n${n} pass, 0 fail`);

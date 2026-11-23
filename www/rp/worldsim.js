@@ -230,9 +230,11 @@ return st;
 }
 
 /* ---------- AI 标记解析 ---------- */
-var MARK_RE = /⟦([^⟧]*)⟧/g;
+/* 括号容错（2026-11-23 用户实报）：协议定的是 ⟦⟧，模型常写成形近的 〚〛，
+ * 解析与剥离都认两对（可混写），否则标记原样漏进正文。 */
+var MARK_RE = /[⟦〚]([^⟧〛]*)[⟧〛]/g;
 function parseMarkers(text){
-var out = {timeAdd: 0, weather: null, place: null};
+var out = {timeAdd: 0, weather: null, weatherName: null, place: null, present: null};
 var m;
 MARK_RE.lastIndex = 0;
 while((m = MARK_RE.exec(text))){
@@ -240,15 +242,16 @@ var s = m[1].trim();
 var tm = s.match(/^\+(\d+)\s*分钟$/); if(tm){ out.timeAdd += parseInt(tm[1],10); continue;}
 var th = s.match(/^\+(\d+)\s*小时$/); if(th){ out.timeAdd += parseInt(th[1],10)*60; continue;}
 var td = s.match(/^\+(\d+)\s*天$/); if(td){ out.timeAdd += parseInt(td[1],10)*1440; continue;}
-var tw = s.match(/^天气\s*=\s*(.+)$/); if(tw){ var wid = WX_BY_NAME[tw[1].trim()]; if(wid!= null) out.weather = wid; continue;}
+var tw = s.match(/^天气\s*=\s*(.+)$/); if(tw){ out.weatherName = tw[1].trim(); var wid = WX_BY_NAME[tw[1].trim()]; if(wid!= null) out.weather = wid; continue;}
 var tp = s.match(/^地点\s*=\s*(.+)$/); if(tp){ out.place = tp[1].trim(); continue;}
+var tz = s.match(/^在场\s*=\s*(.+)$/); if(tz){ out.present = tz[1].split(/[,，、]/).map(function(x){ return x.trim(); }).filter(Boolean); continue;}
 }
 return out;
 }
 function applyReply(chatId, text, hint){
 if(!enabled() ||!text) return {clean: text, changed: false};
 MARK_RE.lastIndex = 0;
-if(text.indexOf("⟦") < 0) return {clean: text, changed: false};
+if(text.indexOf("⟦") < 0 && text.indexOf("〚") < 0) return {clean: text, changed: false};
 var mk = parseMarkers(text);
 var clean = String(text).replace(MARK_RE, "").replace(/[ \t]+\n/g, "\n").trim();
 var changed = false;

@@ -58,11 +58,28 @@ const W = require("../www/rp/wiring.js");
   assert.ok("好感变化 +5 到 5", r.favorChanges.length === 1 && r.favorChanges[0].name === "林黛玉" && r.favorChanges[0].delta === 5 && r.favorChanges[0].total === 5);
   assert.ok("favorOf 查询一致", W.favorOf("r1", "林黛玉") === 5);
   assert.ok("场景状态落地", r.sceneState && r.sceneState.locationName === "潇湘馆" && r.sceneState.time === "night" && r.sceneState.weather === "rain");
+  assert.ok("场景卡数据齐（地点/时段/天气/大事记）", r.sceneCard && r.sceneCard.place === "潇湘馆" && r.sceneCard.period === "night" && r.sceneCard.weather === "rain" && r.sceneCard.diary === "黛玉第一次主动留我喝茶");
   assert.ok("CG 已解锁", W.engines.gallery.isUnlocked("moon001") === true);
   assert.ok("通知按优先级（cg 先于 favor）", r.notices.length === 2 && r.notices[0].kind === "cg" && r.notices[1].kind === "favor");
   assert.ok("日志落一条且 round 对齐", W.engines.diary.count() === 1 && W.engines.diary.list()[0].round === r.report.round);
   assert.ok("选项已 present", r.pendingActions && eq(r.pendingActions.options.map(o => o.text), ["坐下喝茶", "告辞离开"]));
   assert.ok("好感快照已持久化", typeof store["rp_wire_favor_v1"] === "string" && store["rp_wire_favor_v1"].indexOf("林黛玉") >= 0);
+}
+
+/* 2b. 纯世界标记（无 wire 区块）透传时也产出场景卡（标记解析用替身，真实解析在 test_worldsim 验） */
+{
+  global.RP_WORLDSIM = { parseMarkers(txt){
+    const out = { timeAdd: 0, weather: null, weatherName: null, place: null, present: null };
+    const re = /[⟦〚]([^⟧〛]*)[⟧〛]/g; let m;
+    while ((m = re.exec(txt))) { const s = m[1].trim();
+      const tm = s.match(/^\+(\d+)\s*分钟$/); if (tm) { out.timeAdd += +tm[1]; continue; }
+      const tp = s.match(/^地点\s*=\s*(.+)$/); if (tp) { out.place = tp[1].trim(); continue; }
+    }
+    return out;
+  } };
+  const r = await W.settleReply("正文。⟦+25分钟⟧⟦地点=市中心医院门诊走廊⟧", { runId: "r1", name: "杨蓉" });
+  assert.ok("无区块透传但场景卡在（时间/地点）", r.report === null && r.sceneCard && r.sceneCard.timeAdd === 25 && r.sceneCard.place === "市中心医院门诊走廊");
+  delete global.RP_WORLDSIM;
 }
 
 /* 3. 第二轮增量与具名键（全角冒号） */

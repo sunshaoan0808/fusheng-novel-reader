@@ -234,6 +234,59 @@ function chatSegEligible(m){
   return c.indexOf("⚠️") !== 0 && c.indexOf("（已停止") !== 0;
 }
 
+/* 场景模板卡（2026-11-23 用户拍板：固定漂亮模板、AI 只负责调用填字）：
+ * 接收时结算层已把 AI 填的 场景/标记/大事记 抽成 m.scene 存好，渲染只填模板；
+ * 老消息/绕过清理的消息正文里还躺着协议原文的，parseSceneTail 现抽现剥兜底，
+ * 保证协议原文永不裸露（截图实报：错括号 + <scene>/<diary> 整段漏出）。 */
+const SCENE_PERIOD_LABELS = { dawn: "清晨", morning: "上午", noon: "正午", afternoon: "下午", dusk: "黄昏", night: "夜晚", midnight: "深夜" };
+const SCENE_WX_LABELS = { clear: "晴", cloudy: "阴", rain: "雨", snow: "雪", fog: "雾", storm: "暴雨" };
+function parseSceneTail(content) {
+  let s = String(content || "");
+  let card = null;
+  const bump = () => { if (!card) card = {}; return card; };
+  s = s.replace(/<scene>([\s\S]*?)<\/scene>/gi, (m0, inner) => {
+    const c = bump();
+    const mp = inner.match(/地点\s*[:：]\s*(.+)/); if (mp && !c.place) c.place = mp[1].trim();
+    const mt = inner.match(/时段\s*[:：]\s*([A-Za-z]+)/); if (mt && !c.period) c.period = mt[1].trim();
+    const mw = inner.match(/天气\s*[:：]\s*([A-Za-z]+)/); if (mw && !c.weather) c.weather = mw[1].trim();
+    return "";
+  });
+  s = s.replace(/<diary>([\s\S]*?)<\/diary>/gi, (m0, inner) => {
+    const t = inner.trim(); if (t) bump().diary = t;
+    return "";
+  });
+  s = s.replace(/[⟦〚]([^⟧〛]*)[⟧〛]/g, (m0, inner) => {
+    const t = inner.trim();
+    const tm = t.match(/^\+\s*(\d+)\s*(分钟|小时|天)$/);
+    if (tm) { bump().timeAdd = (card.timeAdd || 0) + (+tm[1]) * (tm[2] === "小时" ? 60 : tm[2] === "天" ? 1440 : 1); return ""; }
+    const mp = t.match(/^地点\s*=\s*(.+)$/); if (mp) { if (!card || !card.place) bump().place = mp[1].trim(); return ""; }
+    const mw = t.match(/^天气\s*=\s*(.+)$/); if (mw) { if (!card || !card.weatherName) bump().weatherName = mw[1].trim(); return ""; }
+    const mz = t.match(/^在场\s*=\s*(.+)$/);
+    if (mz) { bump().present = mz[1].split(/[,，、]/).map(x => x.trim()).filter(Boolean); return ""; }
+    return ""; /* 不认识的标记也是协议，一律剥离 */
+  });
+  if (!card) return { rest: s, card: null };
+  const rest = s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
+  return { rest: rest, card: card };
+}
+function sceneCardHTML(card) {
+  if (!card) return "";
+  const place = card.place || "";
+  const period = card.period ? (SCENE_PERIOD_LABELS[card.period] || card.period) : "";
+  const weather = card.weather ? (SCENE_WX_LABELS[card.weather] || card.weather) : (card.weatherName || "");
+  const meta = [period, weather].filter(Boolean).join(" · ");
+  const present = (card.present && card.present.length) ? card.present.join("、") : "";
+  if (!place && !meta && !present && !card.diary && !card.timeAdd) return "";
+  let h = `<div class="scenetpl"><div class="sct-head"><span class="sct-k">场景</span>`
+    + `<span class="sct-place">${esc(place || "场景变化")}</span>`
+    + (card.timeAdd ? `<span class="sct-time">+${card.timeAdd}分钟</span>` : "") + `</div>`;
+  if (meta || present)
+    h += `<div class="sct-meta">${meta ? `<span>${esc(meta)}</span>` : ""}${present ? `<span>在场：${esc(present)}</span>` : ""}</div>`;
+  if (card.diary)
+    h += `<div class="sct-diary"><span class="sct-dk">大事记</span>${esc(card.diary)}</div>`;
+  return h + `</div>`;
+}
+
 /* ---------- 2. 角色页：大立绘头图 + 一句台词 + 性格关键词 ---------- */
 /* 字段值可能是字符串，也可能是 {v, items:[...]}（蒸馏卡），统一摊平成若干行 */
 function cardFieldLines(v){

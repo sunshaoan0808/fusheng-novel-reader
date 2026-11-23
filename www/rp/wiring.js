@@ -310,13 +310,44 @@ var RP_WIRING = (function () {
 
   /* ---------- 对外 ---------- */
   function passthrough(rawText) {
-    return { cleanText: rawText, report: null, favorChanges: [], notices: [], pendingActions: null, sceneState: null, checkResult: null, stageSnapshot: null };
+    return { cleanText: rawText, report: null, favorChanges: [], notices: [], pendingActions: null, sceneState: null, checkResult: null, stageSnapshot: null, sceneCard: null };
+  }
+
+  /* 场景模板卡数据（2026-11-23 用户拍板：固定漂亮模板、AI 只填字）：
+     从本轮原始回复抽 世界标记/场景区块/大事记，渲染层据此出固定版式卡。 */
+  function markersCard(text) {
+    var WS = typeof globalThis !== "undefined" ? globalThis.RP_WORLDSIM : null;
+    if (!WS || typeof WS.parseMarkers !== "function" || typeof text !== "string") return null;
+    var mk = null;
+    try { mk = WS.parseMarkers(text); } catch (e) {}
+    if (!mk) return null;
+    var card = null;
+    if (mk.timeAdd) { card = card || {}; card.timeAdd = mk.timeAdd; }
+    if (mk.place) { card = card || {}; card.place = mk.place; }
+    if (mk.weatherName) { card = card || {}; card.weatherName = mk.weatherName; }
+    if (mk.present && mk.present.length) { card = card || {}; card.present = mk.present; }
+    return card;
+  }
+
+  function sceneCardFrom(ctx) {
+    var card = markersCard(ctx.rawText) || {};
+    var s = ctx.zones && ctx.zones.scene;
+    if (s && typeof s === "object") {
+      if (typeof s["地点"] === "string" && s["地点"].trim()) card.place = s["地点"].trim();
+      if (typeof s["时段"] === "string" && s["时段"].trim()) card.period = s["时段"].trim();
+      if (typeof s["天气"] === "string" && s["天气"].trim()) { card.weather = s["天气"].trim(); delete card.weatherName; }
+    }
+    var dy = ctx.zones && ctx.zones.diary;
+    if (typeof dy === "string" && dy.trim()) card.diary = dy.trim();
+    return Object.keys(card).length ? card : null;
   }
 
   function settleReply(rawText, opts) {
     opts = opts || {};
     if (!isEnabled() || !orchestrator || typeof rawText !== "string" || !ZONE_HINT.test(rawText)) {
-      return Promise.resolve(passthrough(rawText));
+      var p0 = passthrough(rawText);
+      p0.sceneCard = markersCard(rawText);
+      return Promise.resolve(p0);
     }
     var ctx = {
       runId: opts.runId || "", name: opts.name || "", rawText: rawText,
@@ -324,7 +355,7 @@ var RP_WIRING = (function () {
       revertFavor: Array.isArray(opts.revertFavor) ? opts.revertFavor : []
     };
     return orchestrator.settle(ctx).then(function (report) {
-      if (!report) return passthrough(rawText);
+      if (!report) { var p1 = passthrough(rawText); p1.sceneCard = markersCard(rawText); return p1; }
       return {
         cleanText: typeof ctx.cleanText === "string" ? ctx.cleanText : rawText,
         report: report,
@@ -333,7 +364,8 @@ var RP_WIRING = (function () {
         pendingActions: ctx.pendingActions || null,
         sceneState: ctx.sceneState || null,
         checkResult: ctx.checkResult || null,
-        stageSnapshot: ctx.stageSnapshot || null
+        stageSnapshot: ctx.stageSnapshot || null,
+        sceneCard: sceneCardFrom(ctx)
       };
     });
   }

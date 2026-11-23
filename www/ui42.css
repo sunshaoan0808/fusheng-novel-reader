@@ -86,6 +86,21 @@ body.tw-active .chatbg .bglayer{ animation-play-state:paused; }
 .bubble .ooc-tag{ display:inline-block; font-size:calc(11px * var(--fs)); line-height:1.6;
   color:var(--ink-dim); border:1px solid rgba(212,162,78,.4); border-radius:999px;
   padding:1px 9px; margin-bottom:6px; }
+/* 场景模板卡（2026-11-23 用户拍板：固定模板、AI 只填字）：气泡下方挂一张
+ * 版式固定的小卡——地点标题行 + 时段/天气/在场 + 大事记，正文永不裸露协议。 */
+.scenetpl{ margin-top:6px; border:1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+  background:color-mix(in srgb, var(--card) 46%, transparent); border-radius:12px; padding:8px 12px; }
+.scenetpl .sct-head{ display:flex; align-items:center; gap:8px; }
+.scenetpl .sct-k{ flex:none; font-size:calc(10px * var(--fs)); letter-spacing:.18em; color:var(--gold);
+  border:1px solid color-mix(in srgb, var(--gold) 45%, transparent); border-radius:4px; padding:1px 5px; }
+.scenetpl .sct-place{ font-family:var(--serif); font-size:calc(14px * var(--fs)); font-weight:600; color:var(--ink);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.scenetpl .sct-time{ margin-left:auto; flex:none; font-size:calc(11px * var(--fs)); color:var(--gold-soft); }
+.scenetpl .sct-meta{ margin-top:3px; display:flex; gap:12px; flex-wrap:wrap;
+  font-size:calc(12px * var(--fs)); color:var(--ink-dim); }
+.scenetpl .sct-diary{ margin-top:6px; padding-top:6px; font-size:calc(12px * var(--fs)); line-height:1.65; color:var(--ink-dim);
+  border-top:1px dashed color-mix(in srgb, var(--gold) 22%, transparent); }
+.scenetpl .sct-dk{ color:var(--gold); font-size:calc(10px * var(--fs)); letter-spacing:.14em; margin-right:6px; }
 body.chatmode.bars-light .bubble.segd .seg-nar{ color:#4a3d24; text-shadow:0 1px 3px rgba(255,255,255,.6); }
 
 /* ===== 2. 角色页：大立绘头图 + 台词 + 性格词 + 常驻「开始对话」 ===== */

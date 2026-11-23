@@ -673,6 +673,15 @@ const isCur = isHit && SEARCH.hits[SEARCH.cur]===idx;
  * 历史记录本身不动。单聊/群聊走同一 renderChat，改一处即全覆盖。 */
 const oocTag = (m.role==="assistant" && typeof parseOocTag === "function") ? parseOocTag(body) : null;
 if(oocTag) body = oocTag.rest;
+/* 场景模板卡（2026-11-23 用户拍板）：AI 只填字、App 出固定漂亮模板。
+ * 正常消息用接收时存好的 m.scene；老消息/绕过清理的消息正文里若还躺着
+ * 协议原文（错括号标记、<scene>/<diary>），渲染时现抽现剥并同样填卡。 */
+let sceneCard = (m.role==="assistant" && m.scene) ? m.scene : null;
+if(m.role==="assistant" && typeof parseSceneTail === "function"){
+const stl = parseSceneTail(body);
+if(stl.card){ body = stl.rest; if(!sceneCard) sceneCard = stl.card; }
+}
+const sceneHTML = (sceneCard && typeof sceneCardHTML === "function") ? sceneCardHTML(sceneCard) : "";
 /* v42: AI 消息按旁白/对白分排（见 js/app_ui.js chatSegHTML） */
 const segOn = chatSegEligible({role: m.role, content: body});
 const _mdh = hlRestore(md(hlSearchRaw(body)));
@@ -688,7 +697,7 @@ const conflictBadge = (m._conflicts && m._conflicts.length && !m._conflictResolv
 /* Tier1 接线结算条：好感变化 / CG / 判定等结构化结果挂在气泡下方 */
 const wireHTML = (m.role==="assistant" && m.wire && typeof RP_WIRING!=="undefined" && RP_WIRING.wireHTML) ? RP_WIRING.wireHTML(m.wire) : "";
 return __sep + `<div class="msg ${m.role==="user"?"me":""}${mtype==="narr"?" narr":""}${mtype==="npc"?" npc":""}${isCur?" curhit":""}" id="smsg-${idx}" data-mid="${esc(m.mid||m.id||"")}" onclick="toggleTools(event,${jq(idx)})" oncontextmenu="event.preventDefault();msgMenu(${jq(idx)});return false;" ontouchstart="msgPressStart(event,${jq(idx)})" ontouchend="msgPressEnd()" ontouchmove="msgPressEnd()">`
-+ `<div class="msgcol">${showWho?whoHTML:""}<div class="bubble${segOn?" segd":""}${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${wireHTML}${extra}</div>`
++ `<div class="msgcol">${showWho?whoHTML:""}<div class="bubble${segOn?" segd":""}${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${sceneHTML}${wireHTML}${extra}</div>`
 + `</div>`;
 }).join("") || `<div class="empty"><span class="empty-seal" aria-hidden="true">浮生</span>还没有对话，打个招呼吧<br><span style="font-size:calc(12px * var(--fs))">试试：你是谁？</span></div>`;
 renderCtxBar();

@@ -47,5 +47,18 @@ t("台词去掉证据标注 [S026]", JSON.parse(Q({fields:{typical_lines:"- 「�
 t("无台词退回身份一句话（非引语）", JSON.parse(Q({fields:{core_identity:"巡盐御史之女"}})).quote === false);
 t("什么都没有返回 null", Q({fields:{}}) === "null");
 t("性格词：切短词、去括注、最多 5 个", TT({fields:{core_traits:"情深惜物悲悯；诗才敏捷词锋尖俏；心软口硬；客居自敛、屈辱敏感；心事深藏；伤春自怜", temperament_type:"阴冷（6/10）"}}) === JSON.stringify(["情深惜物悲悯","心软口硬","客居自敛","屈辱敏感","心事深藏"]));
+/* 场景模板卡：协议原文现抽现剥（2026-11-23 用户截图形状：错括号 + <scene>/<diary> 整段漏出） */
+const segTail = JSON.parse(vm.runInContext('JSON.stringify(parseSceneTail("她别扭地应了。\\n〚+25分钟〛\\n〚地点=市中心医院门诊走廊〛\\n〚在场=杨蓉，周明远〛\\n<scene>\\n地点：市中心医院门诊走廊\\n时段: morning\\n天气: cloudy\\n</scene>\\n<diary>9月30日上午，杨蓉送你到医院复查，撞见周明远。</diary>"))', ctx));
+t("parseSceneTail 抽出场景卡字段", segTail.card && segTail.card.place === "市中心医院门诊走廊" && segTail.card.period === "morning" && segTail.card.weather === "cloudy" && segTail.card.timeAdd === 25 && segTail.card.present.join(",") === "杨蓉,周明远" && segTail.card.diary.indexOf("周明远") >= 0);
+t("parseSceneTail 正文不留协议原文", segTail.rest.indexOf("〚") < 0 && segTail.rest.indexOf("<scene>") < 0 && segTail.rest.indexOf("<diary>") < 0 && segTail.rest.indexOf("她别扭地应了") >= 0);
+t("无协议消息 parseSceneTail 返回 null 卡", vm.runInContext('parseSceneTail("「你来了。」").card', ctx) === null);
+const segCardHTML = vm.runInContext('sceneCardHTML({place:"市中心医院门诊走廊", period:"morning", weather:"cloudy", timeAdd:25, present:["杨蓉","周明远"], diary:"撞见周明远"})', ctx);
+t("sceneCardHTML 出固定模板（地点/上午/阴/+25分钟/大事记）", segCardHTML.indexOf("scenetpl") >= 0 && segCardHTML.indexOf("市中心医院门诊走廊") >= 0 && segCardHTML.indexOf("上午") >= 0 && segCardHTML.indexOf("阴") >= 0 && segCardHTML.indexOf("+25分钟") >= 0 && segCardHTML.indexOf("大事记") >= 0);
+const prefsSrc2 = fs.readFileSync(path.join(WWW, "js", "app_prefs.js"), "utf8");
+t("renderChat 接了场景卡（m.scene + parseSceneTail 兜底）", prefsSrc2.indexOf("parseSceneTail(body)") >= 0 && prefsSrc2.indexOf("sceneHTML") >= 0 && prefsSrc2.indexOf("m.scene") >= 0);
+const chatSrc2 = fs.readFileSync(path.join(WWW, "rp", "chat.js"), "utf8");
+t("chat.js 四路把 sceneCard 存到消息", (chatSrc2.match(/\.scene = wire\w+\.sceneCard/g) || []).length === 4);
+const ui42Css2 = fs.readFileSync(path.join(WWW, "ui42.css"), "utf8");
+t("ui42 有 scenetpl 样式", ui42Css2.indexOf(".scenetpl") >= 0);
 console.log(`ui42_seg: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);
