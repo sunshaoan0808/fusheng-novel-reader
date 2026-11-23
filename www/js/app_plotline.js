@@ -248,7 +248,7 @@ return `<div class="cb-tools" data-xfade>`
 + `<button id="narrbtn" class="cb-tool${CHAT.narrMode?" on":""}" onclick="toggleNarr()" title="旁白模式：发送场景/动作描写"><span class="cb-ico">${icon("scroll",15)}</span><span class="cb-tx">旁白</span></button>`
 + `${atb}${spk}`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
-+ `<button class="cb-tool" onclick="wireDiceRoll()" title="掷骰：掷一个 1-100 填入输入框，附在行动后面一起发，让 AI 按点数判定成败"><span class="cb-ico">${icon("dice",15)}</span><span class="cb-tx">掷骰</span></button>`
++ `<button class="cb-tool" onclick="wireDiceRoll()" title="掷骰：掷一个 1-100 填入输入框。跟行动一起发=按点数+好感修正判定这件事的成败；只发骰签=赌当前局面的运气（成功则局面朝你有利松动）"><span class="cb-ico">${icon("dice",15)}</span><span class="cb-tx">掷骰</span></button>`
 + `</div>`
 + `<div class="cb-inputrow"><input id="chat_in" placeholder="${CHAT.narrMode?"写场景/动作/心理描写…":ph}" onkeydown="if(event.key==='Enter')sendChat()">`
 + `<button class="cbsend" onclick="sendChat()" title="发送">发送</button></div>`;
@@ -267,7 +267,9 @@ window.wireDiceRoll = ()=>{
 /* 掷骰判定指令(2026-11-23): 骰签此前只是拼进消息的裸标签, 全链没人向 AI 说明口径与
  * 档位, 掷了等于没掷(用户实报: 掷出 10, 角色照常按惯性推进、毫无反应)。
  * 这里按点数定档生成压尾指令, 经 sendOpts.extraPrompt 注入 buildMessages 末尾
- * (与玩家行动铁律同位)。口径与 rp/check.js 一致: 百分骰, 点小为佳。 */
+ * (与玩家行动铁律同位)。口径与 rp/check.js 一致: 百分骰, 点小为佳。
+ * 语义分工(用户拍板): 骰签跟着行动发 = 判定该行动成败, 且行动吃好感修正(见下);
+ * 只发裸骰 = 当前局面的运气判定(成功=僵局朝玩家有利方向松动), 不吃修正。 */
 function diceTierOf(roll){
   if(roll <= 5) return "大成功";
   if(roll <= 35) return "成功";
@@ -275,14 +277,42 @@ function diceTierOf(roll){
   if(roll <= 95) return "失败";
   return "大失败";
 }
-window.diceInstrFor = (text)=>{
-  const m = /（掷骰：(\d{1,3})）/.exec(String(text || ""));
+/* 行动骰的好感修正: 返回实际点数的减值(正=帮玩家压低点数, 负=关系恶劣反噬)。
+ * 好感越高, 对方越愿意让你的行动成事; 恶感则更难。裸骰不吃修正。 */
+function favorBonusOf(favor){
+  if(typeof favor !== "number" || !isFinite(favor)) return 0;
+  if(favor >= 80) return 20;
+  if(favor >= 50) return 15;
+  if(favor >= 30) return 10;
+  if(favor >= 10) return 5;
+  if(favor <= -10) return -10;
+  return 0;
+}
+window.diceInstrFor = (text, favor)=>{
+  const raw = String(text || "");
+  const m = /（掷骰：(\d{1,3})）/.exec(raw);
   if(!m) return "";
   const roll = Math.max(1, Math.min(100, parseInt(m[1], 10)));
-  return "【掷骰判定·必须执行】玩家本轮掷骰 " + roll + "/100，档位：" + diceTierOf(roll) + "。" +
-    "口径：百分骰，点数越小越有利（1-5 大成功、6-35 成功、36-65 部分成功但有代价、66-95 失败、96-100 大失败）。" +
-    "你必须按此档位决定玩家本轮行动的成败与后果，并在剧情中明确体现，禁止无视点数按惯性推进。" +
-    "若玩家只发了骰签没写行动，判定对象是其最近试图推进的那件事。";
+  const action = raw.replace(/（掷骰：\d{1,3}）/g, "").trim();
+  const BANDS = "口径：百分骰，点数越小越有利（1-5 大成功、6-35 成功、36-65 部分成功但有代价、66-95 失败、96-100 大失败）。";
+  if(!action){
+    /* 裸骰: 当前局面的运气判定 —— 不套到不存在的行动上 */
+    return "【掷骰判定·必须执行】玩家本轮只发了骰签没写行动，这是对当前局面的运气判定。" +
+      "原始点数 " + roll + "/100，档位：" + diceTierOf(roll) + "。" + BANDS +
+      "含义：成功档=僵局朝对玩家有利的方向松动（对方让步、态度软化或出现转机）；" +
+      "部分成功=有松动但伴随代价或新条件；失败档=局面朝不利方向发展（对方更强硬或节外生枝）。" +
+      "禁止把骰子套到某个不存在的行动上，禁止无视点数按惯性推进。";
+  }
+  /* 行动骰: 吃好感修正, 按实际点数定档 */
+  const bonus = favorBonusOf(favor);
+  const eff = Math.max(1, Math.min(100, roll - bonus));
+  const modTxt = (typeof favor === "number" && isFinite(favor))
+    ? "好感修正 " + (bonus > 0 ? "-" + bonus : bonus < 0 ? "+" + (-bonus) : "0") +
+      "（当前好感 " + Math.round(favor) + "），实际点数 " + eff + "/100，"
+    : "";
+  return "【掷骰判定·必须执行】玩家本轮行动附带掷骰。原始点数 " + roll + "/100，" + modTxt +
+    "档位：" + diceTierOf(eff) + "。" + BANDS +
+    "你必须按此档位决定玩家本轮行动的成败与后果，并在剧情中明确体现，禁止无视点数按惯性推进。";
 };
 window.toggleAtMenu = (ev)=>{
 if(ev && ev.stopPropagation) ev.stopPropagation();
@@ -476,6 +506,9 @@ try{
 /* Tier2 #15: 简洁回复开关 (Janitor "Snappier, more concise replies"): 单聊且打开时,
  * system 追加简洁指令, maxTokens 压到 300 以内, 透传 concise 到 prompt 构建 */
 const conciseOn = CHAT.mode==="single" && getChatOpt(CHAT.runId, CHAT.name).concise;
+/* 掷骰好感修正只认单聊对象(群聊是多人、穿越是世界判定, 都不吃单人好感) */
+let __diceFavor;
+try{ if(!isGroup && !isTrav && typeof RP_WIRING !== "undefined" && RP_WIRING.favorOf) __diceFavor = RP_WIRING.favorOf(CHAT.runId, CHAT.name); }catch(e){}
 const sendOpts = {
 cfg: Object.assign({}, cfg, {maxContext: rcfg.maxContext, summaryModel: rcfg.summaryModel}),
 history: h,
@@ -484,7 +517,7 @@ maxTokens: conciseOn ? Math.min(rcfg.respTokens, 300) : rcfg.respTokens,
 concise: conciseOn,
 optCards: !!rcfg.optCards, optCount: rcfg.optCount, optMood: rcfg.optMood,
 plotOutline: activePlotOutline(), scenario: scenarioInstr(), oocOn: rcfg.ooc,
-extraPrompt: diceInstrFor(text), /* 掷骰判定指令(本轮消息带骰签时才有) */
+extraPrompt: diceInstrFor(text, __diceFavor), /* 掷骰判定指令(带骰签时才有; 行动骰吃好感修正) */
 sceneText: getSceneText(), /* S-7 高权重场景 */
 chapterIdx: getChapterIdx(), /* 章节进度：角色知识截止 */
 userMtype: CHAT.narrMode ? "narr" : (CHAT.asSpeaker ? "npc" : "player"),
