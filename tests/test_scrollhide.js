@@ -188,5 +188,16 @@ run("renderChat(true)");
 t("renderChat(true): 发消息强制回底", log.scrollTop === log.scrollHeight);
 })();
 
+/* 2026-11-23 真机实报: 沉浸态日志顶边顶到屏幕顶, 上滑首行被状态栏黑条切掉
+ * (viewport-fit=cover; 顶栏可见时靠自身 safe-area 内边距护住, 藏起来就没人护)。
+ * 沉浸时 #chatlog 顶边必须让开安全区。 */
+{
+const css = fs.readFileSync(WWW + "/style.css", "utf8");
+t("immersive: #chatlog 顶边让开状态栏安全区",
+  /body\.chatmode\.immersive #chatlog\{[^}]*margin-top:env\(safe-area-inset-top\)/.test(css));
+t("chathead 自身仍有 safe-area 内边距(栏可见时护顶)",
+  /\.chathead\{[^}]*padding:calc\(10px \+ env\(safe-area-inset-top\)\)/.test(css));
+}
+
 console.log(`test_scrollhide: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);

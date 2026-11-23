@@ -585,7 +585,14 @@ body.chatmode.immersive .chatbg .bgshade{
     rgba(6,5,4,.38) 0%, rgba(6,5,4,.12) 14%, rgba(6,5,4,0) 30%,
     rgba(6,5,4,0) 62%, rgba(6,5,4,.30) 84%, rgba(6,5,4,.72) 100%);
 }
-body.chatmode.immersive #chatlog{ padding-top:8px; }
+body.chatmode.immersive #chatlog{ padding-top:8px;
+  /* 2026-11-23 用户真机实报(掷骰气泡被顶部长条切掉上半截): viewport-fit=cover
+   * 下页面画到状态栏底下, 顶栏可见时靠它自己的 safe-area 内边距护住正文;
+   * 一进沉浸顶栏 display:none, 日志顶边直接顶到屏幕顶, 上滑时首行消息钻进
+   * 状态栏区被系统黑条切掉(实测切线恰在安全区高度处)。沉浸时给日志顶边
+   * 留出安全区: 顶边落在状态栏之下, 露出的那条是壁纸本身, 不再是黑条吃字。
+   * 顶边位移与栏位显隐同属一帧布局变化, 由滚动锚定补偿, 不跳。 */
+  margin-top:env(safe-area-inset-top); }
 body.chatmode.immersive #ctxbar{ padding-top:0; padding-bottom:0; }
 /* 气泡浮在场景上：底色用主题表面色 --nav-bg（与对白块同方），文字 --ink。
  * 旧版写死深棕 rgba(34,30,25,.74)+毛玻璃：浅色主题（如青瓷）的深色字压上去
