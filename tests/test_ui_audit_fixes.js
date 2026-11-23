@@ -168,5 +168,14 @@ t("a11y 优先用 title 作标签", a11y.indexOf('getAttribute("title")') >= 0);
   }
 }
 
+/* (9) 2026-11-23 浅色主题旁白修正(用户真机截图: 深色阴影压浅壁纸灰糊突兀) */
+{
+  const ui42 = fs.readFileSync(path.join(WWW, "ui42.css"), "utf8");
+  t("浅色主题旁白覆盖存在", ui42.indexOf('html[data-theme="xuanzhi"] .bubble.segd .seg-nar') >= 0);
+  t("覆盖含浅色光晕", /qiuxiang"\] \.bubble\.segd \.seg-nar\{[^}]*text-shadow:0 1px 2px rgba\(255,253,245/.test(ui42));
+  t("覆盖字色走 ink 76%", /qiuxiang"\] \.bubble\.segd \.seg-nar\{[^}]*color:color-mix\(in srgb, var\(--ink\) 76%/.test(ui42));
+  t("深色主题旁白原样保留", /\.bubble\.segd \.seg-nar\{\s*color:var\(--ink-dim\)/.test(ui42));
+}
+
 console.log(`test_ui_audit_fixes: ${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

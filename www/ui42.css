@@ -59,6 +59,20 @@ body.chatmode.immersive .chatbg .bgchar.inv.on{ opacity:.6; }
   font-size:calc(15px * var(--fs)); line-height:24px;
   text-shadow:0 1px 3px rgba(0,0,0,.65);
 }
+/* 浅色主题修正(2026-11-23 用户真机截图实报): 上面那套旁白是按深色壁纸调的 ——
+ * --ink-dim 灰字 + rgba(0,0,0,.65) 黑阴影, 压到宣纸这类浅色壁纸上就灰糊成一层脏影,
+ * 和气泡里黑白分明的对白一比格外突兀(今日换文楷后笔画更细, 对比差被放大)。
+ * 浅色 5 套主题下: 字色改 --ink 的 76%(仍弱于对白但不再发灰), 阴影换浅色光晕,
+ * 左侧墨线加深到能在浅底上站住。自定义浅色壁纸+深色主题的组合 CSS 感知不到亮度, 不在此列。 */
+html[data-theme="xuanzhi"] .bubble.segd .seg-nar,
+html[data-theme="qingci"] .bubble.segd .seg-nar,
+html[data-theme="tianqing"] .bubble.segd .seg-nar,
+html[data-theme="taoyao"] .bubble.segd .seg-nar,
+html[data-theme="qiuxiang"] .bubble.segd .seg-nar{
+  color:color-mix(in srgb, var(--ink) 76%, transparent);
+  text-shadow:0 1px 2px rgba(255,253,245,.9), 0 0 8px rgba(255,253,245,.55);
+  border-left-color:rgba(120,100,60,.30);
+}
 /* 打字机/流式播放中：摘掉气泡内文字阴影 + 冻结背景呼吸。
  * 带模糊阴影的文字压在半透明气泡上、底下背景图还在呼吸缩放，播放时每 45ms
  * 整段重栅格化，真机 GPU 扛不住就是「闪个不停」（用户定位：阴影+背景+打字机）。
