@@ -65,6 +65,8 @@ t("off 覆盖层在位(!important)", /html\[data-tshadow="off"\] \.seg-nar,[\s\S
 t("strong 旁白覆盖(带 .bubble.segd 压过基线)", ui42.indexOf('html[data-tshadow="strong"] .bubble.segd .seg-nar') >= 0);
 t("strong 浅色旁白是光晕版", ui42.indexOf('html[data-tshadow="strong"][data-theme="tianqing"] .bubble.segd .seg-nar') >= 0);
 t("immstrip 固定浅字", /body\.chatmode\.immersive \.immstrip\{[^}]*color:#ddd5bf/.test(css));
+t("resume-s 浅色主题换光晕", ui42.indexOf('html[data-theme="tianqing"] .resume-s') >= 0 && /data-theme="qiuxiang"\] \.resume-s\{\s*text-shadow:0 1px 2px rgba\(255,253,245/.test(ui42));
+t("resume-s 浓档+浅色是强光晕不是黑影", ui42.indexOf('html[data-tshadow="strong"][data-theme="tianqing"] .resume-s') >= 0);
 t("wirechip 深色主题浅字版", css.indexOf('html[data-theme="moye"] .wirechip.favor') >= 0 && css.indexOf('html[data-theme="jiangxia"] .wirechip.cg') >= 0);
 
 console.log(`test_contrast: ${pass} passed, ${fail} failed`);

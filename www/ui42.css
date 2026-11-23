@@ -313,3 +313,19 @@ html[data-tshadow="strong"] .chx-name{ text-shadow:0 2px 14px rgba(0,0,0,.9), 0 
 html[data-tshadow="strong"] .chx-quote{ text-shadow:0 1px 10px rgba(0,0,0,.95), 0 1px 2px rgba(0,0,0,.8); }
 html[data-tshadow="strong"] .covermeta .n{ text-shadow:0 1px 10px rgba(0,0,0,.85), 0 1px 2px rgba(0,0,0,.7); }
 html[data-tshadow="strong"] .resume-s{ text-shadow:0 1px 8px rgba(0,0,0,.95); }
+
+/* 浅色主题修正(2026-11-23 用户截图实报): .resume-s 的黑影是按深色卡面定的,
+ * 浅色主题下「继续上次」卡面是浅的, 黑影糊成一团脏印(与旁白同病)。
+ * 浅色 5 套换浅色光晕; 浓档+浅色同理给强光晕, 不许黑影回来。 */
+html[data-theme="xuanzhi"] .resume-s,
+html[data-theme="qingci"] .resume-s,
+html[data-theme="tianqing"] .resume-s,
+html[data-theme="taoyao"] .resume-s,
+html[data-theme="qiuxiang"] .resume-s{
+  text-shadow:0 1px 2px rgba(255,253,245,.9), 0 0 6px rgba(255,253,245,.5); }
+html[data-tshadow="strong"][data-theme="xuanzhi"] .resume-s,
+html[data-tshadow="strong"][data-theme="qingci"] .resume-s,
+html[data-tshadow="strong"][data-theme="tianqing"] .resume-s,
+html[data-tshadow="strong"][data-theme="taoyao"] .resume-s,
+html[data-tshadow="strong"][data-theme="qiuxiang"] .resume-s{
+  text-shadow:0 1px 3px rgba(255,253,245,1), 0 0 10px rgba(255,253,245,.85); }
