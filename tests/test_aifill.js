@@ -31,6 +31,9 @@ function mkCtx(over){
   };
   Object.assign(ctx, over || {});
   vm.createContext(ctx);
+  /* 2026-11-23: 人设走真实 persona.js(RP_PERSONA) —— 旧测试直接种裸键
+   * nd_persona, 与已改版的存储脱节, 等于和 bug 共谋把错误行为钉成绿。 */
+  vm.runInContext(fs.readFileSync(WWW + "/rp/persona.js", "utf8"), ctx);
   vm.runInContext(fs.readFileSync(WWW + "/rp/aifill.js", "utf8"), ctx);
   ctx.RP_AIFILL = vm.runInContext("RP_AIFILL", ctx);
   return ctx;
@@ -127,7 +130,7 @@ ctx = mkCtx({
   chatHistKey: () => "nd_chat_r_黛玉",
   CHAT: {mode: "single", name: "林黛玉"},
 });
-ctx.localStorage.setItem("nd_persona", JSON.stringify({name: "阿凌", desc: "爱开玩笑"}));
+ctx.localStorage.setItem("nd_persona_global", JSON.stringify({name: "阿凌", desc: "爱开玩笑"}));
 let chatPrompt = "";
 ctx.RP_NET.complete = async (cfg, msgs) => { chatPrompt = msgs[0].content; return "代笔的一句话"; };
 ctx._els["chat_in"] = mkEl("input", "", "");
