@@ -211,6 +211,8 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 </select></div>
 <div class="field"><label><input id="r_ooc" type="checkbox" style="width:auto"> OOC 自动纠正（跳出角色时重试一次）</label></div>
 <div class="field"><label><input id="r_ttsauto" type="checkbox" style="width:auto"> ${icon("volume",14)} 自动朗读 AI 回复（TTS 语音气泡播放）</label></div>
+<div class="field"><label>自动朗读范围</label>
+<select id="r_ttsmode"><option value="all">全文（旁白 + 对白）</option><option value="dialog">只念对白（引号内的部分）</option></select></div>
 <div class="field"><label><input id="r_typewriter" type="checkbox" style="width:auto"> 打字机效果（AI 回复逐字呈现，点气泡/发消息可打断）</label></div>
 <div class="field"><label>聊天壁纸</label>
 <select id="r_wallpaper"></select></div>
@@ -310,6 +312,7 @@ document.getElementById("r_optcount").value = rc.optCount||4;
 document.getElementById("r_optmood").value = rc.optMood||"none";
 document.getElementById("r_ooc").checked = !!rc.ooc;
 document.getElementById("r_ttsauto").checked = !!rc.ttsAuto;
+document.getElementById("r_ttsmode").value = rc.ttsMode||"all";
 document.getElementById("r_typewriter").checked = rc.typewriter!==false;
 document.getElementById("r_ws_on").checked = rc.worldsim!==false;
 document.getElementById("r_ws_permsg").value = rc.wsPerMsg||3;
@@ -524,7 +527,7 @@ optCount:Math.min(6,Math.max(2,parseInt($("#r_optcount").value)||4)),
 optMood:$("#r_optmood").value||"none",
 ooc:$("#r_ooc").checked, preset:$("#r_preset").value,
 stPreset:_stId,
-ttsAuto:$("#r_ttsauto").checked, typewriter:$("#r_typewriter").checked,
+ttsAuto:$("#r_ttsauto").checked, ttsMode:$("#r_ttsmode")?$("#r_ttsmode").value:"all", typewriter:$("#r_typewriter").checked,
 memCycle:Math.max(5,parseInt($("#r_memcycle").value)||10),
 memPoolRatio:(($("#r_mempool")&&$("#r_mempool").value)||"50/30/20").trim()||"50/30/20",
 memWindowN:Math.min(500,Math.max(10,parseInt(($("#r_memwin")&&$("#r_memwin").value)||"60")||60)), /* Tier2 #12 */

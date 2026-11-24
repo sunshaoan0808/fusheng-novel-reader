@@ -90,6 +90,15 @@ t("气泡有进度条id", bub.indexOf('id="vbfg-1"') >= 0);
 t("气泡有图标id", bub.indexOf('id="vbico-1"') >= 0);
 t("气泡有时长", bub.indexOf("0:02") >= 0);
 t("气泡调ttsMsg", bub.indexOf("ttsMsg(1)") >= 0);
+// ---- L0 自动朗读（2026-11-24）：只念对白抽取 / 分段 / 范围设置 ----
+t("ttsDialogText 抽引号对白", vm.runInContext(`ttsDialogText("她望着窗外。「你来了。」他点头，说：“坐吧。”")`, ctx) === "你来了。 坐吧。");
+t("ttsDialogText 无引号回落全文", vm.runInContext(`ttsDialogText("她望着窗外，半晌没有说话。")`, ctx) === "她望着窗外，半晌没有说话。");
+t("ttsChunkText 长文按句切且不超长", (()=>{ const cs = vm.runInContext(`ttsChunkText("第一句话很短。第二句话也很短！第三句呢？` + "长".repeat(200) + `。", 160)`, ctx); return cs.length >= 2 && cs.every(c => c.length <= 160) && cs.join("") === "第一句话很短。第二句话也很短！第三句呢？" + "长".repeat(200) + "。"; })());
+t("ttsChunkText 短文单段", vm.runInContext(`ttsChunkText("就一句。", 160).length`, ctx) === 1);
+t("ttsMode默认all", vm.runInContext("getRpCfg().ttsMode", ctx) === "all");
+vm.runInContext("saveRpCfg(Object.assign(getRpCfg(),{ttsMode:'dialog'}))", ctx);
+t("ttsMode保存后dialog", vm.runInContext("getRpCfg().ttsMode", ctx) === "dialog");
+vm.runInContext("saveRpCfg(Object.assign(getRpCfg(),{ttsMode:'all'}))", ctx);
 // ---- 无 TTS 配置、无本地语音: 提示去设置 ----
 const HKEY = "nd_chat_r1_林黛玉";
 store[HKEY] = JSON.stringify([{role:"user", content:"hi", ts:1},{role:"assistant", content:"姑娘好", ts:2}]);
@@ -97,6 +106,13 @@ store[HKEY] = JSON.stringify([{role:"user", content:"hi", ts:1},{role:"assistant
 await vm.runInContext("ttsMsg(1)", ctx);
 t("无配置时alert提示", alerts.some(a=>a.indexOf("设置")>=0));
 t("无配置时不进入播放态", vm.runInContext("TTS_PLAY===null", ctx) === true);
+// 自动朗读静默性：开自动 + 无任何可用通道 → 不弹窗、不进播放态（防每条回复弹一次窗）
+const alertsBefore = alerts.length;
+vm.runInContext("saveRpCfg(Object.assign(getRpCfg(),{ttsAuto:true,ttsMode:'dialog'}))", ctx);
+await vm.runInContext("autoTtsMsg(1)", ctx);
+t("自动朗读无通道时静默", alerts.length === alertsBefore);
+t("自动朗读无通道时不进播放态", vm.runInContext("TTS_PLAY===null", ctx) === true);
+vm.runInContext("saveRpCfg(Object.assign(getRpCfg(),{ttsAuto:false,ttsMode:'all'}))", ctx);
 console.log(`tts: ${pass} pass, ${fail} fail`);
 process.exit(fail ? 1 : 0);
 })();

@@ -8,7 +8,7 @@ const RPCFG_KEY = "nd_rp_cfg_v1";
 const getCfg = ()=>{ try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}};
 const saveCfg = (c)=>{ try{ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，API 配置未保存" : "API 配置保存失败"); }catch(_){} } };
 const getRpCfg = ()=> Object.assign({maxContext:8192, respTokens:2000, summaryModel:"",
-  temperature:0.9, topP:1, ooc:true, preset:"classic", optCards:false, optCount:4, optMood:"none", ttsAuto:false, typewriter:true,
+  temperature:0.9, topP:1, ooc:true, preset:"classic", optCards:false, optCount:4, optMood:"none", ttsAuto:false, ttsMode:"all", typewriter:true,
   worldsim:true, wsPerMsg:3, wsStepMin:30, wsWxAuto:true, wsWxEvery:5, temporal:true, leanmem:true,
   apex:true,
   memCycle:10, memPoolRatio:"50/30/20",

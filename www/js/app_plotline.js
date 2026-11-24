@@ -583,9 +583,10 @@ let hh = null;
 try{ hh = getHist(k); }catch(e2){ rpToast("聊天记录读取失败"); }
 if(hh){ hh.push({role:"assistant", content:"（已停止生成）", ts:Date.now()}); saveHist(k, hh); }
 }else if(getRpCfg().ttsAuto){
-/* P1-1: 自动朗读 AI 回复 */
+/* P1-1: 自动朗读 AI 回复。2026-11-24 L0：改走静默版 autoTtsMsg
+ * （本地优先/分段排队/支持只念对白/失败不弹窗），无此函数时回落 ttsMsg。 */
 const li = r.history.length-1;
-if(r.history[li] && r.history[li].role==="assistant"){ try{ ttsMsg(li); }catch(e){} }
+if(r.history[li] && r.history[li].role==="assistant"){ try{ if(window.autoTtsMsg) autoTtsMsg(li); else ttsMsg(li); }catch(e){} }
 }
 }catch(e){
 /* P0-3: 读失败时只提示、不写回 */
