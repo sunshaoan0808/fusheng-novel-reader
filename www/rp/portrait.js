@@ -15,13 +15,17 @@ var FIELD_CUT = 120;     /* 单字段截断长度（按句边界，不切半句�
 
 /* ---------- 情境包：情境 -> 卡字段列表 ---------- */
 var SITUATION_PACKS = {
-conflict: ["ooc_redline","decision_rules","stress_response","restraint_threshold","taboo_topics"],
+conflict: ["ooc_redline","decision_rules","stress_response","restraint_threshold","taboo_topics","strengths","weaknesses","belief_anchor"],
 emotion: ["emotion_model","fear_triggers","inner_need","shadow_side","grievance_style","joy_style","anger_style"],
-social: ["social_mode","speech_style","signature_phrases","typical_lines","carry_style"],
-memory: ["life_timeline","key_bonds","trauma_scar","background_imprint"],
+social: ["social_mode","speech_style","signature_phrases","typical_lines","carry_style","preference_like","dislike_hate"],
+memory: ["life_timeline","key_bonds","trauma_scar","background_imprint","life_experience"],
+/* 2026-11-24 蒸馏全利用二期: 新增两包, 收编复盘点名的空转字段。
+   交易谋划 = 利益组 + 决策短板; 亲近独处 = 私密自我组。 */
+deal: ["interest_claim","resource_dependence","trade_principle","reward_logic","cognitive_limits","decision_rules"],
+intimate: ["private_self","disguise_switch","self_cognition","inner_conflict"],
 };
 
-var PACK_CN = {conflict:"冲突", emotion:"情感", social:"社交", memory:"回忆"};
+var PACK_CN = {conflict:"冲突", emotion:"情感", social:"社交", memory:"回忆", deal:"交易谋划", intimate:"亲近独处"};
 
 var FIELD_CN = {
 ooc_redline:"行为红线", decision_rules:"决策准则", stress_response:"压力反应",
@@ -32,6 +36,12 @@ social_mode:"社交模式", speech_style:"说话风格", signature_phrases:"口�
 typical_lines:"典型台词", carry_style:"处事风格",
 life_timeline:"人生轨迹", key_bonds:"关键羁绊", trauma_scar:"创伤",
 background_imprint:"背景烙印",
+strengths:"长处", weaknesses:"短板", belief_anchor:"信念锚点",
+preference_like:"喜好", dislike_hate:"厌恶", life_experience:"人生经历",
+interest_claim:"利益诉求", resource_dependence:"资源依赖", trade_principle:"交易原则",
+reward_logic:"回报逻辑", cognitive_limits:"认知局限",
+private_self:"私密自我", disguise_switch:"伪装切换", self_cognition:"自我认知",
+inner_conflict:"内心冲突",
 };
 
 /* ---------- 情境关键词：手写、可解释；命中任一即算该情境 ----------
@@ -46,6 +56,10 @@ social: ["你好","请问","聊聊","告诉","问你","请教","商量","打招�
 "初次","久仰","自我介绍"],
 memory: ["记得","当年","曾经","回忆","往事","小时候","过去","那年",
 "旧事","以前"],
+deal: ["交易","条件","价钱","银子","帮忙","求你","答应","商量","谋划",
+"打算","计划","交换","买卖","报酬","好处"],
+intimate: ["独处","夜里","坦白","心里话","没人时","真心","秘密","面具",
+"一个人","悄悄话"],
 };
 
 function fieldLabel(f){ return FIELD_CN[f] || f; }
@@ -168,7 +182,31 @@ function enrich(card, text, history, budget){
   }catch(e){
     return {text:"", hits:[], banned:[]};
   }
+  try{ recordHits(out); }catch(e){}
   return out;
+}
+
+/* 命中埋点（2026-11-24 全利用二期）：各包/字段累计命中存 localStorage，
+ * 画像 debug 抽屉可见——先看见触发频率，再谈调关键词。只记次数不记内容。 */
+var HITS_KEY = "nd_portrait_hits_v1";
+function recordHits(out){
+  if(typeof localStorage === "undefined") return;
+  if(!out || (!out.hits.length && !out.banned.length)) return;
+  var st = {};
+  try{ st = JSON.parse(localStorage.getItem(HITS_KEY) || "{}") || {}; }catch(e){ st = {}; }
+  st.packs = st.packs || {}; st.fields = st.fields || {};
+  st.rounds = (st.rounds || 0) + 1;
+  out.hits.forEach(function(h){
+    st.packs[h.pack] = (st.packs[h.pack] || 0) + 1;
+    st.fields[h.field] = (st.fields[h.field] || 0) + 1;
+  });
+  localStorage.setItem(HITS_KEY, JSON.stringify(st));
+}
+function hitStats(){
+  try{
+    if(typeof localStorage === "undefined") return null;
+    return JSON.parse(localStorage.getItem(HITS_KEY) || "null");
+  }catch(e){ return null; }
 }
 
 /* P2-11: 收敛到 escutil.js 的 escH()；独立加载（测试 vm）无 escH 时回退同款实现 */
@@ -188,6 +226,14 @@ function renderDebug(hits, banned){
       esc(PACK_CN[x.pack] || x.pack) + '·' + esc(fieldLabel(x.field)) +
       '</span><div class="st">' + esc(x.snippet) + '</div></div>';
   }).join("");
+  var st = null;
+  try{ st = hitStats(); }catch(e){}
+  if(st && st.rounds){
+    var pk = Object.keys(st.packs || {}).map(function(k){
+      return esc(PACK_CN[k] || k) + "×" + st.packs[k];
+    }).join(" · ");
+    if(pk) h += '<div class="pdebug-sec">【累计命中 ' + st.rounds + ' 轮】' + pk + '</div>';
+  }
   if(!h) return '<div class="empty">本轮未命中画像字段</div>';
   return '<div class="pdebug">' + h + '</div>';
 }
@@ -195,7 +241,7 @@ function renderDebug(hits, banned){
 var api = {
 PROMPT_BUDGET: PROMPT_BUDGET, FIELD_CUT: FIELD_CUT,
 SITUATION_PACKS: SITUATION_PACKS, KEYWORDS: KEYWORDS,
-detect: detect, enrich: enrich, renderDebug: renderDebug,
+detect: detect, enrich: enrich, renderDebug: renderDebug, hitStats: hitStats,
 cutSentence: cutSentence,
 };
 return api;
