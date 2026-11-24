@@ -989,6 +989,34 @@ async function send(runId, name, text, opts){
       }).catch(function(){});
     }
   }catch(e){}
+  /* 场景配图：CG 定格自动落图（2026-11-24 双通道 MVP）。结算 notices 里有
+   * kind=cg（首次解锁定格）时后台异步生图，失败静默；成功后发 rp-cgimg
+   * 事件，界面层按 mid 把图挂到这条消息并落盘（本函数只管生成与通知）。 */
+  try{
+    if(typeof RP_SCENEIMG !== "undefined" && wireRes && wireRes.notices && RP_SCENEIMG.cgAutoOn()){
+      var cgN = null;
+      for(var _ci = 0; _ci < wireRes.notices.length; _ci++)
+        if(wireRes.notices[_ci] && wireRes.notices[_ci].kind === "cg"){ cgN = wireRes.notices[_ci]; break; }
+      if(cgN){
+        var cgId = String(cgN.text || "").replace(/^解锁新图鉴：/, "");
+        var cgApp = {};
+        try{
+          var _cf = (card && card.fields) || {};
+          var _ap = _cf.appearance_feature || _cf.visual_identity || "";
+          if(_ap && wireRes.sceneCard && wireRes.sceneCard.present &&
+             wireRes.sceneCard.present.indexOf(name) >= 0) cgApp[name] = _ap;
+        }catch(e){}
+        RP_SCENEIMG.autoCgImage({cfg: cfg, scene: wireRes.sceneCard, appearance: cgApp,
+          excerpt: reply}).then(function(img){
+          if(!img) return;
+          try{
+            window.dispatchEvent(new CustomEvent("rp-cgimg", {detail: {
+              runId: runId, name: name, mid: am.mid || am.id || "", img: img, cgId: cgId}}));
+          }catch(e){}
+        }).catch(function(){});
+      }
+    }
+  }catch(e){}
   /* 游玩统计：记一轮 + prompt/回复 token 估算（纯本地，RP_STATS） */
   try{
     if(typeof RP_STATS !== "undefined"){

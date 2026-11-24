@@ -256,3 +256,117 @@ document.body.appendChild(a); a.click(); a.remove();
 };
 };
 
+
+/* ===== 场景配图（2026-11-24 双通道 MVP）：大图查看 / 落盘压缩 / 每聊限量 / 手动配图浮层 ===== */
+window.viewImgFull = (src)=>{
+if(typeof src !== "string" || !/^(data:image\/|https:\/\/)/i.test(src)) return;
+const ov = document.createElement("div");
+ov.className = "viewer";
+ov.innerHTML = `<div class="vbox"><div class="vhead"><span>图片</span><button onclick="this.closest('.viewer').remove()">✕</button></div><div class="vimg"><img src="${escH(src)}"></div></div>`;
+ov.addEventListener("click", (e)=>{ if(e.target === ov) ov.remove(); });
+document.body.appendChild(ov);
+};
+/* data URL 落盘前压缩：最长边 768、JPEG 0.82（一张约 60-150KB）；
+ * 非 data: 或解码失败原样返回，绝不因为压缩丢图。 */
+window.shrinkImgForStore = (dataUrl)=>{
+return new Promise((resolve)=>{
+if(typeof dataUrl !== "string" || dataUrl.indexOf("data:image/") !== 0){ resolve(dataUrl); return; }
+try{
+const img = new Image();
+img.onload = ()=>{
+try{
+const scale = Math.min(1, 768 / Math.max(img.width || 1, img.height || 1));
+if(scale >= 1 && dataUrl.length < 300000){ resolve(dataUrl); return; }
+const cv = document.createElement("canvas");
+cv.width = Math.round((img.width || 1) * scale);
+cv.height = Math.round((img.height || 1) * scale);
+cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+resolve(cv.toDataURL("image/jpeg", 0.82));
+}catch(e){ resolve(dataUrl); }
+};
+img.onerror = ()=>resolve(dataUrl);
+img.src = dataUrl;
+}catch(e){ resolve(dataUrl); }
+});
+};
+/* 每聊配图上限 30 张（场景图 + 定格图合计），超出从最老的开始摘图（卡面文字保留） */
+window.capChatImgs = (h)=>{
+try{
+let n = 0;
+for(const m of h){ if(!m) continue; if(m.scene && m.scene.img) n++; if(m.cgImg) n++; }
+for(const m of h){
+if(n <= 30) break;
+if(!m) continue;
+if(m.scene && m.scene.img){ delete m.scene.img; n--; if(n <= 30) break; }
+if(m.cgImg){ delete m.cgImg; n--; }
+}
+}catch(e){}
+};
+/* 场景卡「配图/重画」浮层：prompt 先行可改（沿用立绘浮层模式），生成后预览、保存才挂卡 */
+window.sceneImgForm = (idx)=>{
+const k = chatHistKey();
+const h = getHistSafe(k);
+const m = h[idx];
+if(!m || typeof RP_SCENEIMG === "undefined") return;
+let scene = m.scene || null;
+if(!scene && typeof parseSceneTail === "function"){
+const stl = parseSceneTail(m.content || "");
+if(stl && stl.card) scene = stl.card;
+}
+scene = scene || {};
+const appearance = {};
+try{
+for(const nm of (scene.present || [])){
+const f = ((portraitCardFor(CHAT.runId, nm) || {}).fields) || {};
+const ap = f.appearance_feature || f.visual_identity || "";
+if(ap) appearance[nm] = ap;
+}
+}catch(e){}
+const prompt0 = RP_SCENEIMG.buildPrompt(scene, {appearance, excerpt: m.content || ""});
+const ov = document.createElement("div");
+ov.className = "viewer";
+ov.innerHTML = `<div class="vbox">
+<div class="vhead"><span>场景配图${scene.place ? " · " + esc(scene.place) : ""}</span><button onclick="this.closest('.viewer').remove()">✕</button></div>
+<textarea id="v_prompt">${esc(prompt0)}</textarea>
+<div class="vimg" id="v_img"><div class="empty">点「生成」开始画（免费通道繁忙时可能要多试一次）</div></div>
+<div class="btnrow">
+<button class="btn" id="v_gen">生成</button>
+<button class="btn ghost" id="v_save" style="display:none">挂到场景卡</button>
+</div></div>`;
+document.body.appendChild(ov);
+let seed = (Date.now() % 100000), lastUrl = "";
+const box = ov.querySelector("#v_img");
+ov.querySelector("#v_gen").onclick = async ()=>{
+box.innerHTML = `<div class="empty">画画中…（十几秒到一分钟）</div>`;
+ov.querySelector("#v_save").style.display = "none";
+try{
+const url = await RP_SCENEIMG.generate(getCfg(), getRpCfg(), ov.querySelector("#v_prompt").value, seed++);
+/* 远端返回不可信：只放行 data:image/ 与 https:（同立绘口径）；
+ * 再等图片真加载出来才给保存——免费通道 503 时 <img> 只会裂图，先验活。 */
+const safeUrl = (typeof url === "string" && /^(data:image\/|https:\/\/)/i.test(url)) ? url : "";
+if(!safeUrl){ box.innerHTML = `<div class="empty">失败：图片地址不合法</div>`; return; }
+await new Promise((res, rej)=>{
+const im = new Image();
+im.onload = res; im.onerror = ()=>rej(new Error("通道繁忙或图片加载失败，稍后再点一次生成"));
+im.src = safeUrl;
+});
+lastUrl = safeUrl;
+box.innerHTML = `<img src="${escH(safeUrl)}">`;
+ov.querySelector("#v_save").style.display = "";
+}catch(e){ box.innerHTML = `<div class="empty">失败：${esc(e.message)}</div>`; }
+};
+ov.querySelector("#v_save").onclick = async ()=>{
+if(!lastUrl) return;
+const stored = await window.shrinkImgForStore(lastUrl);
+const h2 = getHistSafe(k);
+const m2 = h2[idx];
+if(!m2){ ov.remove(); return; }
+if(!m2.scene) m2.scene = scene;
+m2.scene.img = stored;
+window.capChatImgs(h2);
+saveHist(k, h2);
+ov.remove();
+if(typeof rpToast === "function") rpToast("配图已挂到场景卡");
+__chatRenderSig = null; renderChat();
+};
+};

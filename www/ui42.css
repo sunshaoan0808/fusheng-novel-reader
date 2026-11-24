@@ -101,6 +101,17 @@ body.tw-active .chatbg .bglayer{ animation-play-state:paused; }
 .scenetpl .sct-diary{ margin-top:6px; padding-top:6px; font-size:calc(12px * var(--fs)); line-height:1.65; color:var(--ink-dim);
   border-top:1px dashed color-mix(in srgb, var(--gold) 22%, transparent); }
 .scenetpl .sct-dk{ color:var(--gold); font-size:calc(10px * var(--fs)); letter-spacing:.14em; margin-right:6px; }
+/* 场景配图（2026-11-24）：图贴卡内、配图入口一行小按钮；定格卡同金边语言 */
+.scenetpl .sct-img, .cgtpl .sct-img{ display:block; width:100%; margin-top:8px; border-radius:8px;
+  border:1px solid color-mix(in srgb, var(--gold) 22%, transparent); }
+.scenetpl .sct-genrow{ margin-top:6px; text-align:right; }
+.scenetpl .sct-gen{ font-size:calc(11px * var(--fs)); letter-spacing:.08em; color:var(--gold);
+  background:none; border:1px solid color-mix(in srgb, var(--gold) 40%, transparent);
+  border-radius:999px; padding:2px 12px; cursor:pointer; }
+.cgtpl{ margin-top:6px; border:1px solid color-mix(in srgb, var(--gold) 26%, transparent);
+  background:color-mix(in srgb, var(--card) 46%, transparent); border-radius:12px; padding:8px 12px; }
+.cgtpl .sct-img{ margin-top:0; }
+.cgtpl .cgt-k{ margin-top:5px; font-size:calc(10px * var(--fs)); letter-spacing:.18em; color:var(--gold); }
 body.chatmode.bars-light .bubble.segd .seg-nar{ color:#4a3d24; text-shadow:0 1px 3px rgba(255,255,255,.6); }
 
 /* ===== 2. 角色页：大立绘头图 + 台词 + 性格词 + 常驻「开始对话」 ===== */

@@ -160,6 +160,8 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 <div class="hint">给当前模型打标签，选模型时一眼看清能力；自定义标签会记住。</div></div>
 <div class="field"><label>生图模型（可空，如 dall-e-3）</label>
 <input id="c_img" placeholder="不填则不启用生图" value="${esc(c.imgModel||"")}"></div>
+<div class="field"><label>生图来源（场景配图 / 立绘）</label>
+<select id="c_imgsrc"><option value="pollinations"${c.imgSrc!=="api"?" selected":""}>Pollinations 免费（无需 Key，画质一般，繁忙时要重试）</option><option value="api"${c.imgSrc==="api"?" selected":""}>自定义端点（用上方 API 地址/Key + 生图模型）</option></select></div>
 <div class="field"><label>TTS 模型（可空，如 tts-1）</label>
 <input id="c_tts" placeholder="不填则不启用朗读" value="${esc(c.ttsModel||"")}"></div>
 <div class="field"><label>TTS 音色</label>
@@ -218,6 +220,7 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 <input id="r_memwin" type="number" min="10" max="500" step="10" value=""></div>
 <div class="field"><label><input id="r_leanmem_on" type="checkbox" style="width:auto"> 启用三库记忆（LeanMem：画像 / 事件 / 记录分流，检索按问题类型自适应）</label></div>
 <div class="field"><label><input id="r_apex_on" type="checkbox" style="width:auto"> 启用记忆版本链（APEX-MEM：只追加不覆盖，旧版本可查；检索时消解矛盾记忆）</label></div>
+<div class="field"><label><input id="r_cgauto" type="checkbox" style="width:auto"> CG 定格自动配图（模型标出值得定格的画面时，自动生成一张场景图挂到消息下；来源见上方「生图来源」）</label></div>
 <div class="field"><label>二遍对齐 PPA（第一遍自由生成，第二遍对照铁律/弧光改写，只修人设与穿帮）</label>
 <select id="r_ppa_mode"><option value="off">关闭</option><option value="key">关键轮触发（默认）</option><option value="always">每轮都跑</option></select></div>
 <div class="field"><label>二遍对齐模型（留空=用摘要模型，再空=用主模型，建议填便宜小模型）</label>
@@ -350,6 +353,7 @@ document.getElementById("r_mempool").value = rc.memPoolRatio||"50/30/20";
 document.getElementById("r_memwin").value = rc.memWindowN||60; /* Tier2 #12 */
 document.getElementById("r_leanmem_on").checked = rc.leanmem!==false;
 document.getElementById("r_apex_on").checked = rc.apex!==false;
+document.getElementById("r_cgauto").checked = rc.cgAuto!==false;
 document.getElementById("r_ppa_mode").value = rc.ppaMode||"key";
 document.getElementById("r_ppa_model").value = rc.ppaModel||"";
 (function(){ const gp = RP_PERSONA.getGlobal();
@@ -400,7 +404,7 @@ if(typed && typed !== prev.key && /^[a-z]+:\/\//i.test(base) && !/^https:\/\//i.
 }
 const m = $("#c_model").value.trim() || $("#c_model_sel").value;
 saveCfg({base:base, key:key, model:m,
-imgModel:$("#c_img").value.trim(), ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
+imgModel:$("#c_img").value.trim(), imgSrc:$("#c_imgsrc")?$("#c_imgsrc").value:"pollinations", ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
 $("#c_key").value = "";
 $("#c_key").placeholder = "已保存（留空 = 不修改）";
 alert("已保存");
@@ -519,6 +523,7 @@ memPoolRatio:(($("#r_mempool")&&$("#r_mempool").value)||"50/30/20").trim()||"50/
 memWindowN:Math.min(500,Math.max(10,parseInt(($("#r_memwin")&&$("#r_memwin").value)||"60")||60)), /* Tier2 #12 */
 leanmem:$("#r_leanmem_on")?$("#r_leanmem_on").checked:true,
 apex:$("#r_apex_on")?$("#r_apex_on").checked:true,
+cgAuto:$("#r_cgauto")?$("#r_cgauto").checked:true,
 ppaMode:$("#r_ppa_mode")?$("#r_ppa_mode").value:"key",
 ppaModel:$("#r_ppa_model")?$("#r_ppa_model").value.trim():"",
 /* 世界模拟三件套 */

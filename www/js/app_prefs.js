@@ -432,6 +432,37 @@ function updateSearchBar(){
 const n = document.getElementById("cs_num");
 if(n) n.textContent = (SEARCH.cur>=0?SEARCH.cur+1:0) + "/" + SEARCH.hits.length;
 }
+/* CG 定格自动落图回挂（2026-11-24）：rp 层生成完发 rp-cgimg 事件，
+ * 这里按 mid 找到消息挂图、落盘；是当前打开的聊天才重渲染。
+ * 图鉴留底 nd_cg_art_v1（cgId -> 图引用，上限 30 条 FIFO）。 */
+try{ window.addEventListener("rp-cgimg", (ev)=>{
+try{
+const d = (ev && ev.detail) || {};
+if(!d.img || !d.runId) return;
+const key = `nd_chat_${d.runId}_${d.name||""}`;
+const h = getHistSafe(key);
+const m = h.find(x=>x && String(x.mid||x.id||"") === String(d.mid||""));
+if(!m) return;
+const put = (stored)=>{
+m.cgImg = stored; if(d.cgId) m.cgId = d.cgId;
+if(typeof window.capChatImgs === "function") window.capChatImgs(h);
+saveHist(key, h);
+if(d.cgId){
+try{
+const map = JSON.parse(localStorage.getItem("nd_cg_art_v1") || "{}");
+map[d.cgId] = stored;
+const keys = Object.keys(map);
+while(keys.length > 30){ delete map[keys.shift()]; }
+localStorage.setItem("nd_cg_art_v1", JSON.stringify(map));
+}catch(e){}
+}
+if(key === chatHistKey()){ __chatRenderSig = null; renderChat(); }
+};
+if(typeof d.img === "string" && d.img.indexOf("data:image/") === 0 && typeof window.shrinkImgForStore === "function")
+window.shrinkImgForStore(d.img).then(put).catch(()=>put(d.img));
+else put(d.img);
+}catch(e){}
+}); }catch(e){}
 function renderChatSearch(){
 const bar = document.getElementById("chatsearch");
 if(!bar) return;
@@ -681,7 +712,10 @@ if(m.role==="assistant" && typeof parseSceneTail === "function"){
 const stl = parseSceneTail(body);
 if(stl.card){ body = stl.rest; if(!sceneCard) sceneCard = stl.card; }
 }
-const sceneHTML = (sceneCard && typeof sceneCardHTML === "function") ? sceneCardHTML(sceneCard) : "";
+const sceneHTML = (sceneCard && typeof sceneCardHTML === "function") ? sceneCardHTML(sceneCard, {idx: idx}) : "";
+/* CG 定格图（2026-11-24）：自动落图挂在消息上（m.cgImg），贴在场景卡之后 */
+const cgSafe = (m.role==="assistant" && typeof m.cgImg === "string" && /^(data:image\/|https:\/\/)/i.test(m.cgImg)) ? m.cgImg : "";
+const cgHTML = cgSafe ? `<div class="cgtpl"><img class="sct-img" src="${escH(cgSafe)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)"><div class="cgt-k">定格${m.cgId ? " · " + esc(m.cgId) : ""}</div></div>` : "";
 /* v42: AI 消息按旁白/对白分排（见 js/app_ui.js chatSegHTML） */
 const segOn = chatSegEligible({role: m.role, content: body});
 const _mdh = hlRestore(md(hlSearchRaw(body)));
@@ -697,7 +731,7 @@ const conflictBadge = (m._conflicts && m._conflicts.length && !m._conflictResolv
 /* Tier1 接线结算条：好感变化 / CG / 判定等结构化结果挂在气泡下方 */
 const wireHTML = (m.role==="assistant" && m.wire && typeof RP_WIRING!=="undefined" && RP_WIRING.wireHTML) ? RP_WIRING.wireHTML(m.wire) : "";
 return __sep + `<div class="msg ${m.role==="user"?"me":""}${mtype==="narr"?" narr":""}${mtype==="npc"?" npc":""}${isCur?" curhit":""}" id="smsg-${idx}" data-mid="${esc(m.mid||m.id||"")}" onclick="toggleTools(event,${jq(idx)})" oncontextmenu="event.preventDefault();msgMenu(${jq(idx)});return false;" ontouchstart="msgPressStart(event,${jq(idx)})" ontouchend="msgPressEnd()" ontouchmove="msgPressEnd()">`
-+ `<div class="msgcol">${showWho?whoHTML:""}<div class="bubble${segOn?" segd":""}${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${sceneHTML}${wireHTML}${extra}</div>`
++ `<div class="msgcol">${showWho?whoHTML:""}<div class="bubble${segOn?" segd":""}${needFold?" foldable collapsed":""}">${bubbleInner}${conflictBadge}</div>${sceneHTML}${cgHTML}${wireHTML}${extra}</div>`
 + `</div>`;
 }).join("") || `<div class="empty"><span class="empty-seal" aria-hidden="true">浮生</span>还没有对话，打个招呼吧<br><span style="font-size:calc(12px * var(--fs))">试试：你是谁？</span></div>`;
 renderCtxBar();

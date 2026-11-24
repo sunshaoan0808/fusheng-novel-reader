@@ -269,14 +269,14 @@ function parseSceneTail(content) {
   const rest = s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   return { rest: rest, card: card };
 }
-function sceneCardHTML(card) {
+function sceneCardHTML(card, opts) {
   if (!card) return "";
   const place = card.place || "";
   const period = card.period ? (SCENE_PERIOD_LABELS[card.period] || card.period) : "";
   const weather = card.weather ? (SCENE_WX_LABELS[card.weather] || card.weather) : (card.weatherName || "");
   const meta = [period, weather].filter(Boolean).join(" · ");
   const present = (card.present && card.present.length) ? card.present.join("、") : "";
-  if (!place && !meta && !present && !card.diary && !card.timeAdd) return "";
+  if (!place && !meta && !present && !card.diary && !card.timeAdd && !card.img) return "";
   let h = `<div class="scenetpl"><div class="sct-head"><span class="sct-k">场景</span>`
     + `<span class="sct-place">${esc(place || "场景变化")}</span>`
     + (card.timeAdd ? `<span class="sct-time">+${card.timeAdd}分钟</span>` : "") + `</div>`;
@@ -284,6 +284,12 @@ function sceneCardHTML(card) {
     h += `<div class="sct-meta">${meta ? `<span>${esc(meta)}</span>` : ""}${present ? `<span>在场：${esc(present)}</span>` : ""}</div>`;
   if (card.diary)
     h += `<div class="sct-diary"><span class="sct-dk">大事记</span>${esc(card.diary)}</div>`;
+  /* 场景配图（2026-11-24）：有图贴图、无图给配图入口（idx 由 renderChat 传入） */
+  const safeImg = (typeof card.img === "string" && /^(data:image\/|https:\/\/)/i.test(card.img)) ? card.img : "";
+  if (safeImg)
+    h += `<img class="sct-img" src="${escH(safeImg)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)">`;
+  if (opts && opts.idx != null && typeof sceneImgForm === "function")
+    h += `<div class="sct-genrow"><button class="sct-gen" onclick="event.stopPropagation();sceneImgForm(${jq(opts.idx)})">${safeImg ? "重画一张" : "配图"}</button></div>`;
   return h + `</div>`;
 }
 
