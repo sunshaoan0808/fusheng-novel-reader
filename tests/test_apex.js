@@ -216,6 +216,32 @@ const bSv = RP_MEM.renderBudgeted("sv", "庚", 600, {query: "宝钗"});
 t("作废记录不进 prompt 组装", bSv.text.indexOf("梨香院") < 0);
 t("未知库名拒绝", RP_MEM.editStoreEntry("sv", "庚", "nope", 1, {text: "x"}).ok === false && RP_MEM.voidStoreEntry("sv", "庚", "nope", 1) === false);
 
+/* ---------- 查询扩写语义召回（2026-11-24：网关无 embeddings，走扩写路线） ---------- */
+RP_MEM.save("qx", "辛", {mood: null, short: [], long: "", up_to: 0, migrated3: true, apexMigrated: true,
+profile3: [], event3: [],
+record3: [{id: 1, vid: "r3-1-v1", v: 1, ts: 1, supersedes: null, gist: "薛宝钗连日咳嗽，夜里睡不安稳", msg_from: 1, msg_to: 2}]});
+const qWeak = "她最近身体如何";
+const rPlain = RP_APEX.retrieveApex("qx", "辛", qWeak, ["薛宝钗"], 5);
+t("字面召回对换说法无力（榜首低分）", !!rPlain && (rPlain.cands.length === 0 || (rPlain.cands[0].score || 0) < 3));
+const rExtra = RP_APEX.retrieveApex("qx", "辛", qWeak, ["薛宝钗"], 5, ["咳嗽", "身子不适"]);
+t("扩写词命中语义相关记录", !!rExtra && rExtra.cands.some(c=>c.entry.id === 1) && (rExtra.cands[0].score || 0) > (rPlain.cands.length ? (rPlain.cands[0].score || 0) : 0));
+let nExpand = 0;
+const stubExpand = async ()=>{ nExpand++; return "[\"咳嗽\",\"身子不适\",\"请大夫\"]"; };
+const terms1 = await RP_APEX.expandQueryTerms(qWeak, {model: "m"}, stubExpand);
+t("扩写解析出词组", terms1.length === 3 && terms1[0] === "咳嗽");
+const terms2 = await RP_APEX.expandQueryTerms(qWeak, {model: "m"}, stubExpand);
+t("扩写结果缓存，同问不重复调用", nExpand === 1 && terms2.length === 3);
+t("扩写垃圾输出返回空", (await RP_APEX.expandQueryTerms("另一个问题呀", {model: "m"}, async ()=>"说不清楚")).length === 0);
+t("扩写异常返回空", (await RP_APEX.expandQueryTerms("再换个问题呀", {model: "m"}, async ()=>{ throw new Error("x"); })).length === 0);
+let nE2E = 0;
+const rE2E = await RP_APEX.apexFor("qx", "辛", {name: "薛宝钗"}, "她这阵子身子怎么样", {model: "m"},
+async ()=>{ nE2E++; return "[\"咳嗽\",\"夜里睡不安稳\"]"; });
+t("apexFor 弱召回时走扩写并捞回记录", !!rE2E && rE2E.text.indexOf("咳嗽") >= 0 && nE2E >= 1);
+let nOff = 0;
+await RP_APEX.apexFor("qx", "辛", {name: "薛宝钗"}, "她身子骨还硬朗吗", {model: "m", qexpand: false},
+async ()=>{ nOff++; return "[\"咳嗽\"]"; });
+t("qexpand 关时不调扩写", nOff === 0);
+
 console.log("apex: " + pass + " pass, " + fail + " fail");
 process.exit(fail? 1: 0);
 })().catch(e=>{ console.log("HARNESS ERROR", e); process.exit(1);});

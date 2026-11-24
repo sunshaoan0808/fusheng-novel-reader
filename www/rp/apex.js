@@ -222,8 +222,47 @@ var loser = o.pick === "A"? newer: older;
 return {pick: o.pick, reason: String(o.reason || "").slice(0, 80),
 winnerVid: winner.entry.vid, loserVid: loser.entry.vid};
 }
-/* similar 池候选检索（同步）：人物收窄 → bigram 排序。返回 {cands, conflicts, qPersons} */
-function retrieveApex(runId, name, query, vocab, topK){
+/* 查询扩写（2026-11-24）：网关无 embeddings 端点（实测模型清单 64 个全是
+ * chat/reasoning、/v1/embeddings 401），向量路线走不通，改用摘要小模型把
+ * 用户问题扩写成同义/相关词组，再走 bigram 加权召回。只在字面召回弱时触发
+ * （见 apexFor），结果按查询串缓存（含失败结果），同问不重复付费。 */
+function buildExpandPrompt(query){
+return "你是回忆检索的扩写器。用户在角色扮演聊天里问了一句：\n" +
+String(query || "").slice(0, 120) + "\n" +
+"他可能在指一件过去发生的事，但说法和当时的记录用词不同。" +
+"给出 3 到 6 个最可能出现在当时记录里的关键词或短语（同义说法、具体事物、动作、状态），" +
+"不要重复用户原话里已有的词，不要写人名。\n" +
+"只输出 JSON 数组，无其他文字，如：[\"咳嗽\",\"身子不适\",\"请大夫\"]";
+}
+var _expandCache = {};
+var _expandKeys = [];
+async function expandQueryTerms(query, cfg, callChat){
+try{
+var q = String(query || "");
+if(!q || typeof callChat !== "function") return [];
+if(q in _expandCache) return _expandCache[q];
+var terms = [];
+try{
+var sumCfg = {base: cfg.base, key: cfg.key, model: cfg.summaryModel || cfg.model};
+var raw = await callChat(sumCfg, [{role: "user", content: buildExpandPrompt(q)}], 0.3);
+var s = String(raw || ""), a = s.indexOf("["), b2 = s.lastIndexOf("]");
+if(a >= 0 && b2 > a){
+var arr = JSON.parse(s.slice(a, b2 + 1));
+if(Array.isArray(arr)) terms = arr.filter(function(x){ return typeof x === "string";})
+.map(function(x){ return x.trim().slice(0, 12);})
+.filter(function(x){ return x.length >= 2;}).slice(0, 6);
+}
+}catch(e){ terms = []; }
+_expandCache[q] = terms;
+_expandKeys.push(q);
+if(_expandKeys.length > 40) delete _expandCache[_expandKeys.shift()];
+return terms;
+}catch(e){ return []; }
+}
+/* similar 池候选检索（同步）：人物收窄 → bigram 排序。返回 {cands, conflicts, qPersons}
+ * extraTerms（可选）：查询扩写词组（见 expandQueryTerms），其 bigram 以 0.6 权重计入，
+ * 补字面召回对同义改述的盲区；人物收窄仍只认原查询里的人名，扩写不许扩人物范围。 */
+function retrieveApex(runId, name, query, vocab, topK, extraTerms){
 try{
 if(typeof RP_MEM === "undefined") return null;
 var st = RP_MEM.get(runId, name);
@@ -233,12 +272,14 @@ if(!recs.length) return {cands: [], conflicts: [], qPersons: []};
 vocab = vocab || [];
 var qPersons = extractPersons(query, vocab);
 var qb = bigrams(query);
+var xb = (extraTerms && extraTerms.length) ? bigrams(extraTerms.join(" ")) : null;
 var scored = recs.map(function(r){
 var text = String(r.gist || "");
 var ps = extractPersons(text, vocab);
 var s = 0, b;
 var eb = bigrams(text);
 for(b in eb) if(qb[b]) s += Math.min(eb[b], qb[b]);
+if(xb){ var s2 = 0; for(b in eb) if(xb[b]) s2 += Math.min(eb[b], xb[b]); s += s2 * 0.6; }
 var pHit = ps.filter(function(p){ return qPersons.indexOf(p) >= 0;}).length;
 s += pHit * 12; // 人物收窄优先
 return {entry: r, text: text, persons: ps, score: s};
@@ -266,7 +307,18 @@ if(!on()) return null;
 if(typeof RP_MEM === "undefined" ||!RP_MEM.leanmemOn()) return null;
 var vocab = vocabFor(card);
 var r = retrieveApex(runId, name, query, vocab, 5);
-if(!r ||!r.cands.length) return null;
+if(!r) return null;
+/* 字面召回弱（榜首与问题几乎不共词、也没命中人物）才付一次扩写调用；
+ * 字面够强时零额外成本，和从前完全一样。 */
+var weak = !r.cands.length || (r.cands[0].score || 0) < 3;
+if(weak && cfg.qexpand !== false){
+var extra = await expandQueryTerms(query, cfg, callChat);
+if(extra.length){
+var r2 = retrieveApex(runId, name, query, vocab, 5, extra);
+if(r2 && r2.cands.length && (!r.cands.length || (r2.cands[0].score || 0) > (r.cands[0].score || 0))) r = r2;
+}
+}
+if(!r.cands.length) return null;
 var adjudicated = false, reason = "";
 if(r.conflicts.length){
 var cf = r.conflicts[0];
@@ -292,6 +344,7 @@ extractPersons: extractPersons, vocabFor: vocabFor, buildPersonIndex: buildPerso
 opposed: opposed, topicSimilar: topicSimilar, findConflicts: findConflicts,
 buildAdjudPrompt: buildAdjudPrompt, adjudicate: adjudicate,
 retrieveApex: retrieveApex, renderBlock: renderBlock, apexFor: apexFor,
+buildExpandPrompt: buildExpandPrompt, expandQueryTerms: expandQueryTerms,
 OPP: OPP
 };
 })();
