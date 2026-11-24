@@ -88,6 +88,10 @@
   unicode-range:U+4E00-9FFF;
 }
 :root{
+  /* 动效缓动令牌（2026-11-24 调校）：入场/滑动态统一用 ease-out 指数曲线，
+     告别浏览器默认 ease 的"先慢后慢"廉价感；ease-io 留给往返型过渡。 */
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --ease-io:cubic-bezier(.65,0,.35,1);
   --bg:#12100d; --bg2:#171411; --card:#1d1915; --card2:#23201b;
   --line:#2d2720; --line-soft:#242019;
   --ink:#ece4d3; --ink-dim:#b3a88f; --ink-faint:#9a917e; /* faint 提亮：WCAG 4.5:1 底线 */
@@ -306,8 +310,8 @@ body{
    图片加载等场景的锚定 */
 #chatlog.noanchor{overflow-anchor:none;}
 .msg{max-width:100%;}
-.msg:last-child{animation:msgin calc(.28s * var(--anim-mult,1)) ease;}
-@keyframes msgin{from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:none;}}
+.msg:last-child{animation:msgin calc(.28s * var(--anim-mult,1)) var(--ease-out);}
+@keyframes msgin{from{opacity:0; transform:translateY(7px);} to{opacity:1; transform:none;}}
 @media (prefers-reduced-motion:reduce){.msg:last-child{animation:none;}}
 .msg.me{align-self:flex-end;}
 .msg.me .who{text-align:right;}
@@ -416,7 +420,7 @@ body.chatmode #app{ background:var(--bg); }
   /* 沉浸式显隐：布局变化(marginTop)由 JS 即时切换+同步补偿 scrollTop；
      只给 transform 加 .3s 过渡做滑入滑出，纯视觉、不碰布局，所以补偿精确、
      弱环境下也不闪烁（2026-10-01 曾用 rAF 逐帧补偿布局过渡，实测闪烁，已废弃） */
-  transition:transform calc(.3s * var(--anim-mult,1)) ease;
+  transition:transform calc(.3s * var(--anim-mult,1)) var(--ease-out);
 }
 
 /* P0-1 沉浸态首屏引导：进聊天三栏全收起，屏幕上什么都没有。
@@ -462,7 +466,7 @@ body.chatmode #app{ background:var(--bg); }
 .drawer{
   position:fixed; top:0; right:0; bottom:0; z-index:var(--z-panel); width:min(300px, 82vw);
   background:var(--bg2); border-left:1px solid var(--line);
-  transform:translateX(102%); transition:transform calc(.28s * var(--anim-mult,1)) ease;
+  transform:translateX(102%); transition:transform calc(.28s * var(--anim-mult,1)) var(--ease-out);
   display:flex; flex-direction:column; padding:18px 16px calc(18px + env(safe-area-inset-bottom));
   overflow-y:auto;
 }
@@ -514,12 +518,11 @@ body.chatmode #chatlog{ min-height:0; }
 .chatbg .bglayer{
   position:absolute; inset:-5%;
   background-size:cover; background-position:center 28%; background-repeat:no-repeat;
-  animation:chatbreathe calc(26s * var(--anim-mult,1)) ease-in-out infinite;
-  will-change:transform;
+  animation:chatbreathe calc(34s * var(--anim-mult,1)) ease-in-out infinite;
   transition:filter .25s ease;
 }
 /* 呼吸感：26 秒一轮缓慢推近，营造"活的"场景（猫箱 CreatorSkinRespiratory 的 CSS 版） */
-@keyframes chatbreathe{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.07);} }
+@keyframes chatbreathe{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.03);} }
 /* 渐变罩：顶部给顶栏让可读性，底部给输入栏托底，整体轻微压暗保对比度 */
 .chatbg .bgshade{
   position:absolute; inset:0;
@@ -614,7 +617,7 @@ body.chatmode .chatbar{
   backdrop-filter:blur(14px); -webkit-backdrop-filter:blur(14px);
   border:1px solid rgba(212,162,78,.16);
   padding:8px 8px 8px 16px;
-  transition:transform calc(.3s * var(--anim-mult,1)) ease;
+  transition:transform calc(.3s * var(--anim-mult,1)) var(--ease-out);
 }
 /* 浅色壁纸时三栏文字转深色，保证可读（body.bars-light 由 JS 按背景亮度切换） */
 body.chatmode.bars-light .chathead .cname{ color:#2a2013; }
@@ -1358,11 +1361,11 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder{color:var(
 .menubtn{display:inline-flex; align-items:center; justify-content:center;}
 
 /* ============ 视图进入动效 ============ */
-#view > *:not(.drawer):not(.scrim){animation:viewin calc(.22s * var(--anim-mult,1)) ease;}
+#view > *:not(.drawer):not(.scrim){animation:viewin calc(.22s * var(--anim-mult,1)) var(--ease-out);}
 @keyframes viewin{from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:none;}}
 
 /* ============ 角色卡片交错入场 ============ */
-.chargrid .charcard{animation:cardin calc(.3s * var(--anim-mult,1)) ease backwards;}
+.chargrid .charcard{animation:cardin calc(.3s * var(--anim-mult,1)) var(--ease-out) backwards;}
 .chargrid .charcard:nth-child(2){animation-delay:calc(.04s * var(--anim-mult,1));}
 .chargrid .charcard:nth-child(3){animation-delay:calc(.08s * var(--anim-mult,1));}
 /* 美化癸(2026-11-23): 入场 stagger 从 3 张延到 8 张 */
@@ -1388,7 +1391,7 @@ input::-webkit-input-placeholder, textarea::-webkit-input-placeholder{color:var(
 
 /* ================= 穿越 P0 ================= */
 .travmodes{display:grid;grid-template-columns:1fr;gap:10px;margin-bottom:6px}
-.travmode{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:var(--r);padding:16px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:transform .12s ease,border-color .12s ease;animation:cardin calc(.45s * var(--anim-mult,1)) ease both;position:relative;overflow:hidden;box-shadow:var(--shadow-s)}
+.travmode{background:linear-gradient(180deg,var(--card2),var(--card));border:1px solid var(--line);border-radius:var(--r);padding:16px 14px;display:flex;gap:12px;align-items:center;cursor:pointer;transition:transform .12s ease,border-color .12s ease;animation:cardin calc(.45s * var(--anim-mult,1)) var(--ease-out) both;position:relative;overflow:hidden;box-shadow:var(--shadow-s)}
 .travmode:nth-child(2){animation-delay:calc(.06s * var(--anim-mult,1))}.travmode:nth-child(3){animation-delay:calc(.12s * var(--anim-mult,1))}.travmode:nth-child(4){animation-delay:calc(.18s * var(--anim-mult,1))}
 .travmode .tm-icon{width:44px;height:44px;flex:none;display:flex;align-items:center;justify-content:center;
   border-radius:12px;background:rgba(212,162,78,.10);border:1px solid rgba(212,162,78,.25);color:var(--gold-soft);}
@@ -1448,7 +1451,7 @@ body[data-font="kai"] .bubble{font-family:"Kaiti SC","STKaiti","KaiTi","TW-Kai",
 .simbar{display:flex;align-items:center;gap:8px;font-size:calc(12px * var(--fs));color:var(--muted);
   background:var(--barbg-solid, #14110d);border-bottom:1px solid var(--line);padding:6px 12px;cursor:pointer;line-height:1.6;
   flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none; /* 单行横滑：首屏只占一行 */
-  transition:transform calc(.3s * var(--anim-mult,1)) ease; /* 跟随顶栏一起滑入滑出，纯视觉过渡 */
+  transition:transform calc(.3s * var(--anim-mult,1)) var(--ease-out); /* 跟随顶栏一起滑入滑出，纯视觉过渡 */
   position:relative;z-index:var(--z-base); /* 浮于 .chatbg 之上：与 chatwrap 同层，否则被背景盖住只剩空白带 */}
 .simbar::-webkit-scrollbar{display:none}
 .simbar .simchip{flex:none}
@@ -2034,7 +2037,7 @@ html[data-motion="still"] *, html[data-motion="still"] *::before, html[data-moti
    只挂进场窗口，平时发消息/重渲染不重播，不会重演历史闪烁） */
 html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(-n+20),
 html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(-n+20){
-  animation:msgin calc(.3s * var(--anim-mult,1)) ease both;
+  animation:msgin calc(.3s * var(--anim-mult,1)) var(--ease-out) both;
 }
 html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(1),
 html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(1){ animation-delay:calc(.162s * var(--anim-mult,1)); }
@@ -2055,15 +2058,15 @@ html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(8){ animation-de
 html[data-motion="fluid"] #chatlog.entering .msg:nth-last-child(9),
 html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(9){ animation-delay:calc(.018s * var(--anim-mult,1)); }
 /* 绚烂：页面缩放淡入 + 消息带轻微缩放 + 背景呼吸更明显更快 */
-html[data-motion="vivid"] #view > *:not(.drawer):not(.scrim){ animation:viewin2 calc(.3s * var(--anim-mult,1)) ease; }
+html[data-motion="vivid"] #view > *:not(.drawer):not(.scrim){ animation:viewin2 calc(.3s * var(--anim-mult,1)) var(--ease-out); }
 @keyframes viewin2{ from{opacity:0; transform:translateY(10px) scale(.985);} to{opacity:1; transform:none;} }
 /* 美化癸·方向感转场(2026-11-23): data-navdir 由 app_core 的手势推断设置(450ms 自清)。
  * 放在动效预设之后: 与 vivid 的 #view 规则同分时靠后胜出; still 预设带 !important 仍可全局压停。 */
 @keyframes viewin-fwd{ from{opacity:0; transform:translateX(18px);} to{opacity:1; transform:none;} }
 @keyframes viewin-back{ from{opacity:0; transform:translateX(-18px);} to{opacity:1; transform:none;} }
-html[data-navdir="fwd"] #view > *:not(.drawer):not(.scrim){ animation:viewin-fwd calc(.24s * var(--anim-mult,1)) ease; }
-html[data-navdir="back"] #view > *:not(.drawer):not(.scrim){ animation:viewin-back calc(.24s * var(--anim-mult,1)) ease; }
+html[data-navdir="fwd"] #view > *:not(.drawer):not(.scrim){ animation:viewin-fwd calc(.24s * var(--anim-mult,1)) var(--ease-out); }
+html[data-navdir="back"] #view > *:not(.drawer):not(.scrim){ animation:viewin-back calc(.24s * var(--anim-mult,1)) var(--ease-out); }
 html[data-motion="vivid"] #chatlog.entering .msg:nth-last-child(-n+20){ animation-name:msgin2; }
 @keyframes msgin2{ from{opacity:0; transform:translateY(12px) scale(.97);} to{opacity:1; transform:none;} }
-html[data-motion="vivid"] .chatbg .bglayer{ animation-name:chatbreathe2; animation-duration:calc(18s * var(--anim-mult,1)); }
-@keyframes chatbreathe2{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.12);} }
+html[data-motion="vivid"] .chatbg .bglayer{ animation-name:chatbreathe2; animation-duration:calc(26s * var(--anim-mult,1)); }
+@keyframes chatbreathe2{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.05);} }

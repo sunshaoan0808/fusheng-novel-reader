@@ -308,11 +308,15 @@ var PRESETS = [
   {id:"fluid", name:"灵动", desc:"进聊天时最近消息依次浮现，卡片错落入场"},
   {id:"vivid", name:"绚烂", desc:"灵动之上 · 页面缩放淡入、背景呼吸更明显、消息带轻缩放"}
 ];
+/* 2026-11-24 动效调校重标定: 旧标定把 CSS 里写好的原始时长当作「快」(1.0),
+ * 默认「标准」却是 1.8 —— 全场动效常年以 1.8 倍慢放, 真机观感黏滞廉价。
+ * 新标定: 标准 = 1.0 (CSS 原始时长即设计意图), 慢/快在其两侧对称取档。
+ * 存量只存速度 id, 重标定对所有人自动生效。 */
 var SPEEDS = [
-  {id:"slow", name:"慢",   mult:3},
-  {id:"std",  name:"标准", mult:1.8},
-  {id:"fast", name:"快",   mult:1},
-  {id:"turbo",name:"极快", mult:0.55}
+  {id:"slow", name:"慢",   mult:1.4},
+  {id:"std",  name:"标准", mult:1},
+  {id:"fast", name:"快",   mult:0.7},
+  {id:"turbo",name:"极快", mult:0.45}
 ];
 function presetDef(id){ for(var i = 0; i < PRESETS.length; i++) if(PRESETS[i].id === id) return PRESETS[i]; return PRESETS[1]; }
 function speedDef(id){ for(var i = 0; i < SPEEDS.length; i++) if(SPEEDS[i].id === id) return SPEEDS[i]; return SPEEDS[1]; }
