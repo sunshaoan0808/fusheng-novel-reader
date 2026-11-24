@@ -47,6 +47,39 @@ return "https://image.pollinations.ai/prompt/" + encodeURIComponent(String(promp
 + "?width=1024&height=640&seed=" + (seed == null ? 42 : seed) + "&model=flux";
 }
 
+/* 免费通道的 sana 模型读不懂中文（2026-11-24 实测：中文 prompt 出的图
+ * 与场景完全无关的风景；英文 prompt 则准确还原医院走廊+米色风衣回头）。
+ * 故 pollinations 通道出图前先用摘要模型把中文 prompt 改写成英文
+ * （ST 式两段：文本模型写 prompt、生图源只管画），失败回落原文。
+ * api 通道（gpt-image 类）中文可直读，不翻译。结果按原文缓存。 */
+var _trCache = {};
+function _mostlyCjk(s){
+var cjk = 0, total = 0;
+for(var i = 0; i < s.length; i++){
+var c = s.charCodeAt(i);
+if(c > 127){ total++; if(c >= 0x4e00 && c <= 0x9fff) cjk++; }
+}
+return total > 0 && cjk / total > 0.3;
+}
+async function translatePrompt(cfg, zh){
+if(!zh || !_mostlyCjk(zh)) return zh;
+if(_trCache[zh]) return _trCache[zh];
+var out = zh;
+try{
+if(typeof RP_NET !== "undefined" && RP_NET.complete){
+var model = (cfg && (cfg.summaryModel || cfg.model)) || undefined;
+var r = await RP_NET.complete(cfg,
+[{role: "user", content: "Rewrite the following Chinese scene description as one English image-generation prompt. Output ONLY the English prompt, no explanation. Keep place, time of day, weather, characters and their appearance, and the key action.\n\n" + zh}],
+0.3, model);
+var en = String(r || "").trim().replace(/^["']|["']$/g, "");
+if(en && !_mostlyCjk(en)) out = en;
+}
+}catch(e){}
+_trCache[zh] = out;
+if(Object.keys(_trCache).length > 40) delete _trCache[Object.keys(_trCache)[0]];
+return out;
+}
+
 /* 返回图片引用：api 通道是 data URL（b64），pollinations 是 https URL。
  * 界面层落盘前会把 data URL 压成 768 宽 JPEG（见 app_rundata shrinkImgForStore）。 */
 async function generate(cfg, rpCfg, prompt, seed){
@@ -56,7 +89,8 @@ if(ch === "api"){
 if(typeof RP_NET === "undefined" || !RP_NET.generateImage) throw new Error("生图通道不可用");
 return await RP_NET.generateImage(cfg, prompt, cfg.imgModel);
 }
-return pollinationsUrl(prompt, seed);
+var en = await translatePrompt(cfg, prompt);
+return pollinationsUrl(en, seed);
 }
 
 function cgAutoOn(){
@@ -84,6 +118,7 @@ return await generate(args.cfg, null, prompt, (now % 100000));
 return {
 buildPrompt: buildPrompt, channelOf: channelOf,
 pollinationsUrl: pollinationsUrl, generate: generate,
+translatePrompt: translatePrompt,
 cgAutoOn: cgAutoOn, autoCgImage: autoCgImage
 };
 })();

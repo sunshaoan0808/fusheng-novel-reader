@@ -334,6 +334,15 @@ ov.innerHTML = `<div class="vbox">
 <button class="btn ghost" id="v_save" style="display:none">挂到场景卡</button>
 </div></div>`;
 document.body.appendChild(ov);
+/* 免费通道出图用英文 prompt（sana 读不懂中文）：先把实际要发的英文填进框里，所见即所发 */
+try{
+if(RP_SCENEIMG.channelOf(getCfg(), getRpCfg()) === "pollinations"){
+const ta = ov.querySelector("#v_prompt");
+RP_SCENEIMG.translatePrompt(getCfg(), prompt0).then((en)=>{
+if(document.body.contains(ov) && en && en !== prompt0) ta.value = en;
+}).catch(()=>{});
+}
+}catch(e){}
 let seed = (Date.now() % 100000), lastUrl = "";
 const box = ov.querySelector("#v_img");
 ov.querySelector("#v_gen").onclick = async ()=>{

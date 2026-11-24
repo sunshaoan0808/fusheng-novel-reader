@@ -74,6 +74,32 @@ await (async () => {
   assert.strictEqual(b, null); // 35 秒节流
   n++; console.log("ok - autoCgImage: 首次出图、节流内返回 null");
 })();
+await (async () => {
+  let completes = 0, imgPrompt = null;
+  const S4 = loadSceneimg({ RP_NET: {
+    complete: async () => { completes++; return "A hospital corridor in the morning, a woman in a beige trench coat looking back, cinematic illustration, no text"; },
+    generateImage: async (cfg, prompt) => { imgPrompt = prompt; return "data:image/png;base64,XX"; }
+  } });
+  const zh = "场景插画。地点：市中心医院门诊大厅。上午，多云。在场：杨蓉（米色风衣，长发）。画面：挂号窗口前，她回头望向身后。细腻叙事插画，电影感构图，柔和光影，画面中不要出现文字";
+  const u1 = await S4.generate({}, {}, zh, 5);
+  assert.ok(u1.includes(encodeURIComponent("hospital corridor")), "免费通道应发英文 prompt");
+  assert.strictEqual(completes, 1);
+  const u2 = await S4.generate({}, {}, zh, 6);
+  assert.strictEqual(completes, 1, "同 prompt 译文应走缓存");
+  const u3 = await S4.generate({}, {}, "A forest at dawn, cinematic illustration", 5);
+  assert.strictEqual(completes, 1, "英文 prompt 不翻译");
+  assert.ok(u3.includes(encodeURIComponent("A forest at dawn")));
+  await S4.generate({ imgSrc: "api", base: "b", key: "k", imgModel: "m" }, {}, zh, 5);
+  assert.strictEqual(imgPrompt, zh, "api 通道中文直发不翻译");
+  assert.strictEqual(completes, 1);
+  n++; console.log("ok - generate: 免费通道中文先译英文（缓存）/英文直发/api 不译");
+})();
+await (async () => {
+  const S5 = loadSceneimg({ RP_NET: { complete: async () => { throw new Error("down"); } } });
+  const u = await S5.generate({}, {}, "场景插画。地点：医院。画面：她回头。", 5);
+  assert.ok(u.includes(encodeURIComponent("医院")), "翻译失败应回落中文原文");
+  n++; console.log("ok - translatePrompt: 翻译失败回落原文不抛错");
+})();
 t("cgAutoOn: 无 RP cfg 默认开、显式关才关", () => {
   assert.strictEqual(loadSceneimg().cgAutoOn(), true);
   assert.strictEqual(loadSceneimg({ getRpCfg: () => ({ cgAuto: false }) }).cgAutoOn(), false);
