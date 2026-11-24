@@ -154,9 +154,10 @@ t("同输入同输出", ()=>{
 t("PROMPT_BUDGET 暴露为 800", ()=>{
   assert.strictEqual(P.PROMPT_BUDGET, 800);
 });
-t("SITUATION_PACKS 四情境齐全", ()=>{
+t("SITUATION_PACKS 六情境齐全", ()=>{
+  /* 2026-11-24 全利用二期: 新增 deal(交易谋划)/intimate(亲近独处) 两包 */
   assert.deepStrictEqual(Object.keys(P.SITUATION_PACKS).sort(),
-    ["conflict", "emotion", "memory", "social"]);
+    ["conflict", "deal", "emotion", "intimate", "memory", "social"]);
 });
 t("renderDebug 输出字段名与 snippet", ()=>{
   var r = P.enrich(mkCard(), "你再逼我", []);
