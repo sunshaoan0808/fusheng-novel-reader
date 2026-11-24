@@ -165,6 +165,7 @@ return "你是这场角色扮演聊天的幕后导演（Director），不是演�
 "当前世界状态（时间 / 天气 / 地点）：" + simLine(chatId, o.hint) + "\n" +
 worldcardBrief(o.runId) +
 "角色：" + (o.cardBrief || "未知") + "\n" +
+(o.cardNarrative? "叙事定位（原著蒸馏）：" + o.cardNarrative + "\n": "") +
 (st.lastBeat? "上次导演指令：" + st.lastBeat + "（" + (PACING_CN[st.lastPacing] || "保持") + "）\n": "") +
 "最近对话：\n" + (recentText(o.history, 8) || "（开场）") + "\n" +
 staleWarn +

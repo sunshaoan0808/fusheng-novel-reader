@@ -775,7 +775,8 @@ async function send(runId, name, text, opts){
   try{
     if(typeof RP_DIRECTOR !== "undefined")
       dirText = await withSoftTimeout(RP_DIRECTOR.onUserMessage(wsId, {cfg: cfg, history: h, runId: runId,
-        hint: wsHint, cardBrief: cardBriefOf(card)}), 30000, "导演");
+        hint: wsHint, cardBrief: cardBriefOf(card),
+        cardNarrative: (typeof RP_WORLDLINE !== "undefined" && RP_WORLDLINE.narrativeBrief) ? RP_WORLDLINE.narrativeBrief(card) : ""}), 30000, "导演");
   }catch(e){}
   var temporal = await temporalFor(wsId, card, run.novel, h);
   var apex = await apexFor(runId, name, card, text, cfg,
@@ -811,6 +812,22 @@ async function send(runId, name, text, opts){
         b.messages[0].content += "\n\n" + wsText;
     }
   }catch(e){}
+  /* 2026-11-24 蒸馏全利用三期: 暗线与世界约束（未回收伏笔/原著冲突/
+     世界观组/判词/当前段大纲/对照关系），此前只在书架页展示。 */
+  var wlText = "";
+  try{
+    if(typeof RP_WORLDLINE !== "undefined"){
+      var wlPresent = [name];
+      try{ var wst2 = (typeof RP_WORLDSIM !== "undefined") ? RP_WORLDSIM.get(wsId) : null;
+        if(wst2 && wst2.present) wlPresent = wlPresent.concat(wst2.present); }catch(e){}
+      var wlCards = [card];
+      try{ wlPresent.slice(1).forEach(function(pn){ var pc = findCard(runId, pn); if(pc) wlCards.push(pc); }); }catch(e){}
+      wlText = RP_WORLDLINE.build(run, {name: name, present: wlPresent, cards: wlCards, chapterIdx: opts.chapterIdx});
+      if(wlText && b.messages.length && b.messages[0].role === "system")
+        b.messages[0].content += "\n\n" + wlText;
+    }
+  }catch(e){}
+  b.stats.hasWorldline = !!wlText;
   /* 导演指令注入（compact briefing；关闭/未触发时为空字符串，不注入） */
   try{
     if(dirText && b.messages.length && b.messages[0].role === "system")
