@@ -47,7 +47,7 @@ t("estTokens中文", E("你好世界") > 0);
 t("estTokens空", E("") === 0);
 t("estTokens长文本更大", E("红楼梦".repeat(100)) > E("红楼梦"));
 
-// 默认 maxContext=8192: 少量文本 -> 无告警类
+// 默认 maxContext=32768（2026-11-24 全利用一期由 8192 抬升）: 少量文本 -> 无告警类
 els["ta"] = mkEl(); els["ta"].value = "你好";
 els["out"] = mkEl();
 vm.runInContext("tokCount('ta','out')", ctx);
@@ -62,13 +62,13 @@ vm.runInContext("tokCount(['a','b','c'],'out')", ctx);
 const n3 = parseInt((els["out"].innerHTML.match(/约 (\d+) \//)||[])[1] || "0", 10);
 t("tokCount数组合并", n3 === E("甲\n乙\n丙\n"));
 
-// 80% 告警: 构造足够长的文本 (8192*0.8=6553 tokens; 中文1字~1.6tok -> 4100字)
-els["big"] = mkEl(); els["big"].value = "红".repeat(4200);
+// 80% 告警: 构造足够长的文本 (32768*0.8=26214 tokens; 中文1字~1.6tok -> 约16400字)
+els["big"] = mkEl(); els["big"].value = "红".repeat(16800);
 vm.runInContext("tokCount('big','out')", ctx);
 t("tokCount 80%告警类", els["out"].innerHTML.indexOf("warn") >= 0);
 
-// 100% 超限
-els["huge"] = mkEl(); els["huge"].value = "红".repeat(6000);
+// 100% 超限 (32768 tokens -> 约20500字)
+els["huge"] = mkEl(); els["huge"].value = "红".repeat(21000);
 vm.runInContext("tokCount('huge','out')", ctx);
 t("tokCount 100%超限类", els["out"].innerHTML.indexOf("over") >= 0);
 t("tokCount超限提示文案", els["out"].innerHTML.indexOf("已超上下文") >= 0);

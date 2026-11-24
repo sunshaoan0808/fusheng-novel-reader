@@ -18,7 +18,13 @@ var LABELS = {
   speech_style:"说话风格", cadence:"语速节奏",
   signature_phrases:"口头禅", typical_lines:"典型台词",
   subtext_style:"潜台词", sentence_openers:"常用开头",
+  sentence_endings:"句尾习惯", connective_tokens:"连接词",
   forbidden_fillers:"禁用口癖",
+  /* 2026-11-24 蒸馏全利用一期: 此前蒸出但从未登记的字段补登记。
+     thinking_style 进 core、identity_anchor 进 identity、
+     world_belong/stance_stability 进 background(见 LAYERS)。 */
+  thinking_style:"思维方式", identity_anchor:"身份锚点",
+  world_belong:"世界归属", stance_stability:"立场稳定性",
   life_timeline:"生平", social_soil:"出身", socio_economics:"经济/教育/信仰",
   key_bonds:"关键羁绊", faction_position:"阵营立场",
   visual_identity:"视觉识别", voice_dressing:"声音着装",
@@ -40,12 +46,12 @@ var LABELS = {
 };
 
 var LAYERS = {
-  identity: ["core_identity","gender","age_stage"],
+  identity: ["core_identity","gender","age_stage","identity_anchor"],
   core: ["soul_goal","hidden_desire","inner_need","core_traits","temperament_type",
     "values","moral_bottom_line","moral_position","fatal_flaw","pressure_truth",
-    "shadow_side","big_five","ooc_redline"],
+    "shadow_side","big_five","ooc_redline","thinking_style"],
   speech: ["speech_style","cadence","signature_phrases","typical_lines",
-    "subtext_style","sentence_openers","forbidden_fillers"],
+    "subtext_style","sentence_openers","sentence_endings","connective_tokens","forbidden_fillers"],
   /* P1-a: 外在集群从 background 拆出独立层。以前 10 个外在字段全塞在【背景】段里,
    * 与出身/经历混排, 预算一紧先被整段丢; 且"外貌"混在"背景"里模型权重感低。
    * 顺序 = prompt 里的行序: 先整体外貌, 再分项, 再举止, 最后他人视角。 */
@@ -53,7 +59,7 @@ var LAYERS = {
     "voice_dressing","signature_items","habit_action","carry_style",
     "others_impression","reputation","action_pattern"],
   background: ["background","life_timeline","social_soil","socio_economics","key_bonds",
-    "faction_position","stress_response","fear_triggers","taboo_topics"],
+    "faction_position","world_belong","stance_stability","stress_response","fear_triggers","taboo_topics"],
 };
 
 /* 蒸馏产出的四态来源标注 ([canon:ch003] / [ref:ch012] / [inference:ch007] / [unknown])

@@ -7,7 +7,7 @@ const CFG_KEY = "nd_api_cfg_v1";
 const RPCFG_KEY = "nd_rp_cfg_v1";
 const getCfg = ()=>{ try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}};
 const saveCfg = (c)=>{ try{ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，API 配置未保存" : "API 配置保存失败"); }catch(_){} } };
-const getRpCfg = ()=> Object.assign({maxContext:8192, respTokens:2000, summaryModel:"",
+const getRpCfg = ()=> Object.assign({maxContext:32768, respTokens:2000, summaryModel:"",
   temperature:0.9, topP:1, ooc:true, preset:"classic", optCards:false, optCount:4, optMood:"none", ttsAuto:false, ttsMode:"all", typewriter:true,
   worldsim:true, wsPerMsg:3, wsStepMin:30, wsWxAuto:true, wsWxEvery:5, temporal:true, leanmem:true,
   apex:true,
@@ -32,6 +32,22 @@ function migrateRpCfgOnce(){
   }catch(e){}
 }
 migrateRpCfgOnce();
+/* 2026-11-24 一次性迁移: maxContext 旧默认 8192 → 32768（蒸馏全利用复盘 D 级）。
+ * 8192 时黛玉全段约 6400+ token 超出可用预算，background/relations/lore
+ * 按优先级最先被丢——名义在用、实际没进 prompt。免费模型上下文 128K 起步，
+ * 抬默认让低优先级段回到场上。口径同 respTokens 迁移：只改恰好等于旧默认
+ * 的值（视作从未改过），用户自设的其它值不动；标记 _migCtx32k 独立于
+ * _migResp2000（老用户已带 resp 标记，不能被它短路）。 */
+function migrateRpCfgCtxOnce(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(RPCFG_KEY) || "null");
+    if(!raw || raw._migCtx32k) return;
+    if(raw.maxContext === 8192) raw.maxContext = 32768;
+    raw._migCtx32k = 1;
+    localStorage.setItem(RPCFG_KEY, JSON.stringify(raw));
+  }catch(e){}
+}
+migrateRpCfgCtxOnce();
 /* v37: 解析当前绑定的 ST 预设对象(未绑定返回 null); 传给 prompt 构建做预设组装 */
 function resolveStPreset(){
 try{

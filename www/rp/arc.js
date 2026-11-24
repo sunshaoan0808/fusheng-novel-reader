@@ -67,7 +67,8 @@ function arcSummary(card, runId){
     defaultStage: f.timeline_stage || "",
     start: f.arc_start || "",
     mids: midsOf(card),
-    end: f.arc_end || ""
+    end: f.arc_end || "",
+    blocker: f.arc_blocker || ""
   };
 }
 function cut(s, n){
@@ -77,7 +78,7 @@ function cut(s, n){
 /* compact prompt: 类型 + 当前阶段 + 起(首转→末转)+合, 300 字内 */
 function renderArcPrompt(card, runId){
   var s = arcSummary(card, runId);
-  if(!s.type && !s.start && !s.mids.length && !s.end) return "";
+  if(!s.type && !s.start && !s.mids.length && !s.end && !s.blocker) return "";
   var head = "「弧光」" + ((card && card.name) || "") + " · "
     + (s.typeLabel ? s.typeLabel + "弧" : "弧光")
     + (s.stage ? " · 当前阶段：" + s.stage : "");
@@ -89,6 +90,9 @@ function renderArcPrompt(card, runId){
     lines.push("转：" + zhuan);
   }
   if(s.end) lines.push("合：" + cut(s.end, 60));
+  /* 2026-11-24 蒸馏全利用一期: arc_blocker 此前蒸出无人读。弧光从
+     "阶段描述"升级为"阶段 + 当前阻碍"——阻碍是这一阶段剧情张力的来源。 */
+  if(s.blocker) lines.push("当前阻碍：" + cut(s.blocker, 60));
   return lines.join("\n");
 }
 

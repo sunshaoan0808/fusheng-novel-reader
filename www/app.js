@@ -517,7 +517,7 @@ let _stParams = null;
 try{ const _p = (typeof RP_PRESET!=="undefined") ? RP_PRESET.get(_stId) : null; _stParams = _p ? _p.params : null; }catch(e){}
 const _tempInput = Math.max(0,Math.min(1.5,parseFloat($("#r_temp").value)||0.9));
 const _topPInput = Math.max(0,Math.min(1,parseFloat($("#r_topp").value)||1));
-saveRpCfg({maxContext:Math.max(2048,parseInt($("#r_ctx").value)||8192),
+saveRpCfg({maxContext:Math.max(2048,parseInt($("#r_ctx").value)||32768),
 respTokens:Math.max(128,parseInt($("#r_resp").value)||512),
 summaryModel:$("#r_summ").value.trim(),
 temperature:(_stParams&&_stParams.temperature!=null)?Math.max(0,Math.min(1.5,_stParams.temperature)):_tempInput,
@@ -771,7 +771,7 @@ rc = rc || {};
 if(d.temperature != null) rc.temperature = Math.max(0, Math.min(1.5, +d.temperature || 0.9));
 if(d.top_p != null) rc.topP = Math.max(0, Math.min(1, +d.top_p || 1));
 if(d.openai_max_tokens != null) rc.respTokens = Math.max(128, parseInt(d.openai_max_tokens) || 512);
-if(d.openai_max_context != null) rc.maxContext = Math.max(2048, parseInt(d.openai_max_context) || 8192);
+if(d.openai_max_context != null) rc.maxContext = Math.max(2048, parseInt(d.openai_max_context) || 32768);
 return rc;
 }
 window.importStPreset = ()=>{

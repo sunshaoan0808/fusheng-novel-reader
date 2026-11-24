@@ -16,7 +16,7 @@ var FIELD_CUT = 120;     /* 单字段截断长度（按句边界，不切半句�
 /* ---------- 情境包：情境 -> 卡字段列表 ---------- */
 var SITUATION_PACKS = {
 conflict: ["ooc_redline","decision_rules","stress_response","restraint_threshold","taboo_topics"],
-emotion: ["emotion_model","fear_triggers","inner_need","shadow_side","grievance_style","joy_style"],
+emotion: ["emotion_model","fear_triggers","inner_need","shadow_side","grievance_style","joy_style","anger_style"],
 social: ["social_mode","speech_style","signature_phrases","typical_lines","carry_style"],
 memory: ["life_timeline","key_bonds","trauma_scar","background_imprint"],
 };
@@ -27,7 +27,7 @@ var FIELD_CN = {
 ooc_redline:"行为红线", decision_rules:"决策准则", stress_response:"压力反应",
 restraint_threshold:"克制阈值", taboo_topics:"禁忌话题",
 emotion_model:"情感模式", fear_triggers:"恐惧触发", inner_need:"深层需求",
-shadow_side:"阴影面", grievance_style:"委屈表达", joy_style:"喜悦表达",
+shadow_side:"阴影面", grievance_style:"委屈表达", joy_style:"喜悦表达", anger_style:"愤怒表达",
 social_mode:"社交模式", speech_style:"说话风格", signature_phrases:"口头禅",
 typical_lines:"典型台词", carry_style:"处事风格",
 life_timeline:"人生轨迹", key_bonds:"关键羁绊", trauma_scar:"创伤",
@@ -41,7 +41,7 @@ var KEYWORDS = {
 conflict: ["吵架","争吵","打架","打人","动手","杀","威胁","逼","滚","决斗",
 "报仇","复仇","对峙","宣战","背叛","挑衅","侮辱","打"],
 emotion: ["哭","爱","喜欢","抱","亲","心疼","思念","想念","孤独","委屈",
-"感动","温柔","害怕","心痛"],
+"感动","温柔","害怕","心痛","生气","愤怒","发火","气恼","恼怒"],
 social: ["你好","请问","聊聊","告诉","问你","请教","商量","打招呼",
 "初次","久仰","自我介绍"],
 memory: ["记得","当年","曾经","回忆","往事","小时候","过去","那年",
