@@ -244,6 +244,20 @@ function cardLandingHTML(runId, nm, card, run){
       + txt.split("\n").map(l=>`<div class="kvline">${esc(l)}</div>`).join("") + `</div>` : "";
   }).join("");
   if(arch) h += `<h2 class="sec">档案</h2>` + arch.replace(/<h2 class="sec">[^<]*<\/h2>/g, "");
+  /* 8b. 证据与矛盾（2026-11-24 蒸馏全利用四期）：证据元数据此前躺卡里无人看。
+     计数渲染成可信度行，出处/矛盾原样展示——画像有多可信，用户自己判断。 */
+  const evf = card.fields || {};
+  const evVal = (x)=>{ if(x == null) return ""; if(typeof x === "object") return String(x.v != null ? x.v : (Array.isArray(x) ? x.join("；") : "")).trim(); return String(x).trim(); };
+  const evCounts = [["description_count","描写"],["dialogue_count","对白"],["thought_count","心理"],["chunk_count","蒸馏块"]]
+    .map(([k, lb])=>{ const v = evVal(evf[k]); return v ? `${lb} ${esc(v)}` : ""; }).filter(Boolean);
+  const evSrc = evVal(evf.evidence_source), evCon = evVal(evf.contradiction_note);
+  if(evCounts.length || evSrc || evCon){
+    h += `<h2 class="sec">证据与矛盾</h2><div class="card">`
+      + (evCounts.length ? `<div class="kvline">取材量：${evCounts.join(" · ")}</div>` : "")
+      + (evSrc ? `<div class="kvline">证据出处：${esc(evSrc)}</div>` : "")
+      + (evCon ? `<div class="kvline">矛盾记录：${esc(evCon)}</div>` : "")
+      + `</div>`;
+  }
   /* 9. CTA（P1-19：原先顶部、底部各渲染一次巨型胶囊，把近 1/4 屏高吃掉，
      而这一页真正能做的动作只有一个。收成 sticky 底部单条，随滚动常驻。） */
   h += `<div class="ctadock"><button class="btn landcta" onclick="chatWith('${jq(runId)}','${jq(nm)}')">${typeof icon === "function" ? icon("chat",18) : ""} 开始对话</button></div>`;

@@ -11,7 +11,7 @@ const RP_PROMPT = (function(){
 var LABELS = {
   core_identity:"身份", gender:"性别", age_stage:"年龄段",
   soul_goal:"自觉目标", hidden_desire:"隐秘欲望", inner_need:"深层需求",
-  core_traits:"性格", temperament_type:"气质", values:"价值观",
+  core_traits:"性格", temperament_type:"气质", values:"价值观", worldview:"世界观",
   moral_bottom_line:"道德底线", moral_position:"善恶定位",
   fatal_flaw:"致命缺陷", pressure_truth:"极限下的真相",
   shadow_side:"阴影面", big_five:"大五人格", ooc_redline:"绝不做的事",
@@ -30,7 +30,7 @@ var LABELS = {
   visual_identity:"视觉识别", voice_dressing:"声音着装",
   appearance_feature:"外貌", physical_marks:"身体印记",
   signature_items:"随身物品", reputation:"外界评价",
-  action_pattern:"行动模式",
+  action_pattern:"行动模式", action_style:"行动风格",
   /* 外在三件套收尾: 数据侧(蒸馏产物)一直有这三个键, 但从未登记进 LABELS/LAYERS,
      renderFields 只渲染登记键 → 模型从未见过。P0-a 补登记, P1-a 随外貌集群拆独立分段。 */
   habit_action:"习惯动作", carry_style:"举止风度", others_impression:"他人印象",
@@ -48,7 +48,7 @@ var LABELS = {
 var LAYERS = {
   identity: ["core_identity","gender","age_stage","identity_anchor"],
   core: ["soul_goal","hidden_desire","inner_need","core_traits","temperament_type",
-    "values","moral_bottom_line","moral_position","fatal_flaw","pressure_truth",
+    "values","worldview","moral_bottom_line","moral_position","fatal_flaw","pressure_truth",
     "shadow_side","big_five","ooc_redline","thinking_style"],
   speech: ["speech_style","cadence","signature_phrases","typical_lines",
     "subtext_style","sentence_openers","sentence_endings","connective_tokens","forbidden_fillers"],
@@ -57,7 +57,7 @@ var LAYERS = {
    * 顺序 = prompt 里的行序: 先整体外貌, 再分项, 再举止, 最后他人视角。 */
   appearance: ["appearance_feature","visual_identity","physical_marks",
     "voice_dressing","signature_items","habit_action","carry_style",
-    "others_impression","reputation","action_pattern"],
+    "others_impression","reputation","action_pattern","action_style"],
   background: ["background","life_timeline","social_soil","socio_economics","key_bonds",
     "faction_position","world_belong","stance_stability","stress_response","fear_triggers","taboo_topics"],
 };
