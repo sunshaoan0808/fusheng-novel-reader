@@ -154,9 +154,13 @@ async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
 /* 流式：onToken(tok)，支持 AbortSignal；返回全文 */
 function apiBase(cfg){ return (cfg.base || "").replace(/\/$/, ""); }
 async function generateImage(cfg, prompt, model){
-  var r = await fetch(apiBase(cfg) + "/images/generations", {
+  /* 生图可单独配地址/Key（cfg.imgBase/imgKey，路线 3：生图 key 常与聊天网关不同家），
+   * 留空才共用聊天的 base/key。 */
+  var eb = (cfg.imgBase || cfg.base || "").replace(/\/$/, "");
+  var ek = cfg.imgKey || cfg.key;
+  var r = await fetch(eb + "/images/generations", {
     method: "POST",
-    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + cfg.key},
+    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + ek},
     body: JSON.stringify({model: model, prompt: prompt, n: 1,
       size: "1024x1024", response_format: "b64_json"}),
   });

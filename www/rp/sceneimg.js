@@ -37,8 +37,11 @@ return parts.join("。");
 
 function channelOf(cfg, rpCfg){
 var src = (cfg && cfg.imgSrc) || (rpCfg && rpCfg.imgSrc) || "pollinations";
-if(src === "api")
-return (cfg && cfg.base && cfg.key && cfg.imgModel) ? "api" : null;
+if(src === "api"){
+/* 生图地址/Key 可单独配（imgBase/imgKey），留空共用聊天网关 */
+var eb = cfg && (cfg.imgBase || cfg.base), ek = cfg && (cfg.imgKey || cfg.key);
+return (eb && ek && cfg.imgModel) ? "api" : null;
+}
 return "pollinations";
 }
 

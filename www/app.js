@@ -161,7 +161,11 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 <div class="field"><label>生图模型（可空，如 dall-e-3）</label>
 <input id="c_img" placeholder="不填则不启用生图" value="${esc(c.imgModel||"")}"></div>
 <div class="field"><label>生图来源（场景配图 / 立绘）</label>
-<select id="c_imgsrc"><option value="pollinations"${c.imgSrc!=="api"?" selected":""}>Pollinations 免费（无需 Key，画质一般，繁忙时要重试）</option><option value="api"${c.imgSrc==="api"?" selected":""}>自定义端点（用上方 API 地址/Key + 生图模型）</option></select></div>
+<select id="c_imgsrc"><option value="pollinations"${c.imgSrc!=="api"?" selected":""}>Pollinations 免费（无需 Key，画质一般，繁忙时要重试）</option><option value="api"${c.imgSrc==="api"?" selected":""}>自定义端点（下方生图地址/Key + 生图模型）</option></select></div>
+<div class="field"><label>生图 API 地址（可空）</label>
+<input id="c_imgbase" placeholder="留空 = 与聊天共用同一地址" value="${esc(c.imgBase||"")}"></div>
+<div class="field"><label>生图 Key（可空）</label>
+<input id="c_imgkey" type="password" placeholder="${c.imgKey?"已保存（留空 = 不修改）":"留空 = 与聊天共用同一个 Key"}" value=""></div>
 <div class="field"><label>TTS 模型（可空，如 tts-1）</label>
 <input id="c_tts" placeholder="不填则不启用朗读" value="${esc(c.ttsModel||"")}"></div>
 <div class="field"><label>TTS 音色</label>
@@ -403,8 +407,11 @@ if(typed && typed !== prev.key && /^[a-z]+:\/\//i.test(base) && !/^https:\/\//i.
   if(!confirm("接口地址不是 https://，Key 会以明文形式发送。仍要保存吗？")) return;
 }
 const m = $("#c_model").value.trim() || $("#c_model_sel").value;
+const typedImg = $("#c_imgkey") ? $("#c_imgkey").value.trim() : "";
 saveCfg({base:base, key:key, model:m,
-imgModel:$("#c_img").value.trim(), imgSrc:$("#c_imgsrc")?$("#c_imgsrc").value:"pollinations", ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
+imgModel:$("#c_img").value.trim(), imgSrc:$("#c_imgsrc")?$("#c_imgsrc").value:"pollinations",
+imgBase:$("#c_imgbase")?$("#c_imgbase").value.trim():"", imgKey:typedImg || (prev.imgKey || ""),
+ttsModel:$("#c_tts").value.trim(), ttsVoice:$("#c_voice").value.trim()||"alloy"});
 $("#c_key").value = "";
 $("#c_key").placeholder = "已保存（留空 = 不修改）";
 alert("已保存");

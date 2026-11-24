@@ -55,6 +55,11 @@ t("channelOf: 默认免费/api 齐备才 api/api 未配为 null", () => {
   assert.strictEqual(S.channelOf({ imgSrc: "api", base: "b", key: "k" }, {}), null);
   assert.strictEqual(S.channelOf({ imgSrc: "pollinations" }, {}), "pollinations");
 });
+t("channelOf: 生图独立地址/Key（路线 3：与聊天网关不同家）", () => {
+  assert.strictEqual(S.channelOf({ imgSrc: "api", imgBase: "ib", imgKey: "ik", imgModel: "m" }, {}), "api");
+  assert.strictEqual(S.channelOf({ imgSrc: "api", base: "b", imgKey: "ik", imgModel: "m" }, {}), "api");
+  assert.strictEqual(S.channelOf({ imgSrc: "api", imgBase: "ib", imgModel: "m" }, {}), null);
+});
 await (async () => {
   const S2 = loadSceneimg({ RP_NET: { generateImage: async (cfg, prompt, model) => "data:image/png;base64,XX" } });
   const r1 = await S2.generate({ imgSrc: "api", base: "b", key: "k", imgModel: "m" }, {}, "p", 1);
@@ -147,6 +152,15 @@ t("pin: 设置页生图来源 + cg 自动开关三处齐", () => {
   assert.ok(s.includes('id="r_cgauto"'));
   assert.ok(s.includes("rc.cgAuto!==false"));
   assert.ok(s.includes("cgAuto:"));
+});
+t("pin: 生图独立地址/Key 字段与生效回退（路线 3）", () => {
+  const s = R("www/app.js");
+  assert.ok(s.includes('id="c_imgbase"'));
+  assert.ok(s.includes('id="c_imgkey"'));
+  assert.ok(s.includes("imgKey:typedImg"));
+  const c = R("www/rp/chat.js");
+  assert.ok(c.includes("cfg.imgBase || cfg.base"));
+  assert.ok(c.includes("cfg.imgKey || cfg.key"));
 });
 t("pin: ui42.css 定格卡与配图样式", () => {
   const s = R("www/ui42.css");

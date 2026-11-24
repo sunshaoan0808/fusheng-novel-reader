@@ -221,7 +221,7 @@ return `中国古典小说人物立绘，${name}，《${nv}》中的人物。外
 }
 window.genPortrait = (runId, name)=>{
 const cfg = getCfg();
-if(!cfg.key||!cfg.base||!cfg.imgModel){ alert("先去「我的 · 设置」填 API 地址/Key 和生图模型"); return; }
+if(!(cfg.imgBase||cfg.base)||!(cfg.imgKey||cfg.key)||!cfg.imgModel){ alert("先去「我的 · 设置」填生图模型（生图地址/Key 可单独填，留空与聊天共用）"); return; }
 const prompt = portraitPrompt(runId, name);
 const ov = document.createElement("div");
 ov.className = "viewer";
