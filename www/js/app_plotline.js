@@ -249,6 +249,7 @@ return `<div class="cb-tools" data-xfade>`
 + `${atb}${spk}`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
 + `<button class="cb-tool" onclick="wireDiceRoll()" title="掷骰：掷一个 1-100 填入输入框。跟行动一起发=按点数+好感修正判定这件事的成败；只发骰签=赌当前局面的运气（成功则局面朝你有利松动）"><span class="cb-ico">${icon("dice",15)}</span><span class="cb-tx">掷骰</span></button>`
++ ((CHAT.mode==="group"||CHAT.mode==="traverse") ? "" : `<button class="cb-tool" onclick="openGiftSheet(event)" title="送礼：按 TA 的喜好挑一份礼物，好感随之变化，TA 会在回复里作出反应"><span class="cb-ico">${icon("gift",15)}</span><span class="cb-tx">送礼</span></button>`)
 + `</div>`
 + `<div class="cb-inputrow"><input id="chat_in" placeholder="${CHAT.narrMode?"写场景/动作/心理描写…":ph}" onkeydown="if(event.key==='Enter')sendChat()">`
 + `<button class="cbsend" onclick="sendChat()" title="发送">发送</button></div>`;
@@ -263,6 +264,36 @@ window.wireDiceRoll = ()=>{
   const v = inp.value || "";
   inp.value = /（掷骰：\d+）\s*$/.test(v) ? v.replace(/（掷骰：\d+）\s*$/, tag) : (v ? v + " " + tag : tag);
   inp.focus();
+};
+/* 送礼（2026-11-25）：礼物单按当前角色喜好生成，点选即落账+发一条
+ * 「（送上「X」）」行动消息，角色反应由 RP_GIFT 的一次性纸条驱动。 */
+window.openGiftSheet = (ev)=>{
+  if(ev) ev.stopPropagation();
+  try{
+    window.closeGiftSheet();
+    if(typeof RP_GIFT === "undefined" || !CHAT || !CHAT.name) return;
+    const card = RP.findCard(CHAT.runId, CHAT.name) || {};
+    const opts = RP_GIFT.optionsFor(card);
+    const d = document.createElement("div");
+    d.id = "giftsheet"; d.className = "giftsheet";
+    d.innerHTML = `<div class="gs-panel"><div class="gs-title">送 ${esc(CHAT.name)} 一份礼物</div>`
+      + opts.map(o=>`<button class="gs-item" onclick="pickGift('${o.id}')"><span class="gs-name">${esc(o.name)}</span><span class="gs-kind ${o.kind==="心头好"?"good":o.kind==="忌讳"?"bad":""}">${o.kind} · 好感 ${o.delta>0?"+"+o.delta:o.delta}</span></button>`).join("")
+      + `<button class="gs-cancel" onclick="closeGiftSheet()">取消</button></div>`;
+    d.addEventListener("click", (e)=>{ if(e.target === d) window.closeGiftSheet(); });
+    document.body.appendChild(d);
+  }catch(e){}
+};
+window.closeGiftSheet = ()=>{ const d = document.getElementById("giftsheet"); if(d) d.remove(); };
+window.pickGift = (id)=>{
+  try{
+    const card = RP.findCard(CHAT.runId, CHAT.name) || {};
+    const r = RP_GIFT.give(CHAT.runId, CHAT.name, id, card);
+    window.closeGiftSheet();
+    if(!r) return;
+    const inp = document.getElementById("chat_in");
+    if(inp) inp.value = "（送上「" + r.gift.name + "」）";
+    if(typeof sendChat === "function") sendChat();
+  }catch(e){}
 };
 /* 掷骰判定指令(2026-11-23): 骰签此前只是拼进消息的裸标签, 全链没人向 AI 说明口径与
  * 档位, 掷了等于没掷(用户实报: 掷出 10, 角色照常按惯性推进、毫无反应)。

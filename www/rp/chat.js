@@ -844,6 +844,15 @@ async function send(runId, name, text, opts){
       if(pushText) b.stats.hasPushStory = true;
     }
   }catch(e){}
+  /* 送礼纸条: 一次性注入, 让角色对刚收到的礼物自然反应 */
+  try{
+    if(typeof RP_GIFT !== "undefined"){
+      var giftText = RP_GIFT.consumeNote(runId, name);
+      if(giftText && b.messages.length && b.messages[0].role === "system")
+        b.messages[0].content += "\n\n" + giftText;
+      if(giftText) b.stats.hasGift = true;
+    }
+  }catch(e){}
   b.stats.hasWorldsim = !!wsText;   // P0-5: Prompt 诊断用
   b.stats.hasDirector = !!dirText;
   if(opts.optCards && b.messages.length && b.messages[0].role === "system")
