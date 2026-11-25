@@ -18,7 +18,8 @@ const daiyu = cArr.find(c => c.name === "林黛玉");
 const baoyu = cArr.find(c => c.name === "贾宝玉");
 t("黛玉/宝玉卡在",!!daiyu &&!!baoyu);
 
-const txt = W.build(run, {name: "林黛玉", present: ["林黛玉", "贾宝玉"], cards: [daiyu, baoyu], chapterIdx: 2});
+/* 判词全文断言需亲近档（2026-11-25 好感解锁门控后）：tier.gates.deep 开 */
+const txt = W.build(run, {name: "林黛玉", present: ["林黛玉", "贾宝玉"], cards: [daiyu, baoyu], chapterIdx: 2, tier: {gates: {deep: true, voice: false}}});
 t("组装出暗线段", txt.indexOf("") === 0);
 t("含未回收伏笔", txt.indexOf("· 伏笔：") >= 0);
 t("含判词", txt.indexOf("判词") >= 0 && txt.indexOf("玉带林中挂") >= 0);
