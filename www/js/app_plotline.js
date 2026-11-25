@@ -250,6 +250,7 @@ return `<div class="cb-tools" data-xfade>`
 + `<button class="cb-tool" onclick="RP_AIFILL.fillChat(this)" title="AI 帮我说一句（只填入，不发送）"><span class="cb-ico">${icon("sparkles",15)}</span><span class="cb-tx">帮我说</span></button>`
 + `<button class="cb-tool" onclick="wireDiceRoll()" title="掷骰：掷一个 1-100 填入输入框。跟行动一起发=按点数+好感修正判定这件事的成败；只发骰签=赌当前局面的运气（成功则局面朝你有利松动）"><span class="cb-ico">${icon("dice",15)}</span><span class="cb-tx">掷骰</span></button>`
 + ((CHAT.mode==="group"||CHAT.mode==="traverse") ? "" : `<button class="cb-tool" onclick="openGiftSheet(event)" title="送礼：按 TA 的喜好挑一份礼物，好感随之变化，TA 会在回复里作出反应"><span class="cb-ico">${icon("gift",15)}</span><span class="cb-tx">送礼</span></button>`)
++ ((CHAT.mode==="group"||CHAT.mode==="traverse") ? "" : `<button id="spbtn" class="cb-tool${(typeof RP_SCENEPLAY!=="undefined" && RP_SCENEPLAY.isOn(CHAT.runId, CHAT.name))?" on":""}" onclick="toggleScenePlay(event)" title="入戏（ScenePlay）：场景横幅 + 每轮推进选项 + 关键场景自动配图，一次打包开启"><span class="cb-ico">🎬</span><span class="cb-tx">入戏</span></button>`)
 + `</div>`
 + `<div class="cb-inputrow"><input id="chat_in" placeholder="${CHAT.narrMode?"写场景/动作/心理描写…":ph}" onkeydown="if(event.key==='Enter')sendChat()">`
 + `<button class="cbsend" onclick="sendChat()" title="发送">发送</button></div>`;
@@ -387,6 +388,18 @@ function pushStoryChoice(){
     document.getElementById("pushEvent").onclick = ()=> done("event");
   });
 }
+/* 入戏开关（2026-11-25 ScenePlay 打包）：状态存 RP_SCENEPLAY（按聊持久化），
+ * 开启即刷新横幅与按钮态；选项强制在 sendChat 里按状态生效。 */
+window.toggleScenePlay = (ev)=>{
+  if(ev && ev.stopPropagation) ev.stopPropagation();
+  try{
+    if(typeof RP_SCENEPLAY === "undefined" || !CHAT || !CHAT.name) return;
+    const on = RP_SCENEPLAY.toggle(CHAT.runId, CHAT.name);
+    const b = document.getElementById("spbtn"); if(b) b.classList.toggle("on", on);
+    if(typeof refreshSceneBanner === "function") refreshSceneBanner();
+    rpToast(on ? "入戏模式开：每轮回复末尾给出推进选项，关键场景自动配图" : "入戏模式关");
+  }catch(e){}
+};
 window.togglePushStory = async (ev)=>{
   if(ev && ev.stopPropagation) ev.stopPropagation();
   /* P0: key 必须和注入点一致。穿越模式走 sendTraverse(wsIdT="nd_travchat_"+travId)，
@@ -573,6 +586,12 @@ onAligning: (on, finalText)=>{
 try{
   if(isTrav && CHAT && CHAT.travId && typeof RP_PLOTRUN!=="undefined"
     && RP_PLOTRUN.decisionNode(CHAT.travId)){
+    sendOpts.optCards = true; sendOpts.optCount = 3;
+  }
+}catch(e){}
+/* 入戏模式（2026-11-25 ScenePlay 打包）：单聊开启时强制每轮 3 个推进选项 */
+try{
+  if(!isGroup && !isTrav && typeof RP_SCENEPLAY !== "undefined" && RP_SCENEPLAY.isOn(CHAT.runId, CHAT.name)){
     sendOpts.optCards = true; sendOpts.optCount = 3;
   }
 }catch(e){}

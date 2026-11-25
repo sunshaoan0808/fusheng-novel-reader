@@ -739,6 +739,7 @@ try{ if(CHAT.mode==="group") paintChatPortrait(); }catch(e){} /* v42: 群聊立�
 if(stick){ markProgScroll(); log.scrollTop = log.scrollHeight; }
 renderWsBar();
 renderSimBar();
+try{ refreshSceneBanner(); }catch(e){}
 animateWireNum(log);
 /* P2 打字机：只对"本会话内新到达的最新一条 AI 消息"做逐字动画；
  * 打开已有聊天时现存消息一律先登记为已见、直接全文呈现（修冷启动重播狂闪） */

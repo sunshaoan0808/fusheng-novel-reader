@@ -108,6 +108,32 @@ function renderSimBar(){
   try{ if(typeof RP_WIRING!=="undefined" && RP_WIRING.stageHTML) stageChip = RP_WIRING.stageHTML(); }catch(e){}
   bar.innerHTML = RP_WORLDSIM.briefHTML(simChatKey(), simHint()) + dirChip + portChip + stageChip + `<span class="simgo">›</span>`;
 }
+/* 入戏横幅（2026-11-25 ScenePlay 打包）：开启时在模拟条下方挂一条
+ * 场景横幅（当前场景 brief + 模式说明）。迟创建元素自管显隐：
+ * 沉浸时 CSS body.chatmode.immersive 兜底隐藏（display:none 不留占位），
+ * 刷新时再按 __barsVisible 同步一次。 */
+function refreshSceneBanner(){
+  try{
+    const head = document.getElementById("chathead");
+    let bn = document.getElementById("spbanner");
+    const on = typeof RP_SCENEPLAY !== "undefined" && CHAT && CHAT.mode !== "group" && CHAT.mode !== "traverse"
+      && RP_SCENEPLAY.isOn(CHAT.runId, CHAT.name);
+    if(!on){ if(bn) bn.remove(); return; }
+    if(!head) return;
+    if(!bn){
+      bn = document.createElement("div");
+      bn.id = "spbanner"; bn.className = "spbanner";
+      const sim = document.getElementById("simbar");
+      if(sim && sim.parentNode === head.parentNode) sim.parentNode.insertBefore(bn, sim.nextSibling);
+      else head.parentNode.insertBefore(bn, head.nextSibling);
+    }
+    let brief = "";
+    try{ if(typeof RP_WORLDSIM !== "undefined" && RP_WORLDSIM.enabled()) brief = RP_WORLDSIM.briefHTML(simChatKey(), simHint()); }catch(e){}
+    bn.innerHTML = `<span class="sp-ico">🎬</span><span class="sp-tx">入戏中${brief ? " · " + brief : ""} · 每轮推进选项已开</span>`
+      + `<button class="sp-off" onclick="toggleScenePlay(event)">退出</button>`;
+    bn.style.display = (window.__barsVisible === false) ? "none" : "flex";
+  }catch(e){}
+}
 /* 画像命中调试弹窗（renderSimBar 的 simchip 入口） */
 window.portraitDebug = ()=>{
   const bar = document.getElementById("simbar"); if(!bar || typeof RP_PORTRAIT==="undefined") return;

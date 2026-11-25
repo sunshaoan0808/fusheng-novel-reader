@@ -2080,3 +2080,9 @@ html[data-motion="vivid"] .chatbg .bglayer{ animation-name:chatbreathe2; animati
 .giftsheet .gs-kind.good{color:var(--gold,#d4a24e);opacity:1}
 .giftsheet .gs-kind.bad{color:#c96f5a;opacity:1}
 .giftsheet .gs-cancel{width:100%;padding:11px;margin-top:8px;background:transparent;border:none;color:var(--ink,#e8e2d5);opacity:.7;font-size:calc(14px * var(--fs));cursor:pointer}
+
+/* 入戏横幅（2026-11-25 ScenePlay）：模拟条下方一条金边场景横幅 */
+.spbanner{display:flex;align-items:center;gap:8px;margin:6px 10px 0;padding:7px 10px;border:1px solid var(--gold,#d4a24e);border-radius:10px;background:color-mix(in srgb, var(--gold,#d4a24e) 8%, transparent);font-size:calc(12px * var(--fs));color:var(--ink,#e8e2d5)}
+.spbanner .sp-tx{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.spbanner .sp-off{flex:none;background:transparent;border:1px solid var(--border,#3a352f);border-radius:8px;color:var(--ink,#e8e2d5);padding:3px 9px;font-size:calc(12px * var(--fs));cursor:pointer}
+body.chatmode.immersive .spbanner{display:none!important}
