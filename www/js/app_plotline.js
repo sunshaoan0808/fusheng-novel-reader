@@ -278,7 +278,7 @@ window.openGiftSheet = (ev)=>{
     const d = document.createElement("div");
     d.id = "giftsheet"; d.className = "giftsheet";
     d.innerHTML = `<div class="gs-panel"><div class="gs-title">送 ${esc(CHAT.name)} 一份礼物</div>`
-      + opts.map(o=>`<button class="gs-item" onclick="pickGift('${o.id}')"><span class="gs-name">${esc(o.name)}</span><span class="gs-kind ${o.kind==="心头好"?"good":o.kind==="忌讳"?"bad":""}">${o.kind} · 好感 ${o.delta>0?"+"+o.delta:o.delta}</span></button>`).join("")
+      + opts.map(o=>`<button class="gs-item" onclick="pickGift(${jq(o.id)})"><span class="gs-name">${esc(o.name)}</span><span class="gs-kind ${o.kind==="心头好"?"good":o.kind==="忌讳"?"bad":""}">${o.kind} · 好感 ${o.delta>0?"+"+o.delta:o.delta}</span></button>`).join("")
       + `<button class="gs-cancel" onclick="closeGiftSheet()">取消</button></div>`;
     d.addEventListener("click", (e)=>{ if(e.target === d) window.closeGiftSheet(); });
     document.body.appendChild(d);

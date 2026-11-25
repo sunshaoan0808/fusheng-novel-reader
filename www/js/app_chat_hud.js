@@ -129,8 +129,11 @@ function refreshSceneBanner(){
     }
     let brief = "";
     try{ if(typeof RP_WORLDSIM !== "undefined" && RP_WORLDSIM.enabled()) brief = RP_WORLDSIM.briefHTML(simChatKey(), simHint()); }catch(e){}
-    bn.innerHTML = `<span class="sp-ico">🎬</span><span class="sp-tx">入戏中${brief ? " · " + brief : ""} · 每轮推进选项已开</span>`
-      + `<button class="sp-off" onclick="toggleScenePlay(event)">退出</button>`;
+    /* brief 是 briefHTML 的既成 HTML 出口（与 renderSimBar 同一注入方式，
+     * 字符串拼接而非模板字面量，与 simbar 的既有写法保持一致） */
+    bn.innerHTML = "<span class=\"sp-ico\">🎬</span><span class=\"sp-tx\">入戏中"
+      + (brief ? " · " + brief : "") + " · 每轮推进选项已开</span>"
+      + "<button class=\"sp-off\" onclick=\"toggleScenePlay(event)\">退出</button>";
     bn.style.display = (window.__barsVisible === false) ? "none" : "flex";
   }catch(e){}
 }
