@@ -392,6 +392,32 @@ var RP_WIRING = (function () {
       if (!createFavorEngine) return null;
       return favorEngineFor((runId || "") + "|" + (name || "")).favorOf(name);
     },
+    /* 好感分档与解锁门（2026-11-25 借鉴 Tipsy 等级解锁 Heart Reveal）：
+     * 档位沿用 FavorEngine 阈值 0/20/40/60/80（疏远/平淡/友善/亲近/倾心）。
+     * inner=友善+ 解锁自我认知/内心冲突；deep=亲近+ 解锁私密自我/伪装切换
+     * 与判词全文；voice=倾心 解锁心声独白。门只作用于深层字段的注入，
+     * 基础画像不受影响（披露深度，不是剥夺体验）。 */
+    favorTier: function (runId, name) {
+      if (!createFavorEngine) return null;
+      var lv = favorEngineFor((runId || "") + "|" + (name || "")).levelOf(name);
+      var v = lv.value;
+      return {value: v, level: lv.levelIndex, levelName: lv.levelName,
+        gates: {inner: v >= 40, deep: v >= 60, voice: v >= 80}};
+    },
+    /* 程序化好感变动（送礼等用户动作）：applyStatus 是绝对值口径，
+     * 这里先读现值再写钳制后的目标值，落盘与通知走既有变更通道。 */
+    applyFavorDelta: function (runId, name, delta) {
+      if (!createFavorEngine || !name || !delta) return null;
+      var key = (runId || "") + "|" + (name || "");
+      var engine = favorEngineFor(key);
+      var before = engine.favorOf(name);
+      var patch = {};
+      patch[name + "好感"] = String(Math.max(0, Math.min(100, before + delta)));
+      var res = engine.applyStatus(patch, {});
+      if (res.changes && res.changes.length) persistFavor(key);
+      var ch = (res.changes || [])[0];
+      return ch ? {delta: ch.delta, total: ch.total} : {delta: 0, total: before};
+    },
     /* 选项卡点选（app.js pickOption 调用）：把卡面选项登记进生命周期并结算点选 */
     noteOptionPick: function (options, idx) {
       if (!actionMgr || !Array.isArray(options)) return null;

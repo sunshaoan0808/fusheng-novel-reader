@@ -784,7 +784,9 @@ async function send(runId, name, text, opts){
   var arcText = arcTextFor(runId, name, card); // PPA 对齐依据复用, 避免重复计算
   /* 方向二：画像动态检索（零 LLM，失败不打断；命中明细见 window.__lastPortrait） */
   var portEnrich = {text:"", hits:[], banned:[]};
-  try{ if(typeof RP_PORTRAIT!=="undefined") portEnrich = RP_PORTRAIT.enrich(card, text, h); }catch(e){}
+  var favTier = null;
+  try{ if(typeof RP_WIRING !== "undefined" && RP_WIRING.favorTier) favTier = RP_WIRING.favorTier(runId, name); }catch(e){}
+  try{ if(typeof RP_PORTRAIT!=="undefined") portEnrich = RP_PORTRAIT.enrich(card, text, h, undefined, favTier && favTier.gates); }catch(e){}
   try{ window.__lastPortrait = portEnrich; }catch(e){}
   var b = RP_PROMPT.buildMessages(card, {
     novel: run.novel, worldbook: promptWorldbook(run, runId, card, name), relations: (typeof AGENT_RELATIONS !== "undefined" ? AGENT_RELATIONS.merged(runId, run.relations, name) : run.relations),
@@ -822,7 +824,7 @@ async function send(runId, name, text, opts){
         if(wst2 && wst2.present) wlPresent = wlPresent.concat(wst2.present); }catch(e){}
       var wlCards = [card];
       try{ wlPresent.slice(1).forEach(function(pn){ var pc = findCard(runId, pn); if(pc) wlCards.push(pc); }); }catch(e){}
-      wlText = RP_WORLDLINE.build(run, {name: name, present: wlPresent, cards: wlCards, chapterIdx: opts.chapterIdx});
+      wlText = RP_WORLDLINE.build(run, {name: name, present: wlPresent, cards: wlCards, chapterIdx: opts.chapterIdx, tier: favTier});
       if(wlText && b.messages.length && b.messages[0].role === "system")
         b.messages[0].content += "\n\n" + wlText;
     }

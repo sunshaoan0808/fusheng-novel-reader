@@ -102,7 +102,11 @@ function detect(text, history){
 
 /* 主入口：按情境取字段 -> 相关度排序 -> 预算截断（整字段丢弃）
  * 返回 {text, hits:[{pack,field,snippet}], banned:[...]} */
-function enrich(card, text, history, budget){
+/* 深层字段的好感门（2026-11-25 等级解锁）：gates 由 chat.js 按好感分档
+ * 传入（RP_WIRING.favorTier）；不传 gates 时不设门（其余调用方行为不变）。 */
+var GATED_FIELDS = {self_cognition:"inner", inner_conflict:"inner",
+  private_self:"deep", disguise_switch:"deep"};
+function enrich(card, text, history, budget, gates){
   var out = {text:"", hits:[], banned:[]};
   try{
     if(!(budget > 0)) budget = PROMPT_BUDGET;
@@ -123,6 +127,7 @@ function enrich(card, text, history, budget){
         var fn = fl[fi];
         if(seen[fn]) continue; seen[fn] = 1;
         if(fn === "ooc_redline") continue;
+        if(gates && GATED_FIELDS[fn] && !gates[GATED_FIELDS[fn]]) continue; /* 好感未及: 深层字段暂不披露 */
         var v = fields[fn];
         if(v == null) continue;
         v = String(v).replace(/\s+/g, " ").trim();

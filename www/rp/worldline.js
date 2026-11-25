@@ -74,15 +74,29 @@ function constraintLines(cards){
   return out;
 }
 
-/* 判词/谶纬（红楼 foretell）：只取当前角色命中的第一条 */
-function foretellLines(run, name){
+/* 判词/谶纬（红楼 foretell）：只取当前角色命中的第一条。
+ * 2026-11-25 等级解锁：判词是命数深层信息，好感达「亲近」(deep) 才全文
+ * 披露；未达时只留一句存在性提示，不泄内容。 */
+function foretellLines(run, name, deep){
   var items = (run && run.foretell && run.foretell.items) || [];
   for(var i = 0; i < items.length; i++){
     var it = items[i];
-    if(it && Array.isArray(it.characters) && it.characters.indexOf(name) >= 0 && it.text)
+    if(it && Array.isArray(it.characters) && it.characters.indexOf(name) >= 0 && it.text){
+      if(!deep) return ["· 判词：此人命数在原著中已有谶语，好感未及亲近，暂不揭示内容"];
       return ["· " + (it.type || "判词") + "（" + cut(it.title || "", 16) + "）：" + cut(it.text, 90)];
+    }
   }
   return [];
+}
+
+/* 心声独白（倾心 voice 解锁）：从私密自我/隐秘渴望取一句作叙述 hints，
+ * 只在好感最高档出现——是 Tipsy Heart Reveal 式的 earned 内容。 */
+function heartLines(card, voice){
+  if(!voice) return [];
+  var f = (card && card.fields) || {};
+  var v = f.private_self || f.hidden_desire || "";
+  if(!String(v).trim()) return [];
+  return ["· 心声（倾心解锁）：" + cut(v, 70)];
 }
 
 /* 对照人物：主角卡 foil_pairs 原文提到在场人物时才注入 */
@@ -114,10 +128,12 @@ function build(run, opts){
     opts = opts || {};
     var names = uniqNames(opts.name, opts.present);
     if(!run || !names.length) return "";
+    var gates = (opts.tier && opts.tier.gates) || null;
     var groups = [
       constraintLines(opts.cards || []),
       foreshadowLines(run, names),
-      foretellLines(run, opts.name),
+      foretellLines(run, opts.name, !!(gates && gates.deep)),
+      heartLines((opts.cards || [])[0], !!(gates && gates.voice)),
       conflictLines(run, names),
       foilLines((opts.cards || [])[0], names, opts.name),
       outlineLines(run, opts.chapterIdx),

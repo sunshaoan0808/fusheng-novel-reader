@@ -258,6 +258,20 @@ function cardLandingHTML(runId, nm, card, run){
       + (evCon ? `<div class="kvline">矛盾记录：${esc(evCon)}</div>` : "")
       + `</div>`;
   }
+  /* 8c. 心迹（2026-11-25 好感等级解锁，借鉴 Tipsy Heart Reveal）：
+     与 prompt 侧门控同一套档位——用户能看见深层内容随好感逐步披露。 */
+  try{
+    const tier = (typeof RP_WIRING !== "undefined" && RP_WIRING.favorTier) ? RP_WIRING.favorTier(runId, nm) : null;
+    if(tier){
+      const row = (label, need, on)=>`<div class="kvline">${on ? "🔓" : "🔒"} ${esc(label)} <span style="opacity:.65">${on ? "已解锁" : ("好感 " + need + " 解锁")}</span></div>`;
+      h += `<h2 class="sec">心迹 · 好感 ${tier.value}（${esc(tier.levelName)}）</h2><div class="card">`
+        + row("喜好与厌恶", 0, true)
+        + row("自我认知 · 内心冲突", 40, tier.gates.inner)
+        + row("私密自我 · 判词全文", 60, tier.gates.deep)
+        + row("心声独白", 80, tier.gates.voice)
+        + `<div class="kvline" style="opacity:.65">聊得越深，TA 对你敞开的越多；解锁只影响深层字段的披露，基础画像不受影响。</div></div>`;
+    }
+  }catch(e){}
   /* 9. CTA（P1-19：原先顶部、底部各渲染一次巨型胶囊，把近 1/4 屏高吃掉，
      而这一页真正能做的动作只有一个。收成 sticky 底部单条，随滚动常驻。） */
   h += `<div class="ctadock"><button class="btn landcta" onclick="chatWith('${jq(runId)}','${jq(nm)}')">${typeof icon === "function" ? icon("chat",18) : ""} 开始对话</button></div>`;
