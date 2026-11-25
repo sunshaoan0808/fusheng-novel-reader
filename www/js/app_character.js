@@ -264,7 +264,14 @@ function cardLandingHTML(runId, nm, card, run){
     const tier = (typeof RP_WIRING !== "undefined" && RP_WIRING.favorTier) ? RP_WIRING.favorTier(runId, nm) : null;
     if(tier){
       const row = (label, need, on)=>`<div class="kvline">${on ? "🔓" : "🔒"} ${esc(label)} <span style="opacity:.65">${on ? "已解锁" : ("好感 " + need + " 解锁")}</span></div>`;
+      /* 进度条 + 下一档预告（2026-11-25 借鉴 Tipsy 解锁呈现）：档位刻度
+       * 0/20/40/60/80 与 favorTier 同源；预告只报最近的未解锁项。 */
+      const NEXTS = [[40, "自我认知 · 内心冲突"], [60, "私密自我 · 判词全文"], [80, "心声独白"]];
+      const nxt = NEXTS.find(x => tier.value < x[0]);
+      const prog = `<div class="favbar" role="progressbar" aria-label="好感进度" aria-valuenow="${tier.value}" aria-valuemin="0" aria-valuemax="100"><i style="width:${Math.max(0, Math.min(100, tier.value))}%"></i></div>`
+        + `<div class="kvline" style="opacity:.8">${nxt ? ("下一解锁：好感 " + nxt[0] + " 的「" + nxt[1] + "」，还差 " + (nxt[0] - tier.value)) : "深层心迹已全部解锁"}</div>`;
       h += `<h2 class="sec">心迹 · 好感 ${tier.value}（${esc(tier.levelName)}）</h2><div class="card">`
+        + prog
         + row("喜好与厌恶", 0, true)
         + row("自我认知 · 内心冲突", 40, tier.gates.inner)
         + row("私密自我 · 判词全文", 60, tier.gates.deep)

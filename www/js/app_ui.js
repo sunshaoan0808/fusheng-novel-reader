@@ -368,12 +368,23 @@ function shelfNovelOf(runId){
   const r = (INDEX || []).find(x => x.run_id === runId);
   return r ? r.novel : "";
 }
-/* 最近聊过：按最后活跃时间倒序（开过局的才算） */
+/* 会话置顶（2026-11-25 借鉴 Tipsy 聊天列表 pin）：nd_chat_pins_v1 存
+ * "runId|name" 数组，置顶的在「最近聊过」里排最前并带针标，上限 20。 */
+function chatPins(){ try{ const p = JSON.parse(localStorage.getItem("nd_chat_pins_v1") || "[]"); return Array.isArray(p) ? p : []; }catch(e){ return []; } }
+function isChatPinned(runId, name){ return chatPins().indexOf(runId + "|" + name) >= 0; }
+window.toggleChatPin = (runId, name)=>{
+  const k = runId + "|" + name;
+  let p = chatPins();
+  p = (p.indexOf(k) >= 0) ? p.filter(x => x !== k) : [k].concat(p);
+  try{ localStorage.setItem("nd_chat_pins_v1", JSON.stringify(p.slice(0, 20))); }catch(e){}
+  showRuns();
+};
+/* 最近聊过：置顶优先，其次按最后活跃时间倒序（开过局的才算） */
 function shelfRecent(n){
   const d = shelfStatsAll();
   return Object.keys(d).map(k => { const i = k.indexOf("|"); return {runId: k.slice(0, i), name: k.slice(i + 1), st: d[k] || {}}; })
     .filter(x => x.runId && x.name && (x.st.s > 0 || x.st.t > 0))
-    .sort((a, b) => (b.st.last || 0) - (a.st.last || 0)).slice(0, n || 10);
+    .sort((a, b) => ((isChatPinned(b.runId, b.name) ? 1 : 0) - (isChatPinned(a.runId, a.name) ? 1 : 0)) || ((b.st.last || 0) - (a.st.last || 0))).slice(0, n || 10);
 }
 /* 上次聊天：nd_chat_last（startChat/switchChat 写入）+ 该会话确有记录 */
 function shelfLastChat(){
@@ -414,9 +425,11 @@ function shelfTopHTML(){
   }
   if(recent.length){
     h += `<h2 class="sec shelf-sec">最近聊过</h2><div class="recentrow" data-xfade>`
-      + recent.map(x => `<button class="recent" onclick="startChat('${jq(x.runId)}','${jq(x.name)}')">`
+      + recent.map(x => { const pn = isChatPinned(x.runId, x.name);
+        return `<span class="recent-wrap${pn ? " pinned" : ""}"><button class="recent" onclick="startChat('${jq(x.runId)}','${jq(x.name)}')">`
         + chatAvatarHTML(x.runId, x.name, "lg")
-        + `<span class="recent-n">${esc(x.name)}</span><span class="recent-b">${esc(shelfNovelOf(x.runId))}</span></button>`).join("")
+        + `<span class="recent-n">${esc(x.name)}</span><span class="recent-b">${esc(shelfNovelOf(x.runId))}</span></button>`
+        + `<button class="recent-pin${pn ? " on" : ""}" onclick="toggleChatPin('${jq(x.runId)}','${jq(x.name)}')" title="${pn ? "取消置顶" : "置顶会话"}" aria-label="${pn ? "取消置顶" : "置顶会话"}">${icon("pin", 11)}</button></span>`; }).join("")
       + `</div>`;
   }
   if(!last && !recent.length){

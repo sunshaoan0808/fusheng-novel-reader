@@ -117,7 +117,12 @@ return `<h2 class="sec">事实 Facts</h2><div class="card">${edu}`
 + `<div class="alb-time" style="margin-top:8px">手动事实 · ${gf.manual.length} 条（你亲手添加）</div>`
 + (gf.manual.map(factRow).join("") || '<div class="empty">暂无</div>')
 + `<div class="btnrow" style="margin-top:8px"><button class="btn" onclick="factForm()">+ 添加事实</button></div>`
-+ `<div class="hint">事实总字数 ${fz}/${fmax}，超限请删除或缩短一条事实。</div></div>`;
++ `<div class="hint">事实总字数 ${fz}/${fmax}，超限请删除或缩短一条事实。</div>`
+/* 用量条（2026-11-25 借鉴 Tipsy 记忆 meter）：字数与置顶数各一条细进度条 */
++ (()=>{ const pinN = gf.auto.concat(gf.manual).filter(f=>f.pin).length, pmax = RP_MEM.FACT_PIN_MAX;
+  const bar = (label, v, mx)=>`<div class="memmeter"><span class="mm-label">${label}</span><span class="mm-bar"><i style="width:${mx>0?Math.min(100, Math.round(v*100/mx)):0}%"></i></span><span class="mm-num">${v}/${mx}</span></div>`;
+  return bar("事实字数", fz, fmax) + bar("置顶事实", pinN, pmax); })()
++ `</div>`;
 })();
 const P3stable = P3alb.filter(p=>!RP_MEM.isFactEntry(p));
 const apexHist = (arr, id, fmt)=>{

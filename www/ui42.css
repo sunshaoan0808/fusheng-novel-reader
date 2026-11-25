@@ -387,3 +387,15 @@ html[data-msgstyle="glass"] body.chatmode .msg.me .bubble{
 html[data-msgstyle="glass"] .msg.typing .bubble,
 html[data-msgstyle="glass"] .msg.typing .bubble.segd .seg-dlg{
   -webkit-backdrop-filter:none; backdrop-filter:none; }
+
+/* 会话置顶（2026-11-25）：最近聊过头像瓦的角标针 */
+.recent-wrap{ position:relative; flex:none; display:inline-flex; }
+.recent-pin{ position:absolute; top:-1px; right:1px; width:20px; height:20px; border-radius:50%;
+  border:1px solid var(--border,#3a352f); background:var(--card,#1c1917); color:var(--ink,#e8e2d5);
+  display:flex; align-items:center; justify-content:center; padding:0; cursor:pointer; opacity:.55; }
+.recent-pin.on{ opacity:1; color:var(--gold,#d4a24e); border-color:var(--gold,#d4a24e); }
+.recent-wrap.pinned .recent-n{ color:var(--gold,#d4a24e); }
+
+/* 心迹好感进度条（2026-11-25）：与 .bw-prog 同语言，略粗以便档案页扫读 */
+.favbar{ height:5px; border-radius:3px; background:var(--line); margin:2px 0 8px; overflow:hidden; }
+.favbar i{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold-deep),var(--gold)); transition:width .4s ease; }
