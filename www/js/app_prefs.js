@@ -445,6 +445,7 @@ const m = h.find(x=>x && String(x.mid||x.id||"") === String(d.mid||""));
 if(!m) return;
 const put = (stored)=>{
 m.cgImg = stored; if(d.cgId) m.cgId = d.cgId;
+try{ if(typeof markFreshImg === "function") markFreshImg(stored); }catch(e){}
 if(typeof window.capChatImgs === "function") window.capChatImgs(h);
 saveHist(key, h);
 if(d.cgId){
@@ -715,7 +716,7 @@ if(stl.card){ body = stl.rest; if(!sceneCard) sceneCard = stl.card; }
 const sceneHTML = (sceneCard && typeof sceneCardHTML === "function") ? sceneCardHTML(sceneCard, {idx: idx}) : "";
 /* CG 定格图（2026-11-24）：自动落图挂在消息上（m.cgImg），贴在场景卡之后 */
 const cgSafe = (m.role==="assistant" && typeof m.cgImg === "string" && /^(data:image\/|https:\/\/)/i.test(m.cgImg)) ? m.cgImg : "";
-const cgHTML = cgSafe ? `<div class="cgtpl"><img class="sct-img" src="${escH(cgSafe)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)"><div class="cgt-k">定格${m.cgId ? " · " + esc(m.cgId) : ""}</div></div>` : "";
+const cgHTML = cgSafe ? `<div class="cgtpl polaroid${(typeof isFreshImg === "function" && isFreshImg(cgSafe)) ? " developing" : ""}"><img class="sct-img" src="${escH(cgSafe)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)"><div class="cgt-k">定格${m.cgId ? " · " + esc(m.cgId) : ""}</div></div>` : "";
 /* v42: AI 消息按旁白/对白分排（见 js/app_ui.js chatSegHTML） */
 const segOn = chatSegEligible({role: m.role, content: body});
 const _mdh = hlRestore(md(hlSearchRaw(body)));

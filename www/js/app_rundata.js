@@ -372,6 +372,7 @@ const m2 = h2[idx];
 if(!m2){ ov.remove(); return; }
 if(!m2.scene) m2.scene = scene;
 m2.scene.img = stored;
+try{ if(typeof markFreshImg === "function") markFreshImg(stored); }catch(e){}
 window.capChatImgs(h2);
 saveHist(k, h2);
 ov.remove();

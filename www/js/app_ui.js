@@ -269,6 +269,19 @@ function parseSceneTail(content) {
   const rest = s.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").trim();
   return { rest: rest, card: card };
 }
+/* 拍立得显影（2026-11-25 借鉴 Tipsy PolaroidStudio）：刚生成/刚挂上的图
+ * 在内存里标记为「新鲜」，渲染时带 developing 显影动画；2.6 秒后标记
+ * 自动摘除（不触发重渲染，DOM 已定格在终态），历史图只有相纸框。 */
+window.__freshImgs = window.__freshImgs || new Set();
+function markFreshImg(url){
+  if(!url) return;
+  try{
+    window.__freshImgs.add(url);
+    setTimeout(()=>{ try{ window.__freshImgs.delete(url); }catch(e){} }, 2600);
+  }catch(e){}
+}
+function isFreshImg(url){ try{ return !!url && window.__freshImgs.has(url); }catch(e){ return false; } }
+
 function sceneCardHTML(card, opts) {
   if (!card) return "";
   const place = card.place || "";
@@ -287,7 +300,7 @@ function sceneCardHTML(card, opts) {
   /* 场景配图（2026-11-24）：有图贴图、无图给配图入口（idx 由 renderChat 传入） */
   const safeImg = (typeof card.img === "string" && /^(data:image\/|https:\/\/)/i.test(card.img)) ? card.img : "";
   if (safeImg)
-    h += `<img class="sct-img" src="${escH(safeImg)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)">`;
+    h += `<div class="polaroid sm${isFreshImg(safeImg) ? " developing" : ""}"><img class="sct-img" src="${escH(safeImg)}" alt="" onclick="event.stopPropagation();viewImgFull(this.src)"></div>`;
   if (opts && opts.idx != null && typeof sceneImgForm === "function")
     h += `<div class="sct-genrow"><button class="sct-gen" onclick="event.stopPropagation();sceneImgForm(${jq(opts.idx)})">${safeImg ? "重画一张" : "配图"}</button></div>`;
   return h + `</div>`;

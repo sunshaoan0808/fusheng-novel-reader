@@ -399,3 +399,28 @@ html[data-msgstyle="glass"] .msg.typing .bubble.segd .seg-dlg{
 /* 心迹好感进度条（2026-11-25）：与 .bw-prog 同语言，略粗以便档案页扫读 */
 .favbar{ height:5px; border-radius:3px; background:var(--line); margin:2px 0 8px; overflow:hidden; }
 .favbar i{ display:block; height:100%; border-radius:3px; background:linear-gradient(90deg,var(--gold-deep),var(--gold)); transition:width .4s ease; }
+
+/* 拍立得呈现（2026-11-25 借鉴 Tipsy PolaroidStudio）：生成图一律相纸框，
+ * 刚落图的一张走 1.8s 显影（雾→清），把等图变成仪式。相纸用暖米色，
+ * 与墨金同温；CG 卡的金字落进相纸下沿改深字，像手写在相纸上。 */
+.polaroid{ background:#f3ecdc; padding:7px 7px 9px; border-radius:4px;
+  box-shadow:0 4px 14px rgba(0,0,0,.35); transform:rotate(-.6deg); }
+.polaroid .sct-img{ border:none !important; border-radius:2px !important; margin-top:0 !important; }
+.cgtpl.polaroid{ border-color:rgba(0,0,0,.08); }
+.cgtpl.polaroid .cgt-k{ color:#6b5836; text-align:center; margin-top:7px; }
+.scenetpl .polaroid{ margin-top:8px; }
+.polaroid.sm{ padding:5px 5px 7px; transform:rotate(-.4deg); }
+.polaroid.developing{ position:relative; }
+.polaroid.developing .sct-img{ animation:polaroidDevelop 1.8s ease-out both; }
+.polaroid.developing::after{ content:"显影中"; position:absolute; left:50%; top:42%;
+  transform:translateX(-50%); font-size:calc(11px * var(--fs)); letter-spacing:.3em;
+  color:#6b5836; background:rgba(243,236,220,.75); padding:2px 10px 2px 13px; border-radius:999px;
+  animation:polaroidLabel 1.8s ease-out both; pointer-events:none; }
+@keyframes polaroidDevelop{
+  from{ filter:blur(16px) brightness(1.75) sepia(.55) saturate(.35); opacity:.3; }
+  60%{ filter:blur(5px) brightness(1.25) sepia(.25) saturate(.7); opacity:.85; }
+  to{ filter:blur(0) brightness(1) sepia(0) saturate(1); opacity:1; } }
+@keyframes polaroidLabel{ from{ opacity:1; } 70%{ opacity:1; } to{ opacity:0; } }
+@media (prefers-reduced-motion: reduce){
+  .polaroid.developing .sct-img, .polaroid.developing::after{ animation:none; }
+  .polaroid.developing::after{ display:none; } }
