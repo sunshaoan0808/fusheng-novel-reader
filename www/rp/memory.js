@@ -412,6 +412,36 @@ hit.perm = !!perm; hit.updatedAt = Date.now();
 save(runId, name, st);
 return true;
 }
+/* 置顶事实 (2026-11-25 借鉴 Tipsy pinned memory): profile3 的 fact 条目
+ * 此前只有事件能设永久、短期能置顶, 事实缺抓手。置顶事实在 renderBudgeted
+ * 里单列【置顶事实】段 (important 池, 紧随永久记忆), 不参与画像段排序竞争;
+ * 上限 FACT_PIN_MAX, 切换走 APEX 版本链追加 (与 editFact/setEventPerm 同制)。 */
+var FACT_PIN_MAX = 12;
+function factPinLimitMsg(){ return "置顶事实已达上限（" + FACT_PIN_MAX + " 条），先取消一条再置顶"; }
+function setFactPin(runId, name, id, pin){
+var st = get(runId, name);
+if(!st || !st.profile3) return false;
+var cur = _latestEntry(st, "profile3", id);
+if(!cur || cur.void || !cur.fact) return false;
+if(!!cur.pin === !!pin) return true;
+if(pin){
+var latest = _apexW() ? RP_APEX.latestOf(st.profile3) : st.profile3;
+var cnt = 0;
+latest.forEach(function(e){ if(e && e.fact && e.pin && !e.void) cnt++; });
+if(cnt >= FACT_PIN_MAX) return "limit";
+}
+var arr = st.profile3.slice();
+if(_apexW()){
+var payload = _carryPayload(cur);
+payload.pin = !!pin; payload.updatedAt = Date.now();
+arr.push(RP_APEX.appendVersion(arr, "p3", cur.id, payload, false));
+}else{
+for(var i = 0; i < arr.length; i++) if(arr[i] && arr[i].id == id){ arr[i].pin = !!pin; arr[i].updatedAt = Date.now(); break; }
+}
+st.profile3 = arr;
+save(runId, name, st);
+return true;
+}
 /* 事件剪枝: 永久条目优先保留, 其余按新→旧填满 EVENT3_MAX (apex 路径保留被选 id 的全部版本) */
 function pruneEvents(arr, max){
 arr = arr || [];
@@ -589,7 +619,7 @@ if(hm) hitLabels.push({pool: pool, label: hm[1], items: items || 0});
 }
 
 /* ---- important 池: 本聊摘要 > 铁律 > 永久记忆 > 置顶(新→旧) > 画像库 > 心境; 永不整段丢弃 ---- */
-var sumSec = "", ironSec = "", pinLines = [], moodSec = "", profLines = [], permLines = [];
+var sumSec = "", ironSec = "", pinLines = [], moodSec = "", profLines = [], permLines = [], factPinLines = [];
 var chatSum = getChatSummary(runId, name);
 var impLeft = bImp;
 if(budgetTokens > 0 && (chatSum || iron || pinned.length || mood || (lean && (P3.length || E3.length)))){
@@ -628,11 +658,20 @@ for(var pi = 0; pi < pinned.length; pi++){
 var pl = addImp("pin", fmtItem(pinned[pi]), false);
 if(pl) pinLines.push(pl);
 }
+/* 置顶事实: 紧随永久记忆收集, 画像段里跳过 (下方 profLines 循环按 pin 排除) */
+if(lean){
+var fpin = P3.filter(function(e){ return e && e.fact && e.pin; });
+for(var fi2 = 0; fi2 < fpin.length; fi2++){
+var fl2 = addImp("factpin", "- " + String(fpin[fi2].text || ""), false);
+if(fl2) factPinLines.push(fl2);
+}
+}
 /* LeanMem: profile 库 (稳定事实) 进 important 池; fromPin 的已在置顶区展示, 跳过 */
 if(lean){
 var p3arr = P3;
 for(var qi = 0; qi < p3arr.length; qi++){
 if(p3arr[qi].fromPin) continue;
+if(p3arr[qi].pin) continue; /* 置顶条目已在【置顶事实】段单列 */
 var ql = addImp("profile", "- " + String(p3arr[qi].text || ""), false);
 if(ql) profLines.push(ql);
 }
@@ -646,6 +685,8 @@ if(sumSec) pushSec("important", sumSec, 1); /* #11 本聊摘要最高优先级 *
 if(ironSec) pushSec("important", ironSec, 1);
 if(permLines.length) /* #10 永久记忆置顶 */
 pushSec("important", "【永久记忆】(手动挑选，不参与剪枝)\n" + permLines.join("\n"), permLines.length);
+if(factPinLines.length)
+pushSec("important", "【置顶事实】(用户手动置顶，永不遗忘)\n" + factPinLines.join("\n"), factPinLines.length);
 if(pinLines.length)
 pushSec("important", "【置顶记忆】(永不遗忘, 回答时优先参考)\n" + pinLines.join("\n"), pinLines.length);
 if(profLines.length){
@@ -1093,6 +1134,7 @@ MSG_PIN_MAX: MSG_PIN_MAX, msgPinLimitMsg: msgPinLimitMsg, pinEduText: pinEduText
 pinEduSeen: pinEduSeen, pinEduMark: pinEduMark, chatPinCount: chatPinCount,
 canPinChatMsg: canPinChatMsg,
 PERM_MAX: PERM_MAX, permLimitMsg: permLimitMsg, setEventPerm: setEventPerm,
+FACT_PIN_MAX: FACT_PIN_MAX, factPinLimitMsg: factPinLimitMsg, setFactPin: setFactPin,
 eventPermCount: eventPermCount, pruneEvents: pruneEvents,
 CHATSUM_MAX: CHATSUM_MAX, sumKey: sumKey, getChatSummary: getChatSummary,
 saveChatSummary: saveChatSummary,

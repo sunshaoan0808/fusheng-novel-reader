@@ -103,8 +103,8 @@ return parts.length ? `<div class="alb-sub">${esc(parts.join("；"))}</div>` : "
 const factsHtml = (()=>{
 if(!(st && st.migrated3)) return "";
 const gf = RP_MEM.getFacts(st), fz = RP_MEM.factsChars(st), fmax = RP_MEM.FACTS_MAX_CHARS;
-const factRow = (f)=>`<div class="alb-fact">· <span class="badge">${esc(f.cat||"其他")}</span> ${esc(f.text||"")}`
-+ `<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="factForm(${jq(f.id)})">编辑</button><button class="btn danger" onclick="factDel(${jq(f.id)})">删除</button></div></div>`;
+const factRow = (f)=>`<div class="alb-fact">· ${f.pin?`<span class="badge warn">${icon("pin",11)} 置顶</span> `:""}<span class="badge">${esc(f.cat||"其他")}</span> ${esc(f.text||"")}`
++ `<div class="btnrow" style="margin-top:6px"><button class="btn ghost" onclick="toggleFactPin(${jq(f.id)})">${f.pin?"取消置顶":"置顶"}</button><button class="btn ghost" onclick="factForm(${jq(f.id)})">编辑</button><button class="btn danger" onclick="factDel(${jq(f.id)})">删除</button></div></div>`;
 const edu = `<div class="facts-edu">角色会留意聊天中的细节——外貌、怪癖、关系等，自动记成事实并随时间更新；你也可以随时编辑或补充。`
 + `<details><summary>原文说明 (C.AI)</summary>`
 + `<div class="facts-en">"Your Characters pay attention. As you chat, they pick up on details about everyone mentioned in the conversation - appearance, quirks, relationships, and more. These facts update automatically over time."</div>`
@@ -144,6 +144,10 @@ view.innerHTML = `<button class="back" onclick="albumBack()">${icon("back")} 返
 ${muBar}
 ${memStatusHtml}
 <div class="alb-stats">${icon("brain",14)} ${short.length} 条记忆 · ${icon("pin",13)} ${pinned.length} 条置顶 · ${icon("thumb-up",13)} ${up} ${icon("thumb-down",13)} ${dn}</div>`
++ ((st && st.migrated3) ? (()=>{ const ms = RP_MEM.memStats(ALBUM.runId, ALBUM.name);
+  const pinF = RP_MEM.getFacts(st).auto.concat(RP_MEM.getFacts(st).manual).filter(f=>f.pin).length;
+  const permE = E3alb.filter(e=>e && e.perm).length;
+  return `<div class="alb-stats">用量概览：画像 ${ms.profileN} · 事件 ${ms.event3N} · 记录 ${ms.recordN} · 置顶事实 ${pinF}/${RP_MEM.FACT_PIN_MAX} · 永久事件 ${permE}/${RP_MEM.PERM_MAX}</div>`; })() : "")
 + (st && st.mood && st.mood.state
 ? `<div class="card alb-mood"><div class="alb-time">当前心境</div><div class="alb-fact">${esc(st.mood.state)}${st.mood.filter?" —— "+esc(st.mood.filter):""}</div></div>` : "")
 + ((st && st.migrated3)
@@ -216,6 +220,15 @@ const latest = apexW ? RP_APEX.latestOf(st.event3) : ((st && st.event3) || []);
 const hit = latest.filter(e=>e && String(e.id) === String(id))[0];
 const r = RP_MEM.setEventPerm(ALBUM.runId, ALBUM.name, id, !(hit && hit.perm));
 if(r === "limit") alert(RP_MEM.permLimitMsg());
+renderAlbum();
+};
+/* 置顶事实切换 (2026-11-25): 与永久事件同制, 达上限提示 */
+window.toggleFactPin = (id)=>{
+const st = RP_MEM.get(ALBUM.runId, ALBUM.name) || {};
+const gf = RP_MEM.getFacts(st);
+const hit = gf.auto.concat(gf.manual).filter(f=>f && String(f.id) === String(id))[0];
+const r = RP_MEM.setFactPin(ALBUM.runId, ALBUM.name, id, !(hit && hit.pin));
+if(r === "limit") alert(RP_MEM.factPinLimitMsg());
 renderAlbum();
 };
 /* Tier2 #19: 记忆快照失败 → 手动重试 (用摘要模型对最近消息跑一次分析) */
