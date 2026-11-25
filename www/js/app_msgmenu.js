@@ -186,6 +186,12 @@ if(!b || !b.dataset) return;
 switchChat(b.dataset.swrun + "|" + b.dataset.swname);
 });
 }
+/* 卡面「入戏」入口（2026-11-25 借鉴 Tipsy 卡面多入口）：先开入戏再进聊天，
+ * 横幅与选项在 showChat/renderChat 里按状态自动生效。 */
+window.chatWithScene = (runId, name)=>{
+try{ if(typeof RP_SCENEPLAY !== "undefined") RP_SCENEPLAY.setOn(runId, name, true); }catch(e){}
+chatWith(runId, name);
+};
 window.chatWith = (runId, name)=>{
 /* 蒸馏包的角色卡存在 distill_* 命名空间里，模块是按需加载的：
    冷启动后直接开聊蒸馏包时先把它们拉起来，否则 findCard 找不到卡。 */

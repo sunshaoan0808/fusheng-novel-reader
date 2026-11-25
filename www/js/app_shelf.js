@@ -241,10 +241,13 @@ const _s2 = RP_STATS.get(RUN.run_id, p.name);
 if(_s2.s > 0) _st2 = "开局" + _s2.s + "次 · 平均" + RP_STATS.avgTurns(_s2).toFixed(0) + "轮/局";
 }
 }catch(e){}
+let _sp = false;
+try{ _sp = typeof RP_SCENEPLAY !== "undefined" && RP_SCENEPLAY.isOn(RUN.run_id, p.name); }catch(e){}
 return charCardHTML({
 name:p.name, tag:RUN.novel, img:charImg(RUN.novel, p.name), sum:tagline(p)||"人物档案", stat:_st2,
 oncard:`openChar('${jq(p.name)}')`,
 ops:`<button class="go" onclick="event.stopPropagation();chatWith('${jq(RUN.run_id)}','${jq(p.name)}')">开聊</button>`
++`<button class="${_sp?"go":""}" onclick="event.stopPropagation();chatWithScene('${jq(RUN.run_id)}','${jq(p.name)}')">${_sp?"入戏中":"入戏"}</button>`
 +`<button onclick="event.stopPropagation();openChar('${jq(p.name)}')">详情</button>`
 });}).join("") + `</div>`;
 }

@@ -44,6 +44,7 @@ try{ sum = charSumFor(c.runId, c.name) || ""; }catch(e){}
 return charCardHTML({name: c.name, tag: c.novel || "", img: charImg(c.novel, c.name), sum: sum,
 oncard: `chatWith('${jq(c.runId)}','${jq(c.name)}')`,
 ops: `<button class="go" onclick="event.stopPropagation();chatWith('${jq(c.runId)}','${jq(c.name)}')">开聊</button>`
++ `<button onclick="event.stopPropagation();chatWithScene('${jq(c.runId)}','${jq(c.name)}')">入戏</button>`
 + `<button onclick="event.stopPropagation();albumRemoveCard('${jq(id)}','${jq(c.runId)}','${jq(c.name)}')">移除</button>`});
 }).join("") + `</div>`;
 }else{
