@@ -162,7 +162,8 @@ window.aiLogAnalyze = async (btn)=>{
     const effCfg = dm ? Object.assign({}, cfg, {model: dm}) : cfg;
     const text = await RP_AILOG.analyze((c, ms, t)=>RP_NET.complete(c, ms, t), effCfg, 10, selIds.length ? selIds : null);
     const lr = (typeof RP_AILOG !== "undefined" && RP_AILOG.getLastReview) ? RP_AILOG.getLastReview() : null;
-    const lrTxt = (lr && lr.closed) ? (" 台账自动闭环 " + lr.closed + " 条（复查确认已消失）" + (lr.still ? "，" + lr.still + " 条仍存在" : "") + "。") : "";
+    const lrTxt = (lr && lr.missing) ? " 注意：本次审核未给出结构化复查结论，台账没有自动推进，请到台账里手动核对。"
+      : ((lr && lr.closed) ? (" 台账自动闭环 " + lr.closed + " 条（复查确认已消失）" + (lr.still ? "，" + lr.still + " 条仍存在" : "") + "。") : "");
     if(box) box.innerHTML = `<div class="kv" style="margin-top:8px"><b>诊断完成</b>（已存入历次分析）${esc(lrTxt)}</div><pre class="ailog-pre">${esc(text)}</pre>`;
   }catch(e){
     if(box) box.innerHTML = `<div class="kv" style="margin-top:8px">分析失败：${esc(e.message || String(e))}</div>`;

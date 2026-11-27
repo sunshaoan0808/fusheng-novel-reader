@@ -243,7 +243,11 @@ var issueSeq = 0;
  * 再列一遍，旧 addIssues 盲目追加导致同一标题翻倍（10 条变 20 条，
  * 7 个完全同名）。同名只留一条：刷新证据/来源，已验证的复发则重开。 */
 function normIssueTitle(t){
-  return String(t || "").replace(/\s+/g, " ").trim();
+  /* 去重归一（2026-11-27 第三轮强化）：原版只归一空白，于是「记录1/2/3
+   * 英文泄漏」与「英文泄漏」这种同题异名永远合并不了。现：小写、剥
+   * 标点符号与空白、再剥开头的记录号前缀（记录号不是标题本体）。 */
+  var k = String(t || "").toLowerCase().replace(/[\s\p{P}\p{S}]+/gu, "").replace(/^记录\d+/, "");
+  return k || String(t || "").replace(/\s+/g, " ").trim();
 }
 function addIssues(items, fromTs, srcIds){
   if(!items || !items.length) return 0;
@@ -310,10 +314,15 @@ function openIssues(){
  * 为 verified 并记 lastVerdict，判 still 的只记结论不动状态。 */
 var lastReview = null;
 function parseVerdicts(text){
-  var m = String(text || "").match(/```verdicts\s*([\s\S]*?)```/);
-  if(!m) return [];
-  try{ var arr = JSON.parse(m[1]); return Array.isArray(arr) ? arr : []; }
-  catch(e){ return []; }
+  text = String(text || "");
+  var m = text.match(/```verdicts\s*([\s\S]*?)```/);
+  if(m){ try{ var arr = JSON.parse(m[1]); if(Array.isArray(arr)) return arr; }catch(e){} }
+  var open = text.indexOf("```verdicts"), close = text.lastIndexOf("```");
+  if(open >= 0 && close > open){
+    try{ var arr2 = JSON.parse(text.slice(open + 11, close)); return Array.isArray(arr2) ? arr2 : []; }
+    catch(e){}
+  }
+  return [];
 }
 function applyVerdicts(verdicts, openList){
   var closed = 0, still = 0;
@@ -341,12 +350,48 @@ function applyVerdicts(verdicts, openList){
   lastReview = { closed: closed, still: still };
   return lastReview;
 }
+/* 逐对象打捞（2026-11-27 第三轮模拟实锤）：审核模型会把 ``` 围栏漏进
+ * evidence 字符串里，非贪婪匹配在内嵌围栏处提前收口 → 整块 JSON 解析
+ * 失败、十来条问题全批静默丢失。打捞器按 JSON 字符串规则做括号配平，
+ * 把能独立解析的 {...} 对象逐个救回来（坏的跳过），不再整批归零。 */
+function salvageIssues(seg){
+  var out = [], depth = 0, inStr = false, esc = false, start = -1;
+  for(var i = 0; i < seg.length; i++){
+    var ch = seg[i];
+    if(inStr){
+      if(esc) esc = false;
+      else if(ch === "\\") esc = true;
+      else if(ch === "\"") inStr = false;
+      continue;
+    }
+    if(ch === "\""){ inStr = true; continue; }
+    if(ch === "{"){ if(depth === 0) start = i; depth++; }
+    else if(ch === "}"){
+      depth--;
+      if(depth === 0 && start >= 0){
+        try{ var o = JSON.parse(seg.slice(start, i + 1));
+          if(o && typeof o.title === "string" && o.title) out.push(o); }catch(e){}
+        start = -1;
+      }
+      if(depth < 0) depth = 0;
+    }
+  }
+  return out;
+}
 function parseIssues(text){
+  text = String(text || "");
   var re = /```json\s*([\s\S]*?)```/g, m, blocks = [];
-  while((m = re.exec(String(text || ""))) !== null) blocks.push(m[1]);
+  while((m = re.exec(text)) !== null) blocks.push(m[1]);
   for(var i = blocks.length - 1; i >= 0; i--){
     try{ var arr = JSON.parse(blocks[i]); if(Array.isArray(arr)) return arr; }
     catch(e){}
+  }
+  /* 贪婪跨度：第一个 ```json 到最后一个 ``` ——内嵌围栏只是字符串内容时可整段解析 */
+  var open = text.indexOf("```json"), close = text.lastIndexOf("```");
+  if(open >= 0 && close > open){
+    var span = text.slice(open + 7, close);
+    try{ var arr2 = JSON.parse(span); if(Array.isArray(arr2)) return arr2; }catch(e){}
+    return salvageIssues(span);
   }
   return [];
 }
@@ -381,11 +426,16 @@ function analyze(completeFn, cfg, n, ids){
   var open = openIssues();
   if(open.length){
     msgs[1].content += "\n\n===== 未闭环问题台账（请逐条复查在本次记录中是否仍存在）=====\n"
-      + open.map(function(x, i){ return (i + 1) + ". [" + x.status + "] " + x.title + (x.evidence ? "（证据：" + x.evidence + "）" : ""); }).join("\n");
+      + open.map(function(x, i){ return (i + 1) + ". [" + x.status + "] " + x.title + (x.evidence ? "（证据：" + x.evidence + "）" : ""); }).join("\n")
+      + "\n\n【复查输出要求（必做）】复查完上面每一条后，在答复最后另起一个 ```verdicts 代码块，输出 JSON 数组：[{\"n\":1,\"verdict\":\"gone\"}]——n 是台账序号（共 " + open.length + " 条，一条都不能漏），verdict 只能填 gone（已消失）或 still（仍存在）。不要把 verdicts 混进问题清单的 json 块里。";
   }
   return Promise.resolve(completeFn(cfg, msgs, 0.3)).then(function(text){
     saveAnalysis(text, scope);
-    applyVerdicts(parseVerdicts(text), open);
+    var verdicts = parseVerdicts(text);
+    applyVerdicts(verdicts, open);
+    /* 第三轮模拟实锤：审核模型可能整段无视复查要求——不能静默，
+     * 标 missing 让界面明示「台账未自动推进」，提醒手动处理。 */
+    if(open.length && !verdicts.length) lastReview = { closed: 0, still: 0, missing: true };
     addIssues(parseIssues(text), Date.now(), list.map(function(e){ return e.id; }));
     return text;
   });
