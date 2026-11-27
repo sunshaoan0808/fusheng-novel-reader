@@ -2096,3 +2096,5 @@ body.chatmode.immersive .spbanner{display:none!important}
 
 /* AI 诊断日志（2026-11-26） */
 .ailog-pre{white-space:pre-wrap;word-break:break-word;font-size:calc(12px * var(--fs));line-height:1.65;margin:0;font-family:inherit}
+.ailog-ck{display:inline-flex;align-items:center;gap:5px;margin-top:7px;font-size:calc(12px * var(--fs));opacity:.85;cursor:pointer}
+.ailog-ck input{accent-color:var(--gold,#d4a24e);width:15px;height:15px}

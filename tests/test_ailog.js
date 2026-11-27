@@ -44,9 +44,10 @@ hook({ ts: 4000, ms: 1, model: "m1", messages: [], reply: "不该记" });
 t("关记录时不落盘", A.summaries().length === 3);
 A.setEnabled(true);
 
-/* 条数淘汰：灌到 45 条，只留 40，最旧的被淘 */
+/* 条数淘汰：无 tag 的都算聊天类，灌到 45 条只留聊天环上限 30，最旧的被淘
+ * （2026-11-27 分环后口径；分环细则在 test_ailog_flywheel 验） */
 for(let i = 0; i < 45; i++) hook({ ts: 5000 + i, ms: 1, model: "m", messages: [{role: "user", content: "x" + i}], reply: "r" });
-t("条数上限 40", A.summaries().length === 40);
+t("聊天环上限 30", A.summaries().length === 30);
 t("最旧的已被淘汰", !A.get(e1.id));
 
 /* 字数淘汰：单条巨型记录进来后总量不超上限 */
@@ -70,7 +71,7 @@ A.analyze((cfg, msgs) => { captured = msgs; return Promise.resolve("诊断结论
   /* 传输层挂钩静态断言 */
   const chat = rd("/rp/chat.js");
   t("传输层三包装齐全", chat.includes("completeInner") && chat.includes("streamInner") && chat.includes("visionCompleteInner") && chat.includes("__aiEmit"));
-  t("reasoning 双路捕获", chat.includes("reasoning_content") && chat.includes("__lastReason += rk"));
+  t("reasoning 双路捕获（局部 sink 防串话）", chat.includes("reasoning_content") && chat.includes("sink.reasoning = (sink.reasoning || \"\") + rk") && chat.includes("thinking: sink.reasoning"));
   const appjs = rd("/app.js");
   t("设置页有诊断入口", appjs.includes("showAiLog()") && appjs.includes("AI 诊断"));
   const idx = rd("/index.html");

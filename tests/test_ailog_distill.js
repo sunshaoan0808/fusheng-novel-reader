@@ -18,7 +18,7 @@ async function main(){
     window: { __aiLogHook: (r)=>records.push(r) },
     fetch: async () => failMode
       ? { ok: false, status: 401, json: async()=>({}) }
-      : { ok: true, status: 200, json: async()=>({ choices: [{ message: { content: "蒸馏答复", reasoning_content: "蒸馏思考" } }] }) } };
+      : { ok: true, status: 200, json: async()=>({ choices: [{ message: { content: "蒸馏答复", reasoning_content: "蒸馏思考" }, finish_reason: "stop" }] }) } };
   vm.createContext(ctx);
   vm.runInContext(rd("/rp/distill_llm.js"), ctx);
   t("DISTILL_LLM 已加载", !!ctx.DISTILL_LLM);
@@ -27,6 +27,7 @@ async function main(){
   t("成功记录落盘（tag/思考/答复/模型）", records.length === 1 && records[0].tag === "distill"
     && records[0].thinking === "蒸馏思考" && records[0].reply === "蒸馏答复" && records[0].model === "dm1"
     && records[0].messages[0].content === "正文一章");
+  t("finish_reason 入账", records[0].finish === "stop");
   failMode = true;
   let threw = false;
   try{ await ctx.DISTILL_LLM.chat([{role: "user", content: "x"}]); }catch(e){ threw = true; }

@@ -9,7 +9,18 @@
 "use strict";
 var RP_AILOG = (function(){
 var KEY = "nd_ailog_v1", AKEY = "nd_ailog_analysis_v1", ONKEY = "nd_ailog_on";
-var MAX_N = 40, MAX_CHARS = 1200000;
+/* 分环配额（2026-11-27 审计修复）：聊天类与蒸馏类各占各的环——早期共用
+ * 一个环时，一轮蒸馏几十次调用会把聊天记录全部冲走，诊断时证据已没。 */
+var MAX_CHAT = 30, MAX_DISTILL = 15, MAX_N = MAX_CHAT + MAX_DISTILL, MAX_CHARS = 1200000;
+/* 版本戳：每条记录盖上构建版本+commit，修完打包后新旧记录可分辨。
+ * build-info.json 在 www 根，懒抓一次；抓不到（开发环境）就留空。 */
+var BV = "";
+try{
+  if(typeof fetch === "function")
+    fetch("build-info.json").then(function(r){ return r.json(); })
+      .then(function(j){ if(j) BV = (j.vname || "") + "/" + (j.commit || ""); })
+      .catch(function(){});
+}catch(e){}
 
 function enabled(){
   try{ return localStorage.getItem(ONKEY) !== "0"; }catch(e){ return true; }
@@ -54,6 +65,7 @@ function ingest(rec){
       ts: rec.ts || Date.now(),
       ms: rec.ms || 0,
       model: rec.model || "",
+      bv: BV || "",
       stream: !!rec.stream,
       tag: rec.tag || "",
       finish: rec.finish || "",
@@ -66,9 +78,20 @@ function ingest(rec){
     };
     var list = load();
     list.push(e);
+    /* 先按类淘汰各自超额的（最旧优先），再按总字数淘汰最旧 */
+    var evictClass = function(cls, max){
+      var n = 0, i;
+      for(i = 0; i < list.length; i++) if((list[i].tag === "distill" ? "d" : "c") === cls) n++;
+      for(i = 0; i < list.length && n > max;){
+        if((list[i].tag === "distill" ? "d" : "c") === cls){ list.splice(i, 1); n--; }
+        else i++;
+      }
+    };
+    evictClass("c", MAX_CHAT);
+    evictClass("d", MAX_DISTILL);
     var total = 0;
     list.forEach(function(x){ total += entryChars(x); });
-    while(list.length > 1 && (list.length > MAX_N || total > MAX_CHARS)){
+    while(list.length > 1 && total > MAX_CHARS){
       total -= entryChars(list[0]);
       list.shift();
     }
@@ -80,6 +103,7 @@ function summaries(){
     var pc = 0;
     (e.messages || []).forEach(function(m){ pc += String(m.content || "").length; });
     return { id: e.id, ts: e.ts, ms: e.ms, model: e.model, stream: e.stream, tag: e.tag,
+      finish: e.finish || "", bv: e.bv || "",
       error: e.error, promptChars: pc, replyChars: (e.reply || "").length,
       thinkChars: (e.thinking || "").length, msgs: (e.messages || []).length };
   });
@@ -91,13 +115,15 @@ function get(id){
 }
 function clear(){ try{ localStorage.removeItem(KEY); }catch(e){} }
 function stats(){
-  var list = load(), total = 0;
-  list.forEach(function(x){ total += entryChars(x); });
-  return { n: list.length, chars: total, maxN: MAX_N, maxChars: MAX_CHARS, enabled: enabled() };
+  var list = load(), total = 0, cn = 0, dn = 0;
+  list.forEach(function(x){ total += entryChars(x); if(x.tag === "distill") dn++; else cn++; });
+  return { n: list.length, chars: total, chatN: cn, distillN: dn,
+    maxN: MAX_N, maxChat: MAX_CHAT, maxDistill: MAX_DISTILL,
+    maxChars: MAX_CHARS, enabled: enabled(), bv: BV };
 }
 function exportObj(){
   return { app: "fusheng", kind: "ai-diag-log", exportedAt: new Date().toISOString(),
-    records: load(), analyses: loadAnalyses() };
+    build: BV || "", records: load(), analyses: loadAnalyses() };
 }
 /* ---------- AI 分析 ---------- */
 function loadAnalyses(){
@@ -126,7 +152,8 @@ function buildDiagMessages(records){
       return "[" + (m.role || "?") + "] " + String(m.content || "");
     }).join("\n");
     parts.push("===== 记录 " + (i + 1) + "（" + new Date(e.ts).toLocaleString() + " · 模型 " + (e.model || "?")
-      + (e.tag ? " · 场景 " + e.tag : "") + (e.error ? " · 出错：" + e.error : "") + "）=====\n"
+      + (e.tag ? " · 场景 " + e.tag : "") + (e.finish ? " · 结束原因 " + e.finish : "")
+      + (e.bv ? " · 版本 " + e.bv : "") + (e.error ? " · 出错：" + e.error : "") + "）=====\n"
       + "--- 提示词 ---\n" + msgs
       + "\n--- 思考 ---\n" + (e.thinking || "（无）")
       + "\n--- 答复 ---\n" + (e.reply || "（空）"));
@@ -146,21 +173,34 @@ function setDiagModel(m){
     else localStorage.removeItem(MKEY);
   }catch(e){}
 }
-function analyze(completeFn, cfg, n){
-  var list = load().slice(-(n || 10));
+/* 首尾双截（2026-11-27 审计修复）：早期只留头部，把提示词末尾的压尾铁律
+ * 和答复末尾的协议段全切了——审核最该看的两处恰恰在尾巴上。 */
+function truncHT(s, head, tail){
+  s = String(s || "");
+  if(s.length <= head + tail) return s;
+  return s.slice(0, head) + "\n…（中段省略 " + (s.length - head - tail) + " 字）…\n" + s.slice(s.length - tail);
+}
+function analyze(completeFn, cfg, n, ids){
+  var all = load();
+  var list, scope;
+  if(ids && ids.length){
+    list = all.filter(function(e){ return ids.indexOf(e.id) >= 0; });
+    scope = "勾选 " + list.length + " 条";
+  }else{
+    list = all.slice(-(n || 10));
+    scope = "最近 " + list.length + " 条";
+  }
   if(!list.length) return Promise.reject(new Error("还没有记录，先去聊几句再来分析"));
-  /* 诊断材料太长会把分析调用本身撑爆：单条提示词截到 6000 字、答复 3000、思考 2000 */
   var trimmed = list.map(function(e){
-    return { ts: e.ts, model: e.model, tag: e.tag, error: e.error,
+    return { ts: e.ts, model: e.model, tag: e.tag, error: e.error, finish: e.finish || "", bv: e.bv || "",
       messages: (e.messages || []).map(function(m){
-        var c = String(m.content || "");
-        return { role: m.role, content: c.length > 6000 ? c.slice(0, 6000) + "…（已截断）" : c };
+        return { role: m.role, content: truncHT(m.content, 4000, 2000) };
       }),
-      thinking: (e.thinking || "").slice(0, 2000),
-      reply: (e.reply || "").slice(0, 3000) };
+      thinking: truncHT(e.thinking, 1500, 500),
+      reply: truncHT(e.reply, 2000, 1000) };
   });
   return Promise.resolve(completeFn(cfg, buildDiagMessages(trimmed), 0.3)).then(function(text){
-    saveAnalysis(text, "最近 " + list.length + " 条");
+    saveAnalysis(text, scope);
     return text;
   });
 }
