@@ -239,28 +239,49 @@ function saveIssues(list){
   try{ localStorage.setItem(IKEY, JSON.stringify(list.slice(-60))); }catch(e){}
 }
 var issueSeq = 0;
+/* 台账去重（2026-11-27 第二轮模拟实锤）：复查分析会把未闭环问题原样
+ * 再列一遍，旧 addIssues 盲目追加导致同一标题翻倍（10 条变 20 条，
+ * 7 个完全同名）。同名只留一条：刷新证据/来源，已验证的复发则重开。 */
+function normIssueTitle(t){
+  return String(t || "").replace(/\s+/g, " ").trim();
+}
 function addIssues(items, fromTs, srcIds){
   if(!items || !items.length) return 0;
   var list = loadIssues(), added = 0;
   items.forEach(function(it){
     if(!it || !it.title) return;
+    var title = String(it.title).slice(0, 120);
+    var key = normIssueTitle(title), ev = String(it.evidence || "").slice(0, 300);
+    var sev = (it.severity === "high" || it.severity === "low") ? it.severity : "mid";
+    var src = (srcIds || []).slice(0, 20);
+    var old = null;
+    list.forEach(function(x){ if(!old && normIssueTitle(x.title) === key) old = x; });
+    if(old){
+      if(ev) old.evidence = ev;
+      src.forEach(function(id){ if(old.srcIds.indexOf(id) < 0 && old.srcIds.length < 20) old.srcIds.push(id); });
+      if(old.status === "verified") old.status = "open";
+      return;
+    }
     list.push({ id: "I" + Date.now().toString(36) + (issueSeq++), ts: fromTs || Date.now(),
-      title: String(it.title).slice(0, 120), evidence: String(it.evidence || "").slice(0, 300),
-      severity: (it.severity === "high" || it.severity === "low") ? it.severity : "mid",
-      status: "open", srcIds: (srcIds || []).slice(0, 20) });
+      title: title, evidence: ev, severity: sev, status: "open", srcIds: src });
     added++;
   });
   saveIssues(list);
   return added;
 }
-/* 导入诊断包时合并台账：保留对方的状态与来源，不重置成待修 */
+/* 导入诊断包时合并台账：保留对方的状态与来源，不重置成待修；
+ * 同名已存在时跳过（同一包导两遍不再翻倍，与 addIssues 同口径）。 */
 function importIssues(items){
   if(!items || !items.length) return 0;
   var list = loadIssues(), added = 0;
   items.forEach(function(it){
     if(!it || !it.title) return;
+    var title = String(it.title).slice(0, 120);
+    var dup = false;
+    list.forEach(function(x){ if(normIssueTitle(x.title) === normIssueTitle(title)) dup = true; });
+    if(dup) return;
     list.push({ id: "I" + Date.now().toString(36) + (issueSeq++), ts: it.ts || Date.now(),
-      title: String(it.title).slice(0, 120), evidence: String(it.evidence || "").slice(0, 300),
+      title: title, evidence: String(it.evidence || "").slice(0, 300),
       severity: (it.severity === "high" || it.severity === "low") ? it.severity : "mid",
       status: (it.status === "fixed" || it.status === "verified") ? it.status : "open",
       srcIds: Array.isArray(it.srcIds) ? it.srcIds.slice(0, 20) : [] });
@@ -280,11 +301,18 @@ function delIssue(id){
 function openIssues(){
   return loadIssues().filter(function(x){ return x.status !== "verified"; });
 }
+/* 取最后一个能解析成数组的 ```json 块：诊断正文里可能漏进模型思考，
+ * 思考里会复述提示词（“正文之后，另用一个 ```json 代码块……”）甚至
+ * 草稿 JSON——旧写法取第一个块，撞上就抓错。按提示词约定，真正的问题
+ * 清单是正文之后的最后一个块；从后往前试，第一个解析成功的为准。 */
 function parseIssues(text){
-  var m = String(text || "").match(/```json\s*([\s\S]*?)```/);
-  if(!m) return [];
-  try{ var arr = JSON.parse(m[1]); return Array.isArray(arr) ? arr : []; }
-  catch(e){ return []; }
+  var re = /```json\s*([\s\S]*?)```/g, m, blocks = [];
+  while((m = re.exec(String(text || ""))) !== null) blocks.push(m[1]);
+  for(var i = blocks.length - 1; i >= 0; i--){
+    try{ var arr = JSON.parse(blocks[i]); if(Array.isArray(arr)) return arr; }
+    catch(e){}
+  }
+  return [];
 }
 
 /* 首尾双截（2026-11-27 审计修复）：早期只留头部，把提示词末尾的压尾铁律
