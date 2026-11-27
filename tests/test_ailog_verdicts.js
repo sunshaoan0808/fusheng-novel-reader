@@ -45,6 +45,11 @@ async function main(){
   await A.analyze(() => Promise.resolve("```verdicts\n[{坏的]\n```"), {}, 10);
   t("坏 verdicts JSON 安全忽略", A.loadIssues()[1].status === "open");
 
+  /* verdicts 写进 json 围栏也要认（第四轮实锤：模型跟问题清单学样） */
+  const vj = A.parseVerdicts("正文\n```json\n[{\"title\":\"问题清单\",\"evidence\":\"e\",\"severity\":\"high\"}]\n```\n### verdicts\n```json\n[{\"n\":1,\"verdict\":\"gone\"},{\"n\":2,\"verdict\":\"still\"}]\n```");
+  t("json 围栏里的 verdicts 被认出", vj.length === 2 && vj[0].verdict === "gone");
+  t("问题清单不被误认成 verdicts", A.parseVerdicts("```json\n[{\"title\":\"x\",\"evidence\":\"e\",\"severity\":\"high\"}]\n```").length === 0);
+
   /* UI 接线（静态） */
   const app = rd("/js/app_ailog.js");
   t("台账卡显示复查结论", app.includes("lastVerdict") && app.includes("上次复查"));

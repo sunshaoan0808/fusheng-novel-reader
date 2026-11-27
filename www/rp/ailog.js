@@ -319,8 +319,21 @@ function parseVerdicts(text){
   if(m){ try{ var arr = JSON.parse(m[1]); if(Array.isArray(arr)) return arr; }catch(e){} }
   var open = text.indexOf("```verdicts"), close = text.lastIndexOf("```");
   if(open >= 0 && close > open){
-    try{ var arr2 = JSON.parse(text.slice(open + 11, close)); return Array.isArray(arr2) ? arr2 : []; }
+    try{ var arr2 = JSON.parse(text.slice(open + 11, close)); if(Array.isArray(arr2)) return arr2; }
     catch(e){}
+  }
+  /* 容错（2026-11-27 第四轮实锤）：模型把 verdicts 写进 ```json 块
+   * （跟着问题清单的样例学），内容分毫不差却因围栏名不同被整段丢弃。
+   * 兜底扫所有 json 块，形状对得上（每项都有数字 n 与 gone/still）
+   * 就认——问题清单是 title/evidence 形状，不会误认。 */
+  var re = /```json\s*([\s\S]*?)```/g, mm;
+  while((mm = re.exec(text)) !== null){
+    try{
+      var a = JSON.parse(mm[1]);
+      if(Array.isArray(a) && a.length && a.every(function(v){
+        return v && typeof v.n === "number" && (v.verdict === "gone" || v.verdict === "still");
+      })) return a;
+    }catch(e){}
   }
   return [];
 }
@@ -427,7 +440,7 @@ function analyze(completeFn, cfg, n, ids){
   if(open.length){
     msgs[1].content += "\n\n===== 未闭环问题台账（请逐条复查在本次记录中是否仍存在）=====\n"
       + open.map(function(x, i){ return (i + 1) + ". [" + x.status + "] " + x.title + (x.evidence ? "（证据：" + x.evidence + "）" : ""); }).join("\n")
-      + "\n\n【复查输出要求（必做）】复查完上面每一条后，在答复最后另起一个 ```verdicts 代码块，输出 JSON 数组：[{\"n\":1,\"verdict\":\"gone\"}]——n 是台账序号（共 " + open.length + " 条，一条都不能漏），verdict 只能填 gone（已消失）或 still（仍存在）。不要把 verdicts 混进问题清单的 json 块里。";
+      + "\n\n【复查输出要求（必做）】复查完上面每一条后，在答复最后另起一个代码块，输出 JSON 数组：[{\"n\":1,\"verdict\":\"gone\"}]——n 是台账序号（共 " + open.length + " 条，一条都不能漏），verdict 只能填 gone（已消失）或 still（仍存在）。代码块的语言标记必须写 verdicts（不要写成 json），也不要把 verdicts 混进问题清单的 json 块里。";
   }
   return Promise.resolve(completeFn(cfg, msgs, 0.3)).then(function(text){
     saveAnalysis(text, scope);
