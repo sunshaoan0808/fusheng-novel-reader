@@ -127,6 +127,56 @@ function exportObj(){
   return { app: "fusheng", kind: "ai-diag-log", exportedAt: new Date().toISOString(),
     build: BV || "", records: load(), analyses: loadAnalyses(), issues: loadIssues() };
 }
+
+/* 导入诊断包（2026-11-27 补全）：管线 trace 转出的包、或另一台设备/旧包
+ * 导出的包，都能并进本机飞轮——记录走分环淘汰、台账保留状态、分析留 5。 */
+function importObj(obj){
+  if(!obj || obj.kind !== "ai-diag-log") throw new Error("不是浮生诊断包");
+  var rn = 0, an = 0;
+  (obj.records || []).forEach(function(r){ ingest(r, true); rn++; });
+  var inN = importIssues(obj.issues || []);
+  if(obj.analyses && obj.analyses.length){
+    var merged = loadAnalyses().concat(obj.analyses).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); }).slice(-5);
+    try{ localStorage.setItem(AKEY, JSON.stringify(merged)); }catch(e){}
+    an = obj.analyses.length;
+  }
+  return { records: rn, issues: inN, analyses: an };
+}
+
+/* 待诊断提醒：上次分析之后新增了多少条、台账还有多少未闭环/高危 */
+function diagHint(){
+  var ans = loadAnalyses();
+  var lastTs = ans.length ? Math.max.apply(null, ans.map(function(a){ return a.ts || 0; })) : 0;
+  var unseen = load().filter(function(e){ return (e.ts || 0) > lastTs; }).length;
+  var open = openIssues();
+  return { unseen: unseen, open: open.length,
+    openHigh: open.filter(function(x){ return x.severity === "high" && x.status === "open"; }).length };
+}
+
+/* 导入诊断包（2026-11-27 补全）：管线 trace 转出的包、或另一台设备/旧包
+ * 导出的包，都能并进本机飞轮——记录走分环淘汰、台账保留状态、分析留 5。 */
+function importObj(obj){
+  if(!obj || obj.kind !== "ai-diag-log") throw new Error("不是浮生诊断包");
+  var rn = 0, an = 0;
+  (obj.records || []).forEach(function(r){ ingest(r, true); rn++; });
+  var inN = importIssues(obj.issues || []);
+  if(obj.analyses && obj.analyses.length){
+    var merged = loadAnalyses().concat(obj.analyses).sort(function(a, b){ return (a.ts || 0) - (b.ts || 0); }).slice(-5);
+    try{ localStorage.setItem(AKEY, JSON.stringify(merged)); }catch(e){}
+    an = obj.analyses.length;
+  }
+  return { records: rn, issues: inN, analyses: an };
+}
+
+/* 待诊断提醒：上次分析之后新增了多少条、台账还有多少未闭环/高危 */
+function diagHint(){
+  var ans = loadAnalyses();
+  var lastTs = ans.length ? Math.max.apply(null, ans.map(function(a){ return a.ts || 0; })) : 0;
+  var unseen = load().filter(function(e){ return (e.ts || 0) > lastTs; }).length;
+  var open = openIssues();
+  return { unseen: unseen, open: open.length,
+    openHigh: open.filter(function(x){ return x.severity === "high" && x.status === "open"; }).length };
+}
 /* ---------- AI 分析 ---------- */
 function loadAnalyses(){
   try{ var d = JSON.parse(localStorage.getItem(AKEY) || "[]"); return Array.isArray(d) ? d : []; }
@@ -189,7 +239,7 @@ function saveIssues(list){
   try{ localStorage.setItem(IKEY, JSON.stringify(list.slice(-60))); }catch(e){}
 }
 var issueSeq = 0;
-function addIssues(items, fromTs){
+function addIssues(items, fromTs, srcIds){
   if(!items || !items.length) return 0;
   var list = loadIssues(), added = 0;
   items.forEach(function(it){
@@ -197,7 +247,23 @@ function addIssues(items, fromTs){
     list.push({ id: "I" + Date.now().toString(36) + (issueSeq++), ts: fromTs || Date.now(),
       title: String(it.title).slice(0, 120), evidence: String(it.evidence || "").slice(0, 300),
       severity: (it.severity === "high" || it.severity === "low") ? it.severity : "mid",
-      status: "open" });
+      status: "open", srcIds: (srcIds || []).slice(0, 20) });
+    added++;
+  });
+  saveIssues(list);
+  return added;
+}
+/* 导入诊断包时合并台账：保留对方的状态与来源，不重置成待修 */
+function importIssues(items){
+  if(!items || !items.length) return 0;
+  var list = loadIssues(), added = 0;
+  items.forEach(function(it){
+    if(!it || !it.title) return;
+    list.push({ id: "I" + Date.now().toString(36) + (issueSeq++), ts: it.ts || Date.now(),
+      title: String(it.title).slice(0, 120), evidence: String(it.evidence || "").slice(0, 300),
+      severity: (it.severity === "high" || it.severity === "low") ? it.severity : "mid",
+      status: (it.status === "fixed" || it.status === "verified") ? it.status : "open",
+      srcIds: Array.isArray(it.srcIds) ? it.srcIds.slice(0, 20) : [] });
     added++;
   });
   saveIssues(list);
@@ -255,7 +321,7 @@ function analyze(completeFn, cfg, n, ids){
   }
   return Promise.resolve(completeFn(cfg, msgs, 0.3)).then(function(text){
     saveAnalysis(text, scope);
-    addIssues(parseIssues(text), Date.now());
+    addIssues(parseIssues(text), Date.now(), list.map(function(e){ return e.id; }));
     return text;
   });
 }
@@ -268,5 +334,6 @@ return { enabled: enabled, setEnabled: setEnabled, summaries: summaries, get: ge
   getDiagModel: getDiagModel, setDiagModel: setDiagModel,
   loadIssues: loadIssues, setIssueStatus: setIssueStatus, delIssue: delIssue,
   openIssues: openIssues, addIssues: addIssues, parseIssues: parseIssues,
+  importObj: importObj, diagHint: diagHint,
   MAX_N: MAX_N, MAX_CHARS: MAX_CHARS };
 })();

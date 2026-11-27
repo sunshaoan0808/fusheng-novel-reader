@@ -30,6 +30,29 @@ window.aiLogIssueDel = (id)=>{
   RP_AILOG.delIssue(id);
   showAiLog();
 };
+/* 台账条目跳来源记录（证据链接） */
+window.aiLogIssueSrc = (id)=>{
+  const it = RP_AILOG.loadIssues().find(x=>x.id === id);
+  const src = it && (it.srcIds || []).find(sid=>RP_AILOG.get(sid));
+  if(src) showAiLogDetail(src);
+  else rpToast("来源记录已被环形淘汰，清掉啦");
+};
+/* 导入诊断包（管线 trace 包 / 其他设备导出的包） */
+window.aiLogImportFile = (input)=>{
+  const f = input && input.files && input.files[0];
+  if(!f) return;
+  const rd = new FileReader();
+  rd.onload = ()=>{
+    try{
+      const obj = JSON.parse(String(rd.result || ""));
+      const r = RP_AILOG.importObj(obj);
+      rpToast("已导入：记录 " + r.records + " 条 · 台账 " + r.issues + " 条 · 分析 " + r.analyses + " 份");
+    }catch(e){ rpToast("导入失败：" + ((e && e.message) || e)); }
+    showAiLog();
+  };
+  rd.readAsText(f);
+  input.value = "";
+};
 
 function aiLogTime(ts){
   const d = new Date(ts);
@@ -49,9 +72,14 @@ window.showAiLog = ()=>{
     + `<div class="card"><div class="kv">每一次调用 AI 的<b>完整提示词、思考过程、答复</b>都记在这里（主聊天、导演、世界模拟、摘要等全覆盖），只存本机。上限 ${st.maxN || 40} 条 / 约 ${Math.round((st.maxChars || 1200000) / 10000)} 万字，超限自动淘汰最旧的。</div>`
     + `<div class="kv" style="margin-top:6px">当前 ${st.n} 条 · 共 ${st.chars} 字 · 自动记录 <b>${st.enabled ? "开" : "关"}</b></div>`
     + `<div class="kv" style="margin-top:2px">分环：聊天类 ${st.chatN || 0}/${st.maxChat || 30} 条 · 蒸馏类 ${st.distillN || 0}/${st.maxDistill || 15} 条（互不冲走）</div>`
+    + (()=>{ const hint = (typeof RP_AILOG !== "undefined" && RP_AILOG.diagHint) ? RP_AILOG.diagHint() : null;
+        return (hint && (hint.unseen >= 8 || hint.openHigh > 0))
+          ? `<div class="kv" style="margin-top:2px;color:var(--gold,#d4a24e)">🩺 新增 ${hint.unseen} 条还没诊断${hint.open ? " · 台账 " + hint.open + " 条未闭环" : ""}${hint.openHigh ? "（高危 " + hint.openHigh + "）" : ""}，建议跑一次 AI 分析</div>` : ""; })()
     + `<div class="btnrow" style="margin-top:8px">`
     + `<button class="btn" onclick="aiLogAnalyze(this)">AI 分析最近 10 条</button>`
     + `<button class="btn ghost" onclick="aiLogExport()">导出诊断包</button>`
+    + `<button class="btn ghost" onclick="document.getElementById('ailog_file').click()">导入诊断包</button>`
+    + `<input type="file" id="ailog_file" accept=".json,application/json" style="display:none" onchange="aiLogImportFile(this)">`
     + `<button class="btn ghost" onclick="toggleAiLog()">${st.enabled ? "暂停记录" : "开启记录"}</button>`
     + `<button class="btn danger" onclick="aiLogClear()">清空</button></div>`
     + `<div class="field" style="margin-top:10px"><label>审核模型（交叉审核：用另一个模型审，避开自诊盲区；留空 = 当前聊天模型）</label>`
@@ -70,7 +98,7 @@ window.showAiLog = ()=>{
       + issues.slice().reverse().map(x=>`<div class="card">`
         + `<div class="kv"><b>${x.status === "verified" ? "✅" : (x.status === "fixed" ? "🔧" : "🔴")} ${esc(x.title)}</b> <span style="opacity:.65">${esc(stLabel[x.status] || x.status)} · ${esc(x.severity || "")} · ${esc(aiLogTime(x.ts))}</span></div>`
         + (x.evidence ? `<div class="kv" style="opacity:.75">证据：${esc(x.evidence)}</div>` : "")
-        + `<div class="btnrow" style="margin-top:6px">${x.status !== "verified" ? `<button class="btn ghost" onclick="aiLogIssueNext('${jq(x.id)}')">${x.status === "open" ? "标为已修待验" : "标为已验证"}</button>` : ""}<button class="btn ghost" onclick="aiLogIssueDel('${jq(x.id)}')">删除</button></div></div>`).join("");
+        + `<div class="btnrow" style="margin-top:6px">${x.status !== "verified" ? `<button class="btn ghost" onclick="aiLogIssueNext('${jq(x.id)}')">${x.status === "open" ? "标为已修待验" : "标为已验证"}</button>` : ""}${(x.srcIds && x.srcIds.length) ? `<button class="btn ghost" onclick="aiLogIssueSrc('${jq(x.id)}')">来源记录</button>` : ""}<button class="btn ghost" onclick="aiLogIssueDel('${jq(x.id)}')">删除</button></div></div>`).join("");
   }
   const shown = sums.filter(s=> __aiLogFilter === "all" ? true : (__aiLogFilter === "distill" ? s.tag === "distill" : s.tag !== "distill"));
   const chip = (f, label)=>`<button class="btn ${__aiLogFilter === f ? "" : "ghost"}" style="padding:2px 12px" onclick="aiLogSetFilter('${jq(f)}')">${label}</button>`;
