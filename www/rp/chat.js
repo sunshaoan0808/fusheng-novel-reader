@@ -130,9 +130,26 @@ function stitchOverlap(a, b){
   }
   return a + b;
 }
+/* 默认超时（2026-11-27 第四轮模拟实锤）：无外部信号时 fetch 会在网关
+ * 连接僵死时无限挂起（实测一次诊断调用 7 分钟无响应、重试都触发不了、
+ * 界面只能干转）。无信号时挂内部截止（默认 300 秒，cfg.timeoutMs 可调），
+ * 到点 abort 并改报「接口超时」；有外部信号时原样透传、行为不变。 */
+function __mkTimeout(cfg, ex){
+  if(ex && ex.signal) return { signal: ex.signal, ms: 0, clear: function(){}, timedOut: function(){ return false; } };
+  if(typeof AbortController !== "function")
+    return { signal: undefined, ms: 0, clear: function(){}, timedOut: function(){ return false; } };
+  var ms = (cfg && cfg.timeoutMs) || 300000;
+  var ac = new AbortController();
+  var timer = setTimeout(function(){ try{ ac.abort(); }catch(e){} }, ms);
+  return { signal: ac.signal, ms: ms,
+    clear: function(){ clearTimeout(timer); },
+    timedOut: function(){ return ac.signal.aborted; } };
+}
+function __timeoutErr(ts){ return new Error("接口超时（" + Math.round(ts.ms / 1000) + "s 无响应）"); }
 var CONTINUE_PROMPT = "你的上一条回复被截断了, 请从截断处继续写完, 不要重复已经写过的内容, 不要解释。";
 async function continueOnce(cfg, messages, partial, temperature, extra){
   var ex = extra || {};
+  var ts = __mkTimeout(cfg, ex);
   var ms = messages.concat([
     {role: "assistant", content: partial},
     {role: "user", content: CONTINUE_PROMPT},
@@ -140,10 +157,17 @@ async function continueOnce(cfg, messages, partial, temperature, extra){
   var q = adapterFor().buildRequest(
     {base: cfg.base, key: cfg.key, model: cfg.model}, ms,
     {temperature: temperature, stream: false, topP: ex.topP, maxTokens: ex.maxTokens || 1024});
-  var r = await fetch(q.url, {method: "POST", headers: q.headers,
+  var r;
+  try{
+    r = await fetch(q.url, {method: "POST", headers: q.headers,
                               body: JSON.stringify(q.body),
-                              /* P1-2: 透传取消信号（soul 并行等非流式调用也需要可取消） */
-                              signal: ex.signal || undefined});
+                              signal: ts.signal});
+  }catch(e){
+    ts.clear();
+    if(ts.timedOut()) throw __timeoutErr(ts);
+    throw e;
+  }
+  ts.clear();
   if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var m = d.choices && d.choices[0] && d.choices[0].message;
@@ -161,26 +185,35 @@ async function continueOnce(cfg, messages, partial, temperature, extra){
 async function completeInner(cfg, messages, temperature, modelOverride, extra, sink){
   var c = {base: cfg.base, key: cfg.key, model: modelOverride || cfg.model};
   var ex = extra || {};
+  var ts = __mkTimeout(cfg, ex);
   var q = adapterFor().buildRequest(c, messages, {temperature: temperature, stream: false,
     topP: ex.topP, maxTokens: ex.maxTokens});
-  var r = await fetch(q.url, {method: "POST", headers: q.headers,
+  var r;
+  try{
+    r = await fetch(q.url, {method: "POST", headers: q.headers,
                               body: JSON.stringify(q.body),
-                              /* P1-2: 透传取消信号（soul 并行等非流式调用也需要可取消） */
-                              signal: ex.signal || undefined});
-  if(!r.ok) throw httpErr(r.status);
+                              /* P1-2: 透传取消信号；无信号时 __mkTimeout 给默认截止 */
+                              signal: ts.signal});
+  }catch(e){
+    ts.clear();
+    if(ts.timedOut()) throw __timeoutErr(ts);
+    throw e;
+  }
+  if(!r.ok){ ts.clear(); throw httpErr(r.status); }
   var d = await r.json();
   var ch = d.choices && d.choices[0];
   var m = ch && ch.message;
   if(sink){ sink.reasoning = (m && (m.reasoning_content || m.reasoning)) || ""; sink.finish = (ch && ch.finish_reason) || ""; }
   var text = ((m && m.content) || "(空回复)").trim();
-  /* 截断自动续写一次 */
+  /* 截断自动续写一次（与主请求共享同一截止） */
   if(!ex._noContinue && looksTruncated(text, ch && ch.finish_reason)){
     try{
       var more = await continueOnce(c, messages, text, temperature,
-        {topP: ex.topP, maxTokens: ex.maxTokens});
+        {topP: ex.topP, maxTokens: ex.maxTokens, signal: ts.signal});
       if(more) text = stitchOverlap(text, more);
     }catch(e){/* 续写失败就用原文 */}
   }
+  ts.clear();
   return text;
 }
 
@@ -199,9 +232,18 @@ async function visionCompleteInner(cfg, imageDataUrl, prompt, modelOverride, ext
     temperature: ex.temperature != null ? ex.temperature : 0.7,
     max_tokens: ex.maxTokens || 4000,
   };
-  var r = await fetch(base + "/chat/completions", {method: "POST",
-    headers: {"Content-Type": "application/json", "Authorization": "Bearer " + c.key},
-    body: JSON.stringify(body)});
+  var ts = __mkTimeout(cfg, ex);
+  var r;
+  try{
+    r = await fetch(base + "/chat/completions", {method: "POST",
+      headers: {"Content-Type": "application/json", "Authorization": "Bearer " + c.key},
+      body: JSON.stringify(body), signal: ts.signal});
+  }catch(e){
+    ts.clear();
+    if(ts.timedOut()) throw __timeoutErr(ts);
+    throw e;
+  }
+  ts.clear();
   if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var ch = d.choices && d.choices[0];
