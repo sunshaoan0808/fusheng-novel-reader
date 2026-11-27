@@ -61,6 +61,42 @@ function __aiEmit(rec){
 function __aiSnap(messages){
   try{ return JSON.parse(JSON.stringify(messages || [])); }catch(e){ return []; }
 }
+/* 英文推理泄漏过滤（2026-11-27 用户拍板走渲染层）：部分模型（mimo 实测）
+ * 会把英文推理/元话语漏进答复正文（开头、结尾、甚至整段）。在传输层
+ * 返回前剥掉边缘的泄漏行：诊断日志仍记原始全文（飞轮要拿它当证据），
+ * 但用户看到、存进历史、喂回模型的都是干净版。规则刻意保守：
+ * 只剥首尾行、行内有中文绝不动、JSON/代码/协议行受保护、整段被剥空
+ * 则返回空串走上层既有的空回复重试与兜底。cfg.cleanLeak===false 可关。 */
+function __isMetaLine(line, restHasCJK){
+  var t = String(line || "").trim();
+  if(!t) return false;
+  if(/[一-鿿]/.test(t)) return false;
+  if(/[{}\[\]<>`]/.test(t)) return false;
+  var words = t.match(/[A-Za-z]{2,}/g) || [];
+  if(words.length < 3) return false;
+  if(/^(the user|user wants|user said|let me|i need to|i should|i will|i'll|per the|per rules|okay|alright|so,|now i|first,|the character|the assistant|in this (scene|reply|response)|as an ai|my (response|reply) is)/i.test(t)) return true;
+  if(restHasCJK && !/[^\x00-\x7F]/.test(t) && t.length >= 40 && words.length >= 6) return true;
+  return false;
+}
+function __cleanLeak(text){
+  if(!text || typeof text !== "string") return text;
+  if(text.trim() === "(空回复)") return text;
+  var lines = text.split("\n");
+  var hasCJK = /[一-鿿]/.test(text);
+  var i = 0, j = lines.length - 1, stripped = false;
+  while(i <= j){
+    if(!lines[i].trim()){ i++; continue; }
+    if(__isMetaLine(lines[i], hasCJK)){ i++; stripped = true; continue; }
+    break;
+  }
+  while(j >= i){
+    if(!lines[j].trim()){ j--; continue; }
+    if(__isMetaLine(lines[j], hasCJK)){ j--; stripped = true; continue; }
+    break;
+  }
+  if(!stripped) return text;
+  return lines.slice(i, j + 1).join("\n").trim();
+}
 /* 参数入账（2026-11-27）：温度/topP/最大长度——不少质量问题是参数问题 */
 function __aiParams(t, topP, max){
   var p = {};
@@ -281,7 +317,7 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
       tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: out,
       params: __aiParams(temperature, extra && extra.topP, extra && extra.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || ""});
-    return out;
+    return cfg.cleanLeak === false ? out : __cleanLeak(out);
   }catch(e){
     __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
       tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: "",
@@ -301,7 +337,7 @@ async function stream(cfg, messages, opts, onToken){
       tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: out,
       params: __aiParams(opts.temperature, opts.topP, opts.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || ""});
-    return out;
+    return cfg.cleanLeak === false ? out : __cleanLeak(out);
   }catch(e){
     /* 流式中断：用户实际看到的半截答复也要落盘（sink.partial 实时更新） */
     __aiEmit({ts: t0, ms: Date.now() - t0, model: cfg.model, stream: true,
@@ -333,6 +369,7 @@ async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
 
 return {listModels: listModels, generateImage: generateImage, tts: tts, complete: complete, stream: stream,
         visionComplete: visionComplete,
+        cleanLeak: __cleanLeak,
         adapterFor: adapterFor};
 })();
 
