@@ -62,7 +62,23 @@ function mkHttpError(status){
   return e;
 }
 
-async function chat(messages, opts){
+/* AI 诊断日志挂钩（2026-11-27 补：蒸馏线也纳入）：与 RP_NET 同契约，
+ * 整轮（含内部重试）只落一条，tag=distill。__dReason 由 inner 解析响应时填充。 */
+var __dReason = "";
+function __dEmit(rec){
+  try{
+    if(typeof window !== "undefined" && typeof window.__aiLogHook === "function"){
+      rec.thinking = __dReason || "";
+      window.__aiLogHook(rec);
+    }
+  }catch(e){}
+  __dReason = "";
+}
+function __dSnap(messages){
+  try{ return JSON.parse(JSON.stringify(messages || [])); }catch(e){ return []; }
+}
+
+async function chatInner(messages, opts){
   opts = opts || {};
   var c = cfg();
   if(!c.key) throw new Error("未配置 LLM API Key, 请到设置页填写");
@@ -96,7 +112,9 @@ async function chat(messages, opts){
         });
         if(!r.ok) throw mkHttpError(r.status);
         var d = await r.json();
-        var content = (((d.choices || [])[0] || {}).message || {}).content || "";
+        var msg0 = (((d.choices || [])[0] || {}).message || {});
+        __dReason = msg0.reasoning_content || msg0.reasoning || "";
+        var content = msg0.content || "";
         if(!content.trim()) throw new Error("空正文");
         _stats.totalMs += Date.now() - t0;
         return {content: content, model: models[mi]};
@@ -118,6 +136,23 @@ async function chat(messages, opts){
   _stats.errors++;
   _stats.totalMs += Date.now() - t0;
   throw lastErr || new Error("LLM 调用失败");
+}
+
+async function chat(messages, opts){
+  var t0 = Date.now();
+  __dReason = "";
+  var modelName = (opts && opts.model) || cfg().model || "";
+  try{
+    var out = await chatInner(messages, opts);
+    __dEmit({ts: t0, ms: Date.now() - t0, model: out.model || modelName, stream: false,
+      tag: "distill", messages: __dSnap(messages), reply: out.content || ""});
+    return out;
+  }catch(e){
+    __dEmit({ts: t0, ms: Date.now() - t0, model: modelName, stream: false,
+      tag: "distill", messages: __dSnap(messages), reply: "",
+      error: String((e && e.message) || e)});
+    throw e;
+  }
 }
 
 return {cfg: cfg, saveCfg: saveCfg, chat: chat, getStats: getStats, resetStats: resetStats, fmtStats: fmtStats};

@@ -16,6 +16,7 @@ window.showAiLog = ()=>{
   const st = (typeof RP_AILOG !== "undefined") ? RP_AILOG.stats() : {n: 0, chars: 0, enabled: false};
   subEl.textContent = st.enabled ? ("自动记录中 · " + st.n + " 条") : "自动记录已关";
   const sums = (typeof RP_AILOG !== "undefined") ? RP_AILOG.summaries() : [];
+  const diagModel = (typeof RP_AILOG !== "undefined" && RP_AILOG.getDiagModel) ? RP_AILOG.getDiagModel() : "";
   const analyses = (typeof RP_AILOG !== "undefined") ? RP_AILOG.loadAnalyses() : [];
   let h = `<button class="back" onclick="showSettings()">${icon("back")} 返回设置</button>`
     + `<div class="card"><div class="kv">每一次调用 AI 的<b>完整提示词、思考过程、答复</b>都记在这里（主聊天、导演、世界模拟、摘要等全覆盖），只存本机。上限 ${st.maxN || 40} 条 / 约 ${Math.round((st.maxChars || 1200000) / 10000)} 万字，超限自动淘汰最旧的。</div>`
@@ -25,6 +26,8 @@ window.showAiLog = ()=>{
     + `<button class="btn ghost" onclick="aiLogExport()">导出诊断包</button>`
     + `<button class="btn ghost" onclick="toggleAiLog()">${st.enabled ? "暂停记录" : "开启记录"}</button>`
     + `<button class="btn danger" onclick="aiLogClear()">清空</button></div>`
+    + `<div class="field" style="margin-top:10px"><label>审核模型（交叉审核：用另一个模型审，避开自诊盲区；留空 = 当前聊天模型）</label>`
+    + `<input id="ailog_model" placeholder="填模型名，如 deepseek-chat" value="${esc(diagModel)}" onchange="aiLogSetModel(this.value)"></div>`
     + `<div id="ailog_result"></div></div>`;
   if(analyses.length){
     h += `<h2 class="sec">历次分析</h2>` + analyses.slice().reverse().map((a, ri)=>{
@@ -75,12 +78,18 @@ window.aiLogAnalyze = async (btn)=>{
   try{
     const cfg = getCfg();
     if(!cfg.base || !cfg.model) throw new Error("先在设置里配好 API 地址与模型");
-    const text = await RP_AILOG.analyze((c, ms, t)=>RP_NET.complete(c, ms, t), cfg, 10);
+    const dm = (typeof RP_AILOG !== "undefined" && RP_AILOG.getDiagModel) ? RP_AILOG.getDiagModel() : "";
+    const effCfg = dm ? Object.assign({}, cfg, {model: dm}) : cfg;
+    const text = await RP_AILOG.analyze((c, ms, t)=>RP_NET.complete(c, ms, t), effCfg, 10);
     if(box) box.innerHTML = `<div class="kv" style="margin-top:8px"><b>诊断完成</b>（已存入历次分析）</div><pre class="ailog-pre">${esc(text)}</pre>`;
   }catch(e){
     if(box) box.innerHTML = `<div class="kv" style="margin-top:8px">分析失败：${esc(e.message || String(e))}</div>`;
   }
   if(btn) btn.disabled = false;
+};
+window.aiLogSetModel = (v)=>{
+  RP_AILOG.setDiagModel((v || "").trim());
+  rpToast(RP_AILOG.getDiagModel() ? ("审核模型已设为 " + RP_AILOG.getDiagModel()) : "审核模型已清空（跟随聊天模型）");
 };
 window.aiLogExport = ()=>{
   try{

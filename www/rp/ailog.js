@@ -117,7 +117,8 @@ var DIAG_SYS = "你是浮生（一款 AI 角色扮演 App）的诊断工程师�
   + "3) 提示词健康：有无自相矛盾的指令、重复段落、明显冗余（估算可删字数）、关键约束被淹没；"
   + "4) 思考链异常：思考与答复脱节、思考里已发现的问题答复没落实；"
   + "5) 质量问题：截断、空回复、协议标记泄漏（如场景协议原文出现在正文）、语气漂移。"
-  + "输出格式：先给总评（飞轮结论：整体健康度 + 最值得先修的 3 件事），再逐条列问题（注明第几条记录、证据原句、修法建议）。没有问题的维度明确说无。不要复述全部记录，只引关键证据。";
+  + "输出格式：先给总评（飞轮结论：整体健康度 + 最值得先修的 3 件事），再逐条列问题（注明第几条记录、证据原句、修法建议）。没有问题的维度明确说无。不要复述全部记录，只引关键证据。"
+  + "注意：每条记录都标注了产出模型，可能来自不同模型（交叉审核）；若同类问题在某个模型上反复出现，点名指出是哪个模型。";
 function buildDiagMessages(records){
   var parts = [];
   records.forEach(function(e, i){
@@ -132,6 +133,18 @@ function buildDiagMessages(records){
   });
   return [ { role: "system", content: DIAG_SYS },
            { role: "user", content: parts.join("\n\n") } ];
+}
+/* 交叉审核（2026-11-27）：审核模型单独存，与聊天模型分开——
+ * 用 A 模型审 B 模型的答复，避开自诊盲区。空 = 跟随当前聊天模型。 */
+var MKEY = "nd_ailog_model";
+function getDiagModel(){
+  try{ return localStorage.getItem(MKEY) || ""; }catch(e){ return ""; }
+}
+function setDiagModel(m){
+  try{
+    if(m) localStorage.setItem(MKEY, String(m));
+    else localStorage.removeItem(MKEY);
+  }catch(e){}
 }
 function analyze(completeFn, cfg, n){
   var list = load().slice(-(n || 10));
@@ -157,5 +170,6 @@ try{ window.__aiLogHook = function(rec){ ingest(rec); }; }catch(e){}
 return { enabled: enabled, setEnabled: setEnabled, summaries: summaries, get: get,
   clear: clear, stats: stats, exportObj: exportObj, analyze: analyze,
   loadAnalyses: loadAnalyses, splitThink: splitThink, _ingest: ingest,
+  getDiagModel: getDiagModel, setDiagModel: setDiagModel,
   MAX_N: MAX_N, MAX_CHARS: MAX_CHARS };
 })();
