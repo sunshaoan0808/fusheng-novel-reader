@@ -197,7 +197,7 @@ var DIAG_SYS = "你是浮生（一款 AI 角色扮演 App）的诊断工程师�
   + "5) 质量问题：截断、空回复、协议标记泄漏（如场景协议原文出现在正文）、语气漂移。"
   + "输出格式：先给总评（飞轮结论：整体健康度 + 最值得先修的 3 件事），再逐条列问题（注明第几条记录、证据原句、修法建议）。没有问题的维度明确说无。不要复述全部记录，只引关键证据。"
   + "注意：每条记录都标注了产出模型，可能来自不同模型（交叉审核）；若同类问题在某个模型上反复出现，点名指出是哪个模型。"
-  + "若附带了「未闭环问题台账」，逐条复查每个问题在本次记录里是否仍然存在，明确写已消失/仍存在。"
+  + "若附带了「未闭环问题台账」，逐条复查每个问题在本次记录里是否仍然存在，明确写已消失/仍存在；并在最后另起一个 ```verdicts 代码块输出 JSON 数组 [{\"n\":台账序号,\"verdict\":\"gone\"}]，verdict 只能是 gone（已消失）或 still（仍存在），序号与台账清单一一对应、不要遗漏（App 会据此自动推进台账状态）。"
   + "正文之后，另用一个 ```json 代码块输出问题清单（供 App 自动落台账）：数组元素为 {\"title\":\"一句话问题\",\"evidence\":\"证据原句\",\"severity\":\"high|mid|low\"}；没有发现问题就输出 []。";
 function buildDiagMessages(records){
   var parts = [];
@@ -305,6 +305,42 @@ function openIssues(){
  * 思考里会复述提示词（“正文之后，另用一个 ```json 代码块……”）甚至
  * 草稿 JSON——旧写法取第一个块，撞上就抓错。按提示词约定，真正的问题
  * 清单是正文之后的最后一个块；从后往前试，第一个解析成功的为准。 */
+/* 复查结论（2026-11-27 用户拍板改契约）：审核模型在 ```verdicts 块里
+ * 对台账逐条判 gone/still，代码据此自动推进状态——判 gone 的直接闭环
+ * 为 verified 并记 lastVerdict，判 still 的只记结论不动状态。 */
+var lastReview = null;
+function parseVerdicts(text){
+  var m = String(text || "").match(/```verdicts\s*([\s\S]*?)```/);
+  if(!m) return [];
+  try{ var arr = JSON.parse(m[1]); return Array.isArray(arr) ? arr : []; }
+  catch(e){ return []; }
+}
+function applyVerdicts(verdicts, openList){
+  var closed = 0, still = 0;
+  if(!verdicts || !verdicts.length || !openList || !openList.length){
+    lastReview = { closed: 0, still: 0 };
+    return lastReview;
+  }
+  var list = loadIssues();
+  var byId = {};
+  list.forEach(function(x){ byId[x.id] = x; });
+  verdicts.forEach(function(v){
+    if(!v || typeof v.n !== "number") return;
+    var src = openList[v.n - 1];
+    if(!src || !byId[src.id]) return;
+    var it = byId[src.id];
+    var vd = v.verdict === "gone" ? "gone" : (v.verdict === "still" ? "still" : "");
+    if(!vd) return;
+    it.lastVerdict = vd;
+    it.lastVerdictTs = Date.now();
+    if(vd === "gone"){
+      if(it.status !== "verified"){ it.status = "verified"; closed++; }
+    }else still++;
+  });
+  saveIssues(list);
+  lastReview = { closed: closed, still: still };
+  return lastReview;
+}
 function parseIssues(text){
   var re = /```json\s*([\s\S]*?)```/g, m, blocks = [];
   while((m = re.exec(String(text || ""))) !== null) blocks.push(m[1]);
@@ -349,6 +385,7 @@ function analyze(completeFn, cfg, n, ids){
   }
   return Promise.resolve(completeFn(cfg, msgs, 0.3)).then(function(text){
     saveAnalysis(text, scope);
+    applyVerdicts(parseVerdicts(text), open);
     addIssues(parseIssues(text), Date.now(), list.map(function(e){ return e.id; }));
     return text;
   });
@@ -362,6 +399,8 @@ return { enabled: enabled, setEnabled: setEnabled, summaries: summaries, get: ge
   getDiagModel: getDiagModel, setDiagModel: setDiagModel,
   loadIssues: loadIssues, setIssueStatus: setIssueStatus, delIssue: delIssue,
   openIssues: openIssues, addIssues: addIssues, parseIssues: parseIssues,
+  parseVerdicts: parseVerdicts, applyVerdicts: applyVerdicts,
+  getLastReview: function(){ return lastReview; },
   importObj: importObj, diagHint: diagHint,
   MAX_N: MAX_N, MAX_CHARS: MAX_CHARS };
 })();

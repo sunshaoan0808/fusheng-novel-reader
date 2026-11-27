@@ -98,6 +98,7 @@ window.showAiLog = ()=>{
       + issues.slice().reverse().map(x=>`<div class="card">`
         + `<div class="kv"><b>${x.status === "verified" ? "✅" : (x.status === "fixed" ? "🔧" : "🔴")} ${esc(x.title)}</b> <span style="opacity:.65">${esc(stLabel[x.status] || x.status)} · ${esc(x.severity || "")} · ${esc(aiLogTime(x.ts))}</span></div>`
         + (x.evidence ? `<div class="kv" style="opacity:.75">证据：${esc(x.evidence)}</div>` : "")
+        + (x.lastVerdict ? `<div class="kv" style="opacity:.75">上次复查：${x.lastVerdict === "gone" ? "已消失（自动闭环）" : "仍存在"} · ${esc(aiLogTime(x.lastVerdictTs || x.ts))}</div>` : "")
         + `<div class="btnrow" style="margin-top:6px">${x.status !== "verified" ? `<button class="btn ghost" onclick="aiLogIssueNext('${jq(x.id)}')">${x.status === "open" ? "标为已修待验" : "标为已验证"}</button>` : ""}${(x.srcIds && x.srcIds.length) ? `<button class="btn ghost" onclick="aiLogIssueSrc('${jq(x.id)}')">来源记录</button>` : ""}<button class="btn ghost" onclick="aiLogIssueDel('${jq(x.id)}')">删除</button></div></div>`).join("");
   }
   const shown = sums.filter(s=> __aiLogFilter === "all" ? true : (__aiLogFilter === "distill" ? s.tag === "distill" : s.tag !== "distill"));
@@ -160,7 +161,9 @@ window.aiLogAnalyze = async (btn)=>{
     const dm = (typeof RP_AILOG !== "undefined" && RP_AILOG.getDiagModel) ? RP_AILOG.getDiagModel() : "";
     const effCfg = dm ? Object.assign({}, cfg, {model: dm}) : cfg;
     const text = await RP_AILOG.analyze((c, ms, t)=>RP_NET.complete(c, ms, t), effCfg, 10, selIds.length ? selIds : null);
-    if(box) box.innerHTML = `<div class="kv" style="margin-top:8px"><b>诊断完成</b>（已存入历次分析）</div><pre class="ailog-pre">${esc(text)}</pre>`;
+    const lr = (typeof RP_AILOG !== "undefined" && RP_AILOG.getLastReview) ? RP_AILOG.getLastReview() : null;
+    const lrTxt = (lr && lr.closed) ? (" 台账自动闭环 " + lr.closed + " 条（复查确认已消失）" + (lr.still ? "，" + lr.still + " 条仍存在" : "") + "。") : "";
+    if(box) box.innerHTML = `<div class="kv" style="margin-top:8px"><b>诊断完成</b>（已存入历次分析）${esc(lrTxt)}</div><pre class="ailog-pre">${esc(text)}</pre>`;
   }catch(e){
     if(box) box.innerHTML = `<div class="kv" style="margin-top:8px">分析失败：${esc(e.message || String(e))}</div>`;
   }
