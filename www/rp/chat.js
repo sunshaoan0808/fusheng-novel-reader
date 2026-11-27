@@ -61,6 +61,14 @@ function __aiEmit(rec){
 function __aiSnap(messages){
   try{ return JSON.parse(JSON.stringify(messages || [])); }catch(e){ return []; }
 }
+/* 参数入账（2026-11-27）：温度/topP/最大长度——不少质量问题是参数问题 */
+function __aiParams(t, topP, max){
+  var p = {};
+  if(t != null) p.t = t;
+  if(topP != null) p.topP = topP;
+  if(max != null) p.max = max;
+  return Object.keys(p).length ? p : null;
+}
 
 async function listModels(cfg){
   return adapterFor().listModels(cfg);
@@ -103,7 +111,14 @@ async function continueOnce(cfg, messages, partial, temperature, extra){
   if(!r.ok) throw httpErr(r.status);
   var d = await r.json();
   var m = d.choices && d.choices[0] && d.choices[0].message;
-  return ((m && m.content) || "").trim();
+  var contText = ((m && m.content) || "").trim();
+  /* 续写单独成条（2026-11-27）：它是一次真实调用，有自己的提示词
+   * （原文+半截答复+续写指令），诊断截断问题时要能单独看它。 */
+  __aiEmit({ts: Date.now(), ms: 0, model: cfg.model, stream: false, tag: "continue",
+    messages: __aiSnap(ms), reply: contText,
+    thinking: (m && (m.reasoning_content || m.reasoning)) || "",
+    finish: (d.choices && d.choices[0] && d.choices[0].finish_reason) || ""});
+  return contText;
 }
 
 /* 非流式（摘要/问候/测试用） */
@@ -222,7 +237,7 @@ async function streamInner(cfg, messages, opts, onToken, sink){
       var ch0 = j.choices && j.choices[0];
       if(ch0 && ch0.finish_reason) finishReason = ch0.finish_reason;
       var tok = ch0 && ch0.delta && ch0.delta.content || "";
-      if(tok){ full += tok; if(onToken) onToken(tok); }
+      if(tok){ full += tok; if(onToken) onToken(tok); if(sink) sink.partial = full; }
       var rk = (ch0 && ch0.delta && (ch0.delta.reasoning_content || ch0.delta.reasoning)) || "";
       if(rk && sink) sink.reasoning = (sink.reasoning || "") + rk;
     } catch(e){}
@@ -264,11 +279,13 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
     var out = await completeInner(cfg, messages, temperature, modelOverride, extra, sink);
     __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
       tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: out,
+      params: __aiParams(temperature, extra && extra.topP, extra && extra.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || ""});
     return out;
   }catch(e){
     __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
       tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: "",
+      params: __aiParams(temperature, extra && extra.topP, extra && extra.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || "",
       error: String((e && e.message) || e)});
     throw e;
@@ -276,16 +293,21 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
 }
 async function stream(cfg, messages, opts, onToken){
   var t0 = Date.now();
+  opts = opts || {};
   var sink = {};
   try{
     var out = await streamInner(cfg, messages, opts, onToken, sink);
     __aiEmit({ts: t0, ms: Date.now() - t0, model: cfg.model, stream: true,
       tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: out,
+      params: __aiParams(opts.temperature, opts.topP, opts.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || ""});
     return out;
   }catch(e){
+    /* 流式中断：用户实际看到的半截答复也要落盘（sink.partial 实时更新） */
     __aiEmit({ts: t0, ms: Date.now() - t0, model: cfg.model, stream: true,
-      tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: "",
+      tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: sink.partial || "",
+      partial: !!sink.partial,
+      params: __aiParams(opts.temperature, opts.topP, opts.maxTokens),
       thinking: sink.reasoning || "", finish: sink.finish || "",
       error: String((e && e.message) || e)});
     throw e;

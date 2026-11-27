@@ -143,11 +143,13 @@ async function chat(messages, opts){
     var out = await chatInner(messages, opts, sink);
     __dEmit({ts: t0, ms: Date.now() - t0, model: out.model || modelName, stream: false,
       tag: "distill", messages: __dSnap(messages), reply: out.content || "",
+      params: (opts && (opts.temp != null || opts.maxTokens != null)) ? {t: opts.temp, max: opts.maxTokens} : null,
       thinking: sink.reasoning || "", finish: sink.finish || ""});
     return out;
   }catch(e){
     __dEmit({ts: t0, ms: Date.now() - t0, model: modelName, stream: false,
       tag: "distill", messages: __dSnap(messages), reply: "",
+      params: (opts && (opts.temp != null || opts.maxTokens != null)) ? {t: opts.temp, max: opts.maxTokens} : null,
       thinking: sink.reasoning || "", finish: sink.finish || "",
       error: String((e && e.message) || e)});
     throw e;

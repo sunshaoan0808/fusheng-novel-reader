@@ -69,6 +69,8 @@ function ingest(rec){
       stream: !!rec.stream,
       tag: rec.tag || "",
       finish: rec.finish || "",
+      params: rec.params || null,
+      partial: !!rec.partial,
       error: rec.error || "",
       messages: (rec.messages || []).map(function(m){
         return { role: m.role || "", content: typeof m.content === "string" ? m.content : JSON.stringify(m.content) };
@@ -123,7 +125,7 @@ function stats(){
 }
 function exportObj(){
   return { app: "fusheng", kind: "ai-diag-log", exportedAt: new Date().toISOString(),
-    build: BV || "", records: load(), analyses: loadAnalyses() };
+    build: BV || "", records: load(), analyses: loadAnalyses(), issues: loadIssues() };
 }
 /* ---------- AI 分析 ---------- */
 function loadAnalyses(){
@@ -144,7 +146,9 @@ var DIAG_SYS = "你是浮生（一款 AI 角色扮演 App）的诊断工程师�
   + "4) 思考链异常：思考与答复脱节、思考里已发现的问题答复没落实；"
   + "5) 质量问题：截断、空回复、协议标记泄漏（如场景协议原文出现在正文）、语气漂移。"
   + "输出格式：先给总评（飞轮结论：整体健康度 + 最值得先修的 3 件事），再逐条列问题（注明第几条记录、证据原句、修法建议）。没有问题的维度明确说无。不要复述全部记录，只引关键证据。"
-  + "注意：每条记录都标注了产出模型，可能来自不同模型（交叉审核）；若同类问题在某个模型上反复出现，点名指出是哪个模型。";
+  + "注意：每条记录都标注了产出模型，可能来自不同模型（交叉审核）；若同类问题在某个模型上反复出现，点名指出是哪个模型。"
+  + "若附带了「未闭环问题台账」，逐条复查每个问题在本次记录里是否仍然存在，明确写已消失/仍存在。"
+  + "正文之后，另用一个 ```json 代码块输出问题清单（供 App 自动落台账）：数组元素为 {\"title\":\"一句话问题\",\"evidence\":\"证据原句\",\"severity\":\"high|mid|low\"}；没有发现问题就输出 []。";
 function buildDiagMessages(records){
   var parts = [];
   records.forEach(function(e, i){
@@ -173,6 +177,50 @@ function setDiagModel(m){
     else localStorage.removeItem(MKEY);
   }catch(e){}
 }
+/* ---------- 问题台账（2026-11-27 第三档）：分析结论里的问题落成可追踪
+ * 条目，状态 open（待修）→ fixed（已修待验）→ verified（已验证）；
+ * 未闭环的会在下一次分析时被带上让审核模型复查，飞轮的「验证」齿。 */
+var IKEY = "nd_ailog_issues_v1";
+function loadIssues(){
+  try{ var d = JSON.parse(localStorage.getItem(IKEY) || "[]"); return Array.isArray(d) ? d : []; }
+  catch(e){ return []; }
+}
+function saveIssues(list){
+  try{ localStorage.setItem(IKEY, JSON.stringify(list.slice(-60))); }catch(e){}
+}
+var issueSeq = 0;
+function addIssues(items, fromTs){
+  if(!items || !items.length) return 0;
+  var list = loadIssues(), added = 0;
+  items.forEach(function(it){
+    if(!it || !it.title) return;
+    list.push({ id: "I" + Date.now().toString(36) + (issueSeq++), ts: fromTs || Date.now(),
+      title: String(it.title).slice(0, 120), evidence: String(it.evidence || "").slice(0, 300),
+      severity: (it.severity === "high" || it.severity === "low") ? it.severity : "mid",
+      status: "open" });
+    added++;
+  });
+  saveIssues(list);
+  return added;
+}
+function setIssueStatus(id, status){
+  var list = loadIssues();
+  list.forEach(function(x){ if(x.id === id) x.status = status; });
+  saveIssues(list);
+}
+function delIssue(id){
+  saveIssues(loadIssues().filter(function(x){ return x.id !== id; }));
+}
+function openIssues(){
+  return loadIssues().filter(function(x){ return x.status !== "verified"; });
+}
+function parseIssues(text){
+  var m = String(text || "").match(/```json\s*([\s\S]*?)```/);
+  if(!m) return [];
+  try{ var arr = JSON.parse(m[1]); return Array.isArray(arr) ? arr : []; }
+  catch(e){ return []; }
+}
+
 /* 首尾双截（2026-11-27 审计修复）：早期只留头部，把提示词末尾的压尾铁律
  * 和答复末尾的协议段全切了——审核最该看的两处恰恰在尾巴上。 */
 function truncHT(s, head, tail){
@@ -199,8 +247,15 @@ function analyze(completeFn, cfg, n, ids){
       thinking: truncHT(e.thinking, 1500, 500),
       reply: truncHT(e.reply, 2000, 1000) };
   });
-  return Promise.resolve(completeFn(cfg, buildDiagMessages(trimmed), 0.3)).then(function(text){
+  var msgs = buildDiagMessages(trimmed);
+  var open = openIssues();
+  if(open.length){
+    msgs[1].content += "\n\n===== 未闭环问题台账（请逐条复查在本次记录中是否仍存在）=====\n"
+      + open.map(function(x, i){ return (i + 1) + ". [" + x.status + "] " + x.title + (x.evidence ? "（证据：" + x.evidence + "）" : ""); }).join("\n");
+  }
+  return Promise.resolve(completeFn(cfg, msgs, 0.3)).then(function(text){
     saveAnalysis(text, scope);
+    addIssues(parseIssues(text), Date.now());
     return text;
   });
 }
@@ -211,5 +266,7 @@ return { enabled: enabled, setEnabled: setEnabled, summaries: summaries, get: ge
   clear: clear, stats: stats, exportObj: exportObj, analyze: analyze,
   loadAnalyses: loadAnalyses, splitThink: splitThink, _ingest: ingest,
   getDiagModel: getDiagModel, setDiagModel: setDiagModel,
+  loadIssues: loadIssues, setIssueStatus: setIssueStatus, delIssue: delIssue,
+  openIssues: openIssues, addIssues: addIssues, parseIssues: parseIssues,
   MAX_N: MAX_N, MAX_CHARS: MAX_CHARS };
 })();

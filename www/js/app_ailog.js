@@ -16,6 +16,20 @@ window.aiLogSetFilter = (f)=>{
   __aiLogFilter = f || "all";
   showAiLog();
 };
+/* 问题台账：状态推进 open → fixed（已修待验）→ verified（已验证） */
+window.aiLogIssueNext = (id)=>{
+  const list = RP_AILOG.loadIssues();
+  const it = list.find(x=>x.id === id);
+  if(!it) return;
+  const nxt = it.status === "open" ? "fixed" : "verified";
+  RP_AILOG.setIssueStatus(id, nxt);
+  rpToast(nxt === "fixed" ? "已标为「已修待验」——下次分析会复查它" : "已标为「已验证」，台账闭环");
+  showAiLog();
+};
+window.aiLogIssueDel = (id)=>{
+  RP_AILOG.delIssue(id);
+  showAiLog();
+};
 
 function aiLogTime(ts){
   const d = new Date(ts);
@@ -49,6 +63,15 @@ window.showAiLog = ()=>{
       return `<div class="card" style="cursor:pointer" onclick="showAiAnalysis(${jq(i)})"><div class="kv"><b>${esc(aiLogTime(a.ts))}</b> · ${esc(a.scope || "")}</div><div class="kv" style="opacity:.75">${esc(String(a.text || "").slice(0, 90))}…</div></div>`;
     }).join("");
   }
+  const issues = (typeof RP_AILOG !== "undefined" && RP_AILOG.loadIssues) ? RP_AILOG.loadIssues() : [];
+  if(issues.length){
+    const stLabel = {open: "待修", fixed: "已修待验", verified: "已验证"};
+    h += `<h2 class="sec">问题台账（${issues.filter(x=>x.status !== "verified").length} 条未闭环）</h2>`
+      + issues.slice().reverse().map(x=>`<div class="card">`
+        + `<div class="kv"><b>${x.status === "verified" ? "✅" : (x.status === "fixed" ? "🔧" : "🔴")} ${esc(x.title)}</b> <span style="opacity:.65">${esc(stLabel[x.status] || x.status)} · ${esc(x.severity || "")} · ${esc(aiLogTime(x.ts))}</span></div>`
+        + (x.evidence ? `<div class="kv" style="opacity:.75">证据：${esc(x.evidence)}</div>` : "")
+        + `<div class="btnrow" style="margin-top:6px">${x.status !== "verified" ? `<button class="btn ghost" onclick="aiLogIssueNext('${jq(x.id)}')">${x.status === "open" ? "标为已修待验" : "标为已验证"}</button>` : ""}<button class="btn ghost" onclick="aiLogIssueDel('${jq(x.id)}')">删除</button></div></div>`).join("");
+  }
   const shown = sums.filter(s=> __aiLogFilter === "all" ? true : (__aiLogFilter === "distill" ? s.tag === "distill" : s.tag !== "distill"));
   const chip = (f, label)=>`<button class="btn ${__aiLogFilter === f ? "" : "ghost"}" style="padding:2px 12px" onclick="aiLogSetFilter('${jq(f)}')">${label}</button>`;
   h += `<h2 class="sec">记录</h2>`
@@ -70,8 +93,10 @@ window.showAiLogDetail = (id)=>{
   subEl.textContent = aiLogTime(e.ts) + " · " + (e.model || "") + (e.finish ? " · 结束 " + e.finish : "") + (e.bv ? " · 版本 " + e.bv : "");
   const pre = (label, text)=>`<h2 class="sec">${label}</h2><div class="card"><pre class="ailog-pre">${esc(text || "（无）")}</pre></div>`;
   const msgs = (e.messages || []).map(m=>`【${m.role || "?"}】\n${m.content || ""}`).join("\n\n");
+  const paramTxt = e.params ? Object.keys(e.params).map(k=>k + "=" + e.params[k]).join(" · ") : "";
   view.innerHTML = `<button class="back" onclick="showAiLog()">${icon("back")} 返回日志</button>`
     + (e.error ? `<div class="card"><div class="kv">⚠️ 本次调用出错：${esc(e.error)}</div></div>` : "")
+    + ((paramTxt || e.partial) ? `<div class="card"><div class="kv">${paramTxt ? "参数：" + esc(paramTxt) : ""}${e.partial ? " · ⚠️ 流式中断，下面是中断前已生成的半截答复" : ""}</div></div>` : "")
     + pre("提示词（实际发送的全部内容）", msgs)
     + pre("AI 的思考", e.thinking)
     + pre("AI 的答复", e.reply)
@@ -118,6 +143,7 @@ window.aiLogSetModel = (v)=>{
   rpToast(RP_AILOG.getDiagModel() ? ("审核模型已设为 " + RP_AILOG.getDiagModel()) : "审核模型已清空（跟随聊天模型）");
 };
 window.aiLogExport = ()=>{
+  if(!confirm("诊断包包含你的全部聊天原文、提示词与思考记录，等于完整聊天记录。只发给可信的人（比如你自己的 Muse）做迭代诊断，不要公开分享。确定导出？")) return;
   try{
     const obj = RP_AILOG.exportObj();
     const d = new Date();
