@@ -47,6 +47,23 @@ var adapters = {
 
 function adapterFor(){ return adapters.openai; }
 
+/* AI 诊断日志挂钩（2026-11-26）：complete/stream/vision 的包装层把每次调用的
+ * 提示词+思考+答复交给 window.__aiLogHook（rp/ailog.js 注册；不在场就跳过）。
+ * __lastReason 由 inner 在解析响应时填充（reasoning_content 字段/流式增量）。 */
+var __lastReason = "";
+function __aiEmit(rec){
+  try{
+    if(typeof window !== "undefined" && typeof window.__aiLogHook === "function"){
+      rec.thinking = __lastReason || "";
+      window.__aiLogHook(rec);
+    }
+  }catch(e){}
+  __lastReason = "";
+}
+function __aiSnap(messages){
+  try{ return JSON.parse(JSON.stringify(messages || [])); }catch(e){ return []; }
+}
+
 async function listModels(cfg){
   return adapterFor().listModels(cfg);
 }
@@ -92,7 +109,7 @@ async function continueOnce(cfg, messages, partial, temperature, extra){
 }
 
 /* 非流式（摘要/问候/测试用） */
-async function complete(cfg, messages, temperature, modelOverride, extra){
+async function completeInner(cfg, messages, temperature, modelOverride, extra){
   var c = {base: cfg.base, key: cfg.key, model: modelOverride || cfg.model};
   var ex = extra || {};
   var q = adapterFor().buildRequest(c, messages, {temperature: temperature, stream: false,
@@ -105,6 +122,7 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
   var d = await r.json();
   var ch = d.choices && d.choices[0];
   var m = ch && ch.message;
+  __lastReason = (m && (m.reasoning_content || m.reasoning)) || "";
   var text = ((m && m.content) || "(空回复)").trim();
   /* 截断自动续写一次 */
   if(!ex._noContinue && looksTruncated(text, ch && ch.finish_reason)){
@@ -119,7 +137,7 @@ async function complete(cfg, messages, temperature, modelOverride, extra){
 
 /* vision: OpenAI 兼容图文消息 (看图写卡用)。模型是否真支持 vision 由调用方按
  * RP_MODELTAGS 能力标签判断, 这里只负责把图发出去。 */
-async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
+async function visionCompleteInner(cfg, imageDataUrl, prompt, modelOverride, extra){
   var c = {base: cfg.base, key: cfg.key, model: modelOverride || cfg.model};
   var ex = extra || {};
   var base = (c.base || "").replace(/\/+$/, "");
@@ -139,6 +157,7 @@ async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
   var d = await r.json();
   var ch = d.choices && d.choices[0];
   var m = ch && ch.message;
+  __lastReason = (m && (m.reasoning_content || m.reasoning)) || "";
   var text = ((m && m.content) || "").trim();
   if(!ex._noContinue && looksTruncated(text, ch && ch.finish_reason)){
     try{
@@ -181,7 +200,7 @@ async function tts(cfg, text, model, voice){
   var blob = await r.blob();
   return URL.createObjectURL(blob);
 }
-async function stream(cfg, messages, opts, onToken){
+async function streamInner(cfg, messages, opts, onToken){
   opts = opts || {};
   /* 2026-11-22: 此前 buildRequest 只传 temperature, max_tokens/top_p 被丢弃,
    * 流式聊天(默认路径)的「回复长度」设置形同虚设, 长度全凭网关默认。
@@ -206,6 +225,8 @@ async function stream(cfg, messages, opts, onToken){
       if(ch0 && ch0.finish_reason) finishReason = ch0.finish_reason;
       var tok = ch0 && ch0.delta && ch0.delta.content || "";
       if(tok){ full += tok; if(onToken) onToken(tok); }
+      var rk = (ch0 && ch0.delta && (ch0.delta.reasoning_content || ch0.delta.reasoning)) || "";
+      if(rk) __lastReason += rk;
     } catch(e){}
   }
   for(;;){
@@ -234,6 +255,53 @@ async function stream(cfg, messages, opts, onToken){
     }catch(e){}
   }
   return full.trim() || "(空回复)";
+}
+
+/* 诊断日志包装层：计时 + 成功/失败都落一条记录，再把结果/异常原样交还调用方 */
+async function complete(cfg, messages, temperature, modelOverride, extra){
+  var t0 = Date.now();
+  __lastReason = "";
+  try{
+    var out = await completeInner(cfg, messages, temperature, modelOverride, extra);
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
+      tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: out});
+    return out;
+  }catch(e){
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
+      tag: (extra && extra.tag) || "", messages: __aiSnap(messages), reply: "",
+      error: String((e && e.message) || e)});
+    throw e;
+  }
+}
+async function stream(cfg, messages, opts, onToken){
+  var t0 = Date.now();
+  __lastReason = "";
+  try{
+    var out = await streamInner(cfg, messages, opts, onToken);
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: cfg.model, stream: true,
+      tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: out});
+    return out;
+  }catch(e){
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: cfg.model, stream: true,
+      tag: (opts && opts.tag) || "", messages: __aiSnap(messages), reply: "",
+      error: String((e && e.message) || e)});
+    throw e;
+  }
+}
+async function visionComplete(cfg, imageDataUrl, prompt, modelOverride, extra){
+  var t0 = Date.now();
+  __lastReason = "";
+  try{
+    var out = await visionCompleteInner(cfg, imageDataUrl, prompt, modelOverride, extra);
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
+      tag: "vision", messages: [{role: "user", content: String(prompt || "") + "（附图片，已省略）"}], reply: out});
+    return out;
+  }catch(e){
+    __aiEmit({ts: t0, ms: Date.now() - t0, model: modelOverride || cfg.model, stream: false,
+      tag: "vision", messages: [{role: "user", content: String(prompt || "") + "（附图片，已省略）"}], reply: "",
+      error: String((e && e.message) || e)});
+    throw e;
+  }
 }
 
 return {listModels: listModels, generateImage: generateImage, tts: tts, complete: complete, stream: stream,
