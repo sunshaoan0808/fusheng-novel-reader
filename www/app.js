@@ -111,6 +111,8 @@ __backAction = null;
 titleEl.textContent = "设置";
 subEl.textContent = "";
 const c = getCfg();
+const aiLogLabel = (typeof RP_AILOG !== "undefined" && RP_AILOG.enabled()) ? "记录中" : "已暂停";
+const aiLogN = (typeof RP_AILOG !== "undefined") ? RP_AILOG.stats().n : 0;
 view.innerHTML = `<div class="searchwrap"><input id="set_q" placeholder="搜索设置…" oninput="filterSettings(this.value)"></div>`
 + `<h2 class="sec setsec">本机</h2>` + renderStorageCard()
 + `<h2 class="sec setsec">外观</h2>` + `
@@ -132,7 +134,10 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 <div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="globalWallpaperEditor()">全局壁纸 / 背景来源</button></div></div>` + `<h2 class="sec setsec">游玩</h2>` + checkinCardHTML() + `
 <div class="setcard"><h3>${icon("check",15)} 成就</h3>
 <div class="kv">${typeof RP_ACHV!=="undefined" ? `已解锁 ${RP_ACHV.count()}/${RP_ACHV.DEFS.length}` : ""}</div>
-<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="showAchv()">查看成就</button></div></div>` + `<h2 class="sec setsec">安全</h2>
+<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="showAchv()">查看成就</button></div></div>` + `<h2 class="sec setsec">AI 诊断</h2>
+<div class="setcard"><h3>${icon("chat",15)} 诊断日志（自主诊断飞轮）</h3>
+<div class="kv">自动记录每一次 AI 调用的完整提示词、思考与答复（当前 ${aiLogN} 条，状态：${aiLogLabel}），可一键让 AI 分析问题、导出诊断包离线迭代。只存本机。</div>
+<div class="btnrow" style="margin-top:8px"><button class="btn ghost" onclick="showAiLog()">打开诊断日志</button><button class="btn ghost" onclick="toggleAiLog()">开 / 关自动记录</button></div></div>` + `<h2 class="sec setsec">安全</h2>
 <div class="setcard"><h3>${icon("check",15)} 应用锁</h3>
 <div class="kv">纯前端 PIN 锁。忘记 PIN 只能清除全部数据, 没有找回途径。</div>
 <div id="pinset" style="margin-top:8px"></div></div>` + `<h2 class="sec setsec">连接</h2>

@@ -2093,3 +2093,6 @@ body.chatmode.immersive .spbanner{display:none!important}
 .memmeter .mm-bar{flex:1;height:4px;border-radius:2px;background:var(--line,#3a352f);overflow:hidden}
 .memmeter .mm-bar i{display:block;height:100%;border-radius:2px;background:var(--gold,#d4a24e)}
 .memmeter .mm-num{flex:none;opacity:.75}
+
+/* AI 诊断日志（2026-11-26） */
+.ailog-pre{white-space:pre-wrap;word-break:break-word;font-size:calc(12px * var(--fs));line-height:1.65;margin:0;font-family:inherit}
