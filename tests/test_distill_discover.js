@@ -268,7 +268,7 @@ function sandbox() {
   /* 提名计数口径: 记总次数, 语境命中只作资格 (小萌真书 count 曾被记成 4 而非 26) */
   const cntNom = D.scanNominations("小萌笑了。小萌走了。大家都提小萌。书里写小萌。朋友喊小萌。");
   t("提名计数: 小萌记总次数 5", cntNom["小萌"] === 5);
-  t("泛称: 妈妈/爸爸/爷爷", D.isGeneric("妈妈") && D.isGeneric("爸爸") && D.isGeneric("爷爷"));
+  t("亲属词不算泛称 (妈妈可以是具名角色的正确别名)", !D.isGeneric("妈妈") && !D.isGeneric("爸爸") && !D.isGeneric("爷爷"));
 
   /* 叙述者正名: 真名被并进占位条目当别名时扶正为正名 */
   sb.DISTILL_LLM.chat = async (msgs) => {
