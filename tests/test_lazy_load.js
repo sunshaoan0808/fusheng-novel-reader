@@ -40,7 +40,7 @@ function boot(failSet) {
   const { lazy, appended } = boot();
   const manifest = lazy.groups.distill;
 
-  t("L1 清单里是 23 个蒸馏文件", manifest.length === 23);
+  t("L1 清单里是 24 个蒸馏文件", manifest.length === 24);
   t("L2 加载前不算就绪", lazy.groupReady("distill") === false);
 
   // 两个入口同时点：只应加载一次
