@@ -184,8 +184,34 @@ function countOccurrences(text, needle){
   return n;
 }
 /* 出场门计数: 本名 + 全部别名 (≥2 字, 与 buildAliasIndex 同口径) 的出现次数 */
-function countMentions(text, charName, aliasIndex){
-  var n = countOccurrences(text, charName);
+/* 裸亲属词条目 (妈妈/爸爸…) 的出场计数守卫: 子串计数会把「陈猴妈妈」「小远的妈妈」
+ * 这类别人亲属的出场全算到裸词条目头上, 蒸馏时模型对着别人的戏份编档 (实测污染)。
+ * 回看所有格形态 ([他人名]的?+亲属词) 不计入; 代词所有格 (我/他/她的妈妈) 无法
+ * 确定性归属, 照计。allNames = 本轮全部人物名 + 别名。 */
+var KINSHIP_TERMS = {"妈妈":1,"爸爸":1,"爷爷":1,"奶奶":1,"外公":1,"外婆":1,"叔叔":1,"婶婶":1,"伯伯":1,"姑姑":1,"舅舅":1,"阿姨":1,"哥哥":1,"姐姐":1,"弟弟":1,"妹妹":1,"嫂子":1,"婆婆":1,"公公":1};
+function countKinshipMentions(text, term, others){
+  var n = 0, i = 0;
+  while((i = text.indexOf(term, i)) >= 0){
+    var start = i; i += term.length;
+    var preEnd = start;
+    if(preEnd > 0 && text.charAt(preEnd - 1) === "的") preEnd--;
+    var owned = false;
+    for(var L = 2; L <= 4 && !owned; L++){
+      if(preEnd - L < 0) break;
+      if(others.indexOf(text.slice(preEnd - L, preEnd)) >= 0) owned = true;
+    }
+    if(!owned) n++;
+  }
+  return n;
+}
+function countMentions(text, charName, aliasIndex, allNames){
+  var n;
+  if(KINSHIP_TERMS[charName] && allNames && allNames.length){
+    var others = allNames.filter(function(x){ return x !== charName; });
+    n = countKinshipMentions(text, charName, others);
+  }else{
+    n = countOccurrences(text, charName);
+  }
   var al = (aliasIndex && aliasIndex[charName]) || [];
   for(var i = 0; i < al.length; i++) n += countOccurrences(text, al[i]);
   return n;
@@ -207,6 +233,17 @@ function anchorStrength(value, chunkText){
   return 0;
 }
 function createStore(){ return {fields: {}, conflicts: []}; }
+/* 值归一化 (只用于判同, 不改落盘原文): 剥 [推测] 标记、[ch...] 引用、反引号、
+ * 空白与尾随标点。模型逐块换装饰 ([推测] 5 vs 5、值尾引用有无) 不该记成冲突 ——
+ * Laguna 真跑里这类假冲突占了冲突队列的大头 (苏清禾/妈妈各 257 条)。 */
+function normValue(v){
+  return String(v == null ? "" : v)
+    .replace(/\[推测\]/g, "")
+    .replace(/\[[^\]]*\]/g, "")
+    .replace(/`/g, "")
+    .replace(/\s+/g, "")
+    .replace(/[。，；;、,.]+$/, "");
+}
 function applyToStore(store, fields, chunkId, chunkText){
   Object.keys(fields || {}).forEach(function(k){
     var v = String(fields[k] == null ? "" : fields[k]).trim();
@@ -214,7 +251,7 @@ function applyToStore(store, fields, chunkId, chunkText){
     var cur = store.fields[k];
     var s = anchorStrength(v, chunkText);
     if(!cur){ store.fields[k] = {value: v, chunk: chunkId, strength: s, first: chunkId, last: chunkId}; return; }
-    if(cur.value === v){ cur.last = chunkId; return; }
+    if(normValue(cur.value) === normValue(v)){ cur.last = chunkId; return; }
     if(FROZEN_FIELDS[k] && cur.strength >= 2) return;
     if(s > cur.strength){ store.fields[k] = {value: v, chunk: chunkId, strength: s, first: cur.first, last: chunkId}; return; }
     if(s === cur.strength){
@@ -263,6 +300,7 @@ async function distillNovelFull(chunks, characters, opts){
     }
   }
   var stores = {}, details = {}, gateFailures = {}, chains = {};
+  var allNames = characters.concat(Object.keys(aliasMap || {}));
   characters.forEach(function(ch){
     stores[ch] = {early: createStore(), mid: createStore(), late: createStore()};
     details[ch] = []; gateFailures[ch] = []; chains[ch] = [];
@@ -275,7 +313,7 @@ async function distillNovelFull(chunks, characters, opts){
         chains[ch].push({kind: "restore", chunk: chunk, saved: saved});
       }else{
         var hit = minMentions <= 0 ? appearsIn(chunk.text, ch, aliasIndex)
-                                   : countMentions(chunk.text, ch, aliasIndex) >= minMentions;
+                                   : countMentions(chunk.text, ch, aliasIndex, allNames) >= minMentions;
         chains[ch].push(hit ? {kind: "work", chunk: chunk, key: key} : {kind: "skip", chunk: chunk});
       }
     });
@@ -291,7 +329,7 @@ async function distillNovelFull(chunks, characters, opts){
     var best = null, bestN = 0;
     items.forEach(function(it){
       if(it.kind !== "skip") return;
-      var n = countMentions(it.chunk.text, ch, aliasIndex);
+      var n = countMentions(it.chunk.text, ch, aliasIndex, allNames);
       if(n > bestN){ bestN = n; best = it; }
     });
     if(best){ best.kind = "work"; best.key = best.chunk.id + "|" + ch; best.fallback = true; }

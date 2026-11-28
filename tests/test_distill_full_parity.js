@@ -113,6 +113,19 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("冲突进队列", st.conflicts.length === 1 && st.conflicts[0].field === "speech_style");
     C.applyToStore(st, { speech_style: "言辞犀利" }, "c4", "旁白。");
     t("同值不记冲突", st.conflicts.length === 1);
+    /* 装饰差异不算冲突: [推测] 前缀 / 尾随引用 / 标点 (Laguna 真跑假冲突大头) */
+    const st2 = C.createStore();
+    C.applyToStore(st2, { core_identity: "[推测] 村中少年", stance_stability: "[推测] 5" }, "c1", "旁白。");
+    C.applyToStore(st2, { core_identity: "村中少年", stance_stability: "5" }, "c2", "旁白。");
+    t("[推测] 装饰差异不记冲突", st2.conflicts.length === 0);
+    const st3 = C.createStore();
+    C.applyToStore(st3, { life_experience: "处理过多起事件" }, "c1", "旁白。");
+    C.applyToStore(st3, { life_experience: "处理过多起事件 [ch014-1]" }, "c2", "旁白。");
+    t("尾随引用差异不记冲突", st3.conflicts.length === 0);
+    const st4 = C.createStore();
+    C.applyToStore(st4, { core_identity: "村中少年" }, "c1", "旁白。");
+    C.applyToStore(st4, { core_identity: "城市学生" }, "c2", "旁白。");
+    t("实质不同仍记冲突", st4.conflicts.length === 1);
   }
 
   /* ── 5. 端到端: 增量链 + 门禁重摇 + 出场跳过 ────────────────────── */
@@ -182,6 +195,18 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("全拦人物留条目", !!fin["苦手"]);
     t("全拦条目 fields 为空", !!fin["苦手"] && !String(fin["苦手"].fields.core_identity || "").trim());
     t("全拦条目带 gateFailures", !!fin["苦手"] && (fin["苦手"].gateFailures || []).length === 1 && fin["苦手"].gateFailures[0].kind === "values");
+  }
+
+  /* ── 8. 裸亲属词出场计数守卫: 别人的妈妈不算她的出场 ──────────────── */
+  {
+    const sb = sandbox({ DISTILL_CHUNK: { MAX_CHARS: 6000 } });
+    load(sb, ["distill_prompt_full.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const txt = "陈猴妈妈吼了一声。我妈妈笑了笑，小远的妈妈也在场，他妈妈没说话。";
+    const all = ["陈猴", "小远", "妈妈", "林远"];
+    t("亲属守卫: 他人所有格不计", C.countMentions(txt, "妈妈", {}, all) === 2);
+    t("亲属守卫: 无名单时旧口径", C.countMentions(txt, "妈妈", {}) === 4);
+    t("亲属守卫: 普通人名不受影响", C.countMentions(txt, "陈猴", {}, all) === 1);
   }
 
   console.log("distill_full_parity: " + pass + " pass, " + fail + " fail");
