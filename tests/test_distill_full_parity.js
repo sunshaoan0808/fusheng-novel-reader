@@ -68,6 +68,10 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     ].join("\n");
     const f = C.parseFullProfile(md, "林黛玉");
     t("解析取到 core_identity", f.core_identity === "贾府表小姐");
+    /* 反引号字段名 (Laguna 真回复格式, 2026-11-28 真跑实测整批被误判空档案) */
+    const mdBt = ["## 林黛玉", "### 基础身份定位", "- `core_identity`: 贾府表小姐 [ch001]", "- `values`: 守拙=8；任真=9 [ch001]"].join("\n");
+    const fBt = C.parseFullProfile(mdBt, "林黛玉");
+    t("反引号字段名被容忍解析", fBt.core_identity === "贾府表小姐 [ch001]" && fBt.values === "守拙=8；任真=9 [ch001]");
     t("引号误写字段被容忍解析", (f.speech_style || "").includes("犀利"));
     t("畸形字段名不入档", !("inner_conflict_两难" in f) && Object.keys(f).every(k => /^[a-z][a-z0-9_]*$/.test(k)));
     t("畸形行文本不混入上一字段", !(f.speech_style || "").includes("畸形"));
@@ -84,6 +88,9 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("values 散文被拦", (C.checkGates({ values: "无自主价值观，完全跟随母亲" }) || {}).kind === "values");
     t("values 尾注脚放行", C.checkGates({ values: "护宗=8；守正=7；敬长=8；母性本能=9（被压抑）" }) === null);
     t("values 对照分隔放行", C.checkGates({ values: "服从誓言=9（表面）/ 情感失控=7（实际）" }) === null);
+    t("values 带引用标注放行 (提示词规则17要求)", C.checkGates({ values: "勇气=6；智慧=8；亲情=7 [ch004-1]" }) === null);
+    t("values 带引用与杂散反引号放行 (Laguna 真格式)", C.checkGates({ values: "勇气=6；智慧=8；自由=5 `[ch004-1]`" }) === null);
+    t("values 散文带引用仍拦", (C.checkGates({ values: "母子情深最重要 [ch004-1]" }) || {}).kind === "values");
     t("values 旧坏样本仍拦", (C.checkGates({ values: "母子情深>名望地位" }) || {}).kind === "values");
     t("空字段不触发门禁", C.checkGates({ values: "", core_traits: "" }) === null);
     const idx = C.buildAliasIndex({ "黛玉": "林黛玉" });

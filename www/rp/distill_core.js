@@ -146,7 +146,7 @@ function parseFullProfile(md, character){
     var sec = ln.match(/^###\s+(.+)$/);
     if(sec){ flush(); curKey = null; curVal = []; skipSec = sec[1].indexOf("冲突备注") >= 0; return; }
     if(skipSec) return;
-    var m = ln.match(/^\s*-\s*\*{0,2}([a-z][a-z0-9_]*)["”]?\*{0,2}\s*[:：]\s*(.*)$/);
+    var m = ln.match(/^\s*-\s*`?\*{0,2}([a-z][a-z0-9_]*)["”]?\*{0,2}`?\s*[:：]\s*(.*)$/);
     if(m){ flush(); curKey = m[1]; curVal = [m[2]]; }
     else if(curKey) curVal.push(ln);
   });
@@ -167,8 +167,13 @@ function checkGates(fields){
       if(v.indexOf(PLACEHOLDER_TOKENS[j]) === 0)
         return {kind: "placeholder", field: k, value: v.slice(0, 40)};
     }
-    if(k === "values" && !VALUES_OK_RE.test(v))
-      return {kind: "values", field: k, value: v.slice(0, 40)};
+    if(k === "values"){
+      /* 与管线 _field_values 同口径: 校验前剥掉引用标注 [ch...] 与反引号
+       * (提示词规则 17 要求每个字段带 [chunk_id], 不剥必误伤合规输出) */
+      var vv = v.replace(/`/g, "").replace(/(\s*\[[^\]]*\])+\s*$/, "").trim();
+      if(!VALUES_OK_RE.test(vv))
+        return {kind: "values", field: k, value: v.slice(0, 40)};
+    }
   }
   return null;
 }
