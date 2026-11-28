@@ -1,5 +1,5 @@
 /* 全套蒸馏移植回归 (2026-11-28): App 端蒸馏与 novel-distill 管线同源的断言。
- * 覆盖: 全套提示词组装标记 / 95 字段口径 / 全格式解析容忍 / 三道门 / 字段仲裁 /
+ * 覆盖: 全套提示词组装标记 / 97 字段口径 / 全格式解析容忍 / 三道门 / 字段仲裁 /
  * 端到端增量链 (existing 回灌 + 门禁重摇 + 冲突落账)。只用 Node vm, 零依赖。 */
 const fs = require("fs");
 const vm = require("vm");
@@ -39,7 +39,7 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("含 overlay 不确定留空口径", P.text.includes("不确定") && P.text.includes("留空"));
     const fields = P.groups.reduce((a, g) => a.concat(g.fields), []);
     t("24 组", P.groups.length === 24);
-    t("95 字段", fields.length === 95);
+    t("97 字段", fields.length === 97);
     t("字段无重复", new Set(fields).size === fields.length);
   }
 
@@ -49,7 +49,7 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     load(sb, ["distill_prompt_full.js", "distill_core.js"]);
     const C = sb.DISTILL_CORE;
     t("FULL_MODE 开", C.FULL_MODE === true);
-    t("PROFILE_FIELDS 95", C.PROFILE_FIELDS.length === 95);
+    t("PROFILE_FIELDS 97", C.PROFILE_FIELDS.length === 97);
     t("含 big_five/pressure_truth/ensemble_role",
       ["big_five", "pressure_truth", "ensemble_role"].every(f => C.PROFILE_FIELDS.includes(f)));
     t("CORE_FIELDS 18", C.CORE_FIELDS.length === 18);
@@ -207,6 +207,27 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("亲属守卫: 他人所有格不计", C.countMentions(txt, "妈妈", {}, all) === 2);
     t("亲属守卫: 无名单时旧口径", C.countMentions(txt, "妈妈", {}) === 4);
     t("亲属守卫: 普通人名不受影响", C.countMentions(txt, "陈猴", {}, all) === 1);
+  }
+
+  /* ── 9. 身高/体型数值证据门: 编的数字剥掉, 有据的留下 ──────────────── */
+  {
+    const sb = sandbox({ DISTILL_CHUNK: { MAX_CHARS: 6000 } });
+    load(sb, ["distill_prompt_full.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const f1 = { height: "[推测] 1.70米左右", build: "[推测] 瘦弱" };
+    C.stripFabricatedMeasures(f1, "她抱着小远站在门口。");
+    t("数值门: 编造身高被剥", !("height" in f1));
+    t("数值门: 无数字的推测体型保留", f1.build === "[推测] 瘦弱");
+    const f2 = { height: "约1.83米 [ch003]", build: "约60公斤" };
+    C.stripFabricatedMeasures(f2, "他身高约1.83米，体重约60公斤。");
+    t("数值门: 原文有据的身高保留", f2.height === "约1.83米 [ch003]");
+    t("数值门: 原文有据的体重保留", f2.build === "约60公斤");
+    const f3 = { height: "未明确描述 [推测]" };
+    C.stripFabricatedMeasures(f3, "旁白。");
+    t("数值门: 未明确式占位被剥", !("height" in f3));
+    const f4 = { build: "干瘦 [ch005-12]" };
+    C.stripFabricatedMeasures(f4, "干瘦的老人背着麻袋。");
+    t("数值门: 干瘦保留", f4.build === "干瘦 [ch005-12]");
   }
 
   console.log("distill_full_parity: " + pass + " pass, " + fail + " fail");

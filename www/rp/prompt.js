@@ -28,7 +28,7 @@ var LABELS = {
   life_timeline:"生平", social_soil:"出身", socio_economics:"经济/教育/信仰",
   key_bonds:"关键羁绊", faction_position:"阵营立场",
   visual_identity:"视觉识别", voice_dressing:"声音着装",
-  appearance_feature:"外貌", physical_marks:"身体印记",
+  appearance_feature:"外貌", height:"身高", build:"体型", physical_marks:"身体印记",
   signature_items:"随身物品", reputation:"外界评价",
   action_pattern:"行动模式", action_style:"行动风格",
   /* 外在三件套收尾: 数据侧(蒸馏产物)一直有这三个键, 但从未登记进 LABELS/LAYERS,
@@ -55,7 +55,7 @@ var LAYERS = {
   /* P1-a: 外在集群从 background 拆出独立层。以前 10 个外在字段全塞在【背景】段里,
    * 与出身/经历混排, 预算一紧先被整段丢; 且"外貌"混在"背景"里模型权重感低。
    * 顺序 = prompt 里的行序: 先整体外貌, 再分项, 再举止, 最后他人视角。 */
-  appearance: ["appearance_feature","visual_identity","physical_marks",
+  appearance: ["appearance_feature","height","build","visual_identity","physical_marks",
     "voice_dressing","signature_items","habit_action","carry_style",
     "others_impression","reputation","action_pattern","action_style"],
   background: ["background","life_timeline","social_soil","socio_economics","key_bonds",

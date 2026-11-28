@@ -1208,7 +1208,7 @@ async function send(runId, name, text, opts){
         var cgApp = {};
         try{
           var _cf = (card && card.fields) || {};
-          var _ap = _cf.appearance_feature || _cf.visual_identity || "";
+          var _ap = [_cf.appearance_feature, _cf.height, _cf.build].filter(function(x){ return !!x; }).join("；") || _cf.visual_identity || "";
           if(_ap && wireRes.sceneCard && wireRes.sceneCard.present &&
              wireRes.sceneCard.present.indexOf(name) >= 0) cgApp[name] = _ap;
         }catch(e){}

@@ -158,6 +158,24 @@ function parseFullProfile(md, character){
 var PLACEHOLDER_TOKENS = ["未判定", "未知", "证据不足", "待判定", "不详"];
 var VALUES_OK_RE = /^[^=；;]+=-?\d+\s*(?:[（(][^）)]*[）)])?\s*(?:[；;\/]\s*[^=；;]+=-?\d+\s*(?:[（(][^）)]*[）)])?\s*)*$/;
 /* 返回第一个违规 {kind, field, value} 或 null。kind: placeholder|values。 */
+/* 身高/体型数值证据门 (2026-11-28 一期验收实测): 弱模型会给 height 编数值
+ * (苏清禾「[推测] 1.70米左右」——标了推测也是编的)。确定性剥离, 不触发重摇:
+ * height/build 里出现的阿拉伯数字必须逐字在本块原文中出现, 否则删该字段;
+ * 值剥掉 [推测]/引用后只剩「未明确」类占位短语的, 同样删 (留空才是诚实)。 */
+function stripFabricatedMeasures(fields, chunkText){
+  ["height", "build"].forEach(function(k){
+    var v = fields[k];
+    if(!v) return;
+    var s = String(v);
+    var bare = s.replace(/\[推测\]/g, "").replace(/\[[^\]]*\]/g, "").replace(/`/g, "").replace(/\s+/g, "");
+    if(bare.length <= 8 && /^(未明确|未提及|没有描述|无描述|不详|未知)/.test(bare)){ delete fields[k]; return; }
+    var nums = bare.match(/\d+(?:\.\d+)?/g);
+    if(nums && chunkText){
+      var ok = nums.every(function(n){ return chunkText.indexOf(n) >= 0; });
+      if(!ok) delete fields[k];
+    }
+  });
+}
 function checkGates(fields){
   var keys = Object.keys(fields || {});
   for(var i = 0; i < keys.length; i++){
@@ -367,6 +385,7 @@ async function distillNovelFull(chunks, characters, opts){
             aliasMap: aliasMap
           });
           var fields = parseFullProfile(r.md, ch);
+          stripFabricatedMeasures(fields, chunk.text);
           if(!Object.keys(fields).length){
             if(attempt === 0){ onProgress(done, total, "空档案, 重摇 " + ch + " @ " + chunk.id); continue; }
             gateFailures[ch].push({chunk: chunk.id, kind: "empty", field: ""});
@@ -789,6 +808,7 @@ return {
   FULL_MODE: FULL_MODE,
   countMentions: countMentions,
   checkGates: checkGates,
+  stripFabricatedMeasures: stripFabricatedMeasures,
   parseFullProfile: parseFullProfile,
   createStore: createStore,
   applyToStore: applyToStore,
