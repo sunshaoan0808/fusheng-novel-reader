@@ -135,36 +135,166 @@ function extractEvidence(text, name, n, sentences){
   return out;
 }
 
+/* 段落上下文提取 (2026-11-28 用户拍板): 名字连同它所在的段落、上一段、下一段
+ * 一起交给 LLM 判断。证据句是碎片, 段落上下文能看出名字到底指人、指物还是
+ * 只是常用词的一部分; 第一人称叙事的主角名出现次数少, 也靠上下文翻案。 */
+function splitParagraphs(text){
+  return String(text == null ? "" : text).split(/\n+/).map(function(p){ return p.trim(); })
+    .filter(function(p){ return p.length > 0; });
+}
+function countOcc(hay, needle){
+  var n = 0, i = 0;
+  while(needle && (i = hay.indexOf(needle, i)) >= 0){ n++; i += needle.length; }
+  return n;
+}
+/* 取名字出现最集中的一段 (并列取最早), 前后各带一段; 每段限长防 token 爆炸 */
+function extractContext(name, paragraphs){
+  var best = -1, bestN = 0;
+  for(var i = 0; i < paragraphs.length; i++){
+    var n = countOcc(paragraphs[i], name);
+    if(n > bestN){ bestN = n; best = i; }
+  }
+  if(best < 0) return "";
+  function cap(t, max){ return t.length > max ? t.slice(0, max) + "…" : t; }
+  var parts = [];
+  if(best > 0) parts.push("【上段】" + cap(paragraphs[best - 1], 200));
+  parts.push("【本段】" + cap(paragraphs[best], 320));
+  if(best < paragraphs.length - 1) parts.push("【下段】" + cap(paragraphs[best + 1], 200));
+  return parts.join("\n");
+}
+
+/* 宽容解析 LLM 返回的 JSON 对象: 先按贪婪匹配整段试解; 失败再从第一个 {
+ * 起做括号配平扫描 (跳过字符串内括号), 取第一个完整对象试解。
+ * 实测失败形态: 模型在 JSON 前后多写了带花括号的文字, 贪婪匹配把两段拼成非法串。 */
+function parseJsonObj(text){
+  var m = String(text == null ? "" : text).match(/\{[\s\S]*\}/);
+  if(m){ try{ return JSON.parse(m[0]); }catch(e){} }
+  var t = String(text == null ? "" : text);
+  var pos = t.indexOf("{");
+  while(pos >= 0){
+    var depth = 0, inStr = false, esc = false, end = -1;
+    for(var i = pos; i < t.length; i++){
+      var ch = t[i];
+      if(inStr){
+        if(esc) esc = false;
+        else if(ch === "\\") esc = true;
+        else if(ch === '"') inStr = false;
+        continue;
+      }
+      if(ch === '"') inStr = true;
+      else if(ch === "{") depth++;
+      else if(ch === "}"){
+        depth--;
+        if(depth === 0){ end = i; break; }
+      }
+    }
+    if(end < 0) return null;
+    try{ return JSON.parse(t.slice(pos, end + 1)); }catch(e){}
+    /* 这段不是合法 JSON (如前言里的 {注: …}), 跳过它找下一个对象 */
+    pos = t.indexOf("{", end + 1);
+  }
+  return null;
+}
+
+var CONFIRM_SYS = "你是小说角色识别器。从候选名单中确认哪些是真实人物角色, 合并同一人的不同写法。每个候选附了它出现最集中段落的原文上下文 (上段/本段/下段), 依据上下文判断: 名字指代具体人物才是角色; 指代物品、动物、地点、泛称或只是常用词的一部分, 都不是角色。若文本是第一人称叙事, 叙述者本人也是角色, 请结合上下文确认其姓名并保留。同一人有多个候选写法时只返回一人, 正名取更完整者, 其余写法放进 aliases。返回 JSON: {\"characters\": [{\"name\": \"正名\", \"aliases\": [\"别名\"], \"importance\": 1-10, \"reason\": \"一句话推荐理由\"}]}。importance 按戏份打分, reason 说明为什么值得蒸馏 (如: 主角/关键情节推动者/有完整成长弧)。只返回名单里确认的角色, 不要把候选原样全抄回来。";
+
+/* 跨批合并: 后批返回的人若与已保留者同名/互为别名/名字互含, 并入已保留者 */
+function mergeConfirmResults(acc, batch){
+  batch.forEach(function(c){
+    var hit = null;
+    for(var i = 0; i < acc.length; i++){
+      var a = acc[i];
+      if(a.name === c.name || a.aliases.indexOf(c.name) >= 0 || c.aliases.indexOf(a.name) >= 0
+        || (a.name.length >= 2 && c.name.indexOf(a.name) >= 0) || (c.name.length >= 2 && a.name.indexOf(c.name) >= 0)){ hit = a; break; }
+    }
+    if(!hit){ acc.push(c); return; }
+    if(c.name.length > hit.name.length && hit.aliases.indexOf(hit.name) < 0){
+      /* 改名以更完整的写法为准, count 也随正名走 (苏清禾 61 次, 不是含子串的苏清 70 次) */
+      hit.aliases.push(hit.name); hit.name = c.name; hit.count = c.count;
+    }else{
+      if(c.name !== hit.name && hit.aliases.indexOf(c.name) < 0) hit.aliases.push(c.name);
+      hit.count = Math.max(hit.count, c.count);
+    }
+    c.aliases.forEach(function(al){ if(al !== hit.name && hit.aliases.indexOf(al) < 0) hit.aliases.push(al); });
+    hit.importance = Math.max(hit.importance, c.importance);
+    if(!hit.reason) hit.reason = c.reason;
+  });
+  return acc;
+}
+
+/* 名单去重 (2026-11-28): 分批判定看不见跨批的同一人 (林远/小远、老杨头/杨老头
+ * 这类全名与小名、敬称变体, 规则互含判断抓不住), 最后把紧凑名单交 LLM 合并一次。
+ * 失败不阻断: 原样返回未去重名单。count/importance 合并后按组内最大值重算,
+ * 不信 LLM 复述的数字。 */
+var DEDUPE_SYS = "你是角色名单去重器。下面是已确认的小说角色名单, 其中可能有同一人的不同称呼 (全名/小名/昵称/敬称变体, 如「林远」与「小远」、「老杨头」与「杨老头」), 必须合并为一人: 正名取最正式、最完整的写法, 其余称呼放进 aliases。不同的人不要合并 (同姓不同人尤其小心)。返回 JSON: {\"characters\": [{\"name\": \"正名\", \"aliases\": [\"别名\"], \"importance\": 1-10, \"reason\": \"一句话理由\"}]}, 包含合并后的全部角色, 不要漏人。";
+async function dedupeCharacters(results, onProgress){
+  if(!results || results.length < 2) return results;
+  onProgress(1, 1, "LLM 名单去重...");
+  try{
+    var r = await DISTILL_LLM.chat([
+      {role: "system", content: DEDUPE_SYS},
+      {role: "user", content: JSON.stringify({characters: results.map(function(c){
+        return {name: c.name, aliases: c.aliases, importance: c.importance, reason: c.reason};
+      })})}
+    ]);
+    var obj = parseJsonObj(r.content);
+    if(!obj) return results;
+    var list = (obj.characters || []).filter(function(c){ return c && c.name && !isGeneric(c.name); });
+    if(!list.length || list.length > results.length) return results;
+    return list.map(function(c){
+      var aliases = (c.aliases || []).map(function(a){ return cleanAlias(a, c.name); })
+        .filter(function(a){ return a && a !== c.name && !isGeneric(a); });
+      aliases = aliases.filter(function(a, ix){ return aliases.indexOf(a) === ix; });
+      var names = [c.name].concat(aliases);
+      var count = 0, imp = c.importance || 5;
+      results.forEach(function(o){
+        if(names.indexOf(o.name) >= 0 || o.aliases.some(function(a){ return names.indexOf(a) >= 0; })){
+          count = Math.max(count, o.count);
+          imp = Math.max(imp, o.importance);
+          o.aliases.forEach(function(a){ if(a !== c.name && aliases.indexOf(a) < 0) aliases.push(a); });
+        }
+      });
+      return {name: c.name, aliases: aliases, importance: imp, count: count, reason: c.reason || ""};
+    });
+  }catch(e){
+    return results;
+  }
+}
+
 async function confirmCharacters(candidates, text, opts, warnings){
   opts = opts || {};
   warnings = warnings || [];
   var onProgress = opts.onProgress || function(){};
-  // 取 Top 30 让 LLM 确认
-  var top = candidates.slice(0, 30);
-  onProgress(0, 1, "提取证据句...");
-  // 每个候选附 5 条证据句（全文只切一次，Top30 复用）
-  var sentences = String(text == null ? "" : text).split(/[。！？\n]+/);
-  var candsWithEv = top.map(function(c){
-    return {name: c.name, count: c.count, evidence: extractEvidence(null, c.name, 5, sentences)};
-  });
-  onProgress(0, 1, "LLM 确认角色...");
-  try{
-    var r = await DISTILL_LLM.chat([
-      {role: "system", content: "你是小说角色识别器。从候选名单中确认哪些是真实人物角色，合并别名。每个候选附了 5 条原文证据句，帮你快速判断（证据句里名字若指代物品/状语/泛称则不是角色）。返回 JSON: {\"characters\": [{\"name\": \"正名\", \"aliases\": [\"别名\"], \"importance\": 1-10, \"reason\": \"一句话推荐理由\"}]}。importance 按戏份打分，reason 说明为什么值得蒸馏（如：主角/关键情节推动者/有完整成长弧）。"},
-      {role: "user", content: JSON.stringify({candidates: candsWithEv})}
-    ]);
-    var m = r.content.match(/\{[\s\S]*\}/);
-    if(m){
-      var obj = JSON.parse(m[0]);
-      return (obj.characters || []).map(function(c){
-        var cand = top.find(function(t){ return t.name === c.name; });
-        // 过滤泛称正名
+  /* 全候选判定 (2026-11-28): 不再只看 Top 30 —— 低频真角色 (如第一人称主角)
+   * 排在 60 名开外, 窗口一截就永远漏掉。候选池本身已过 minCount 与泛称过滤,
+   * 总量 ≤100, 分批 (每批 20) 逐批让 LLM 带段落上下文判定。 */
+  var pool = candidates.slice(0, 100);
+  var paragraphs = splitParagraphs(text);
+  var BATCH = 20;
+  var batches = [];
+  for(var i = 0; i < pool.length; i += BATCH) batches.push(pool.slice(i, i + BATCH));
+  var results = [];
+  var okBatches = 0, lastErr = null;
+  for(var b = 0; b < batches.length; b++){
+    var batch = batches[b];
+    onProgress(b, Math.max(1, batches.length), "LLM 判定角色 (第 " + (b + 1) + "/" + batches.length + " 批)...");
+    var candsWithCtx = batch.map(function(c){
+      return {name: c.name, count: c.count, context: extractContext(c.name, paragraphs)};
+    });
+    try{
+      var r = await DISTILL_LLM.chat([
+        {role: "system", content: CONFIRM_SYS},
+        {role: "user", content: JSON.stringify({candidates: candsWithCtx})}
+      ]);
+      var obj = parseJsonObj(r.content);
+      if(!obj) throw new Error("LLM 返回无 JSON");
+      var mapped = (obj.characters || []).map(function(c){
+        var cand = batch.find(function(t){ return t.name === c.name; })
+          || pool.find(function(t){ return t.name === c.name; });
         if(isGeneric(c.name)) return null;
-        // 清洗别名
         var aliases = (c.aliases || []).map(function(a){ return cleanAlias(a, c.name); })
           .filter(function(a){ return a && a !== c.name && !isGeneric(a); });
-        // 去重
-        aliases = aliases.filter(function(a, i){ return aliases.indexOf(a) === i; });
+        aliases = aliases.filter(function(a, ix){ return aliases.indexOf(a) === ix; });
         return {
           name: c.name,
           aliases: aliases,
@@ -172,15 +302,25 @@ async function confirmCharacters(candidates, text, opts, warnings){
           count: cand ? cand.count : 0,
           reason: c.reason || ""
         };
-      }).filter(Boolean).sort(function(a, b){ return b.importance - a.importance || b.count - a.count; });
+      }).filter(Boolean);
+      mergeConfirmResults(results, mapped);
+      okBatches++;
+    }catch(e){
+      lastErr = e;
     }
-  }catch(e){
-    var wmsg = "LLM 确认失败，已降级为规则结果: " + e.message;
-    warnings.push(wmsg);
-    onProgress(0, 1, wmsg);
   }
+  if(okBatches > 0){
+    if(okBatches < batches.length){
+      warnings.push("LLM 判定有 " + (batches.length - okBatches) + " 批失败, 结果可能不全: " + (lastErr ? lastErr.message : ""));
+    }
+    results = await dedupeCharacters(results, onProgress);
+    return results.sort(function(a, b2){ return b2.importance - a.importance || b2.count - a.count; });
+  }
+  var wmsg = "LLM 确认失败，已降级为规则结果: " + (lastErr ? lastErr.message : "未知错误");
+  warnings.push(wmsg);
+  onProgress(0, 1, wmsg);
   // 降级: 直接用规则结果
-  return top.slice(0, 20).map(function(c){
+  return pool.slice(0, 20).map(function(c){
     return {name: c.name, aliases: [], importance: 5, count: c.count,
       reason: "规则提取 (出现 " + c.count + " 次)"};
   });
@@ -202,6 +342,9 @@ async function discover(text, opts){
 
 return {
   extractCandidates: extractCandidates,
+  extractContext: extractContext,
+  parseJsonObj: parseJsonObj,
+  splitParagraphs: splitParagraphs,
   confirmCharacters: confirmCharacters,
   discover: discover,
   isGeneric: isGeneric,
