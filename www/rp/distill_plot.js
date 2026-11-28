@@ -5,6 +5,53 @@
 var DISTILL_PLOT = (function(){
 "use strict";
 
+/* 事件结构化 (2026-11-28 蒸馏补强三期): events 从字符串升级为对象
+ * {event, time_marker, characters, location}。旧断点里的字符串事件照常兼容。
+ * time_marker 只记原文相对时间词 (三年后/次日/子时), 没有留空, 禁止编造日期。 */
+function normEvent(ev){
+  if(typeof ev === "string") return {event: ev, time_marker: "", characters: [], location: ""};
+  ev = ev || {};
+  return {
+    event: String(ev.event || ev.text || "").trim(),
+    time_marker: String(ev.time_marker || "").trim(),
+    characters: Array.isArray(ev.characters) ? ev.characters.map(function(c){ return String(c); }) : [],
+    location: String(ev.location || "").trim()
+  };
+}
+function eventText(ev){ return typeof ev === "string" ? ev : ((ev && ev.event) || ""); }
+
+/* 全书事件时间线: 按块序 flatten 结构化事件, 跨块同文去重,
+ * 转折点/伏笔埋设按文本互含打 type 标。产物落盘为 package 的 "timeline"。 */
+function buildTimeline(summaries){
+  var out = [], seen = {};
+  /* 伏笔是跨块的: 后块事件呼应前块 hook 也算 hook 事件, 故 hook 池全书收集 */
+  var allHooks = [];
+  (summaries || []).forEach(function(s){
+    (s.hooks || []).forEach(function(h){ var t = String((h && h.hook) || h || ""); if(t) allHooks.push(t); });
+  });
+  (summaries || []).forEach(function(s){
+    var tps = (s.turning_points || []).map(function(t){ return String(t || ""); });
+    var hooks = allHooks;
+    (s.events || []).forEach(function(raw){
+      var e = normEvent(raw);
+      if(!e.event) return;
+      var key = e.event.replace(/\s+/g, "");
+      if(seen[key]) return;
+      seen[key] = 1;
+      var type = "event";
+      var i;
+      for(i = 0; i < tps.length; i++)
+        if(tps[i] && (e.event.indexOf(tps[i]) >= 0 || tps[i].indexOf(e.event) >= 0)){ type = "turning"; break; }
+      if(type === "event")
+        for(i = 0; i < hooks.length; i++)
+          if(hooks[i] && (e.event.indexOf(hooks[i]) >= 0 || hooks[i].indexOf(e.event) >= 0)){ type = "hook"; break; }
+      out.push({seq: out.length + 1, chunk_id: s.chunk_id, time_marker: e.time_marker,
+                event: e.event, characters: e.characters, location: e.location, type: type});
+    });
+  });
+  return out;
+}
+
 async function summarizeChunks(chunks, characters, aliasMap, opts){
   opts = opts || {};
   var onProgress = opts.onProgress || function(){};
@@ -27,14 +74,15 @@ async function summarizeChunks(chunks, characters, aliasMap, opts){
     onProgress(i + 1, chunks.length, "梗概 " + ch.id);
     try{
       var r = await DISTILL_LLM.chat([
-        {role: "system", content: "你是剧情梗概器。从小说片段提取结构化梗概。返回 JSON: {\"events\": [\"事件1\", ...], \"turning_points\": [\"转折点\", ...], \"hooks\": [{\"hook\": \"悬念描述\"}]}"},
+        {role: "system", content: "你是剧情梗概器。从小说片段提取结构化梗概。返回 JSON: {\"events\": [{\"event\": \"一句话事件\", \"time_marker\": \"原文中的相对时间词 (如三年后/次日/当夜, 没有留空, 禁止编造具体日期)\", \"characters\": [\"参与者\"], \"location\": \"发生地点 (没有留空)\"}], \"turning_points\": [\"转折点\", ...], \"hooks\": [{\"hook\": \"悬念描述\"}]}"},
         {role: "user", content: JSON.stringify({chunk_id: ch.id, title: ch.title, characters: characters,
           // 与分块上限一致, 否则每块尾部被截掉 (见 distill_chunk.MAX_CHARS)
           excerpt: ch.text.slice(0, (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000)})}
       ]);
       var m = r.content.match(/\{[\s\S]*\}/);
       var obj = m ? JSON.parse(m[0]) : {events: [], turning_points: [], hooks: []};
-      var summary = {chunk_id: ch.id, title: ch.title, events: obj.events || [],
+      var summary = {chunk_id: ch.id, title: ch.title,
+                     events: (obj.events || []).map(normEvent).filter(function(e){ return !!e.event; }),
                      turning_points: obj.turning_points || [], hooks: obj.hooks || []};
       // 兼容 LLM 返回字符串数组的情况
       summary.hooks = summary.hooks.map(function(h){
@@ -63,7 +111,7 @@ async function buildOutline(summaries, opts){
     try{
       var r = await DISTILL_LLM.chat([
         {role: "system", content: "你是大纲合并器。把多个章节梗概合并为连贯大纲。返回 JSON: {\"sections\": [{\"title\": \"标题\", \"summary\": \"摘要\"}]}"},
-        {role: "user", content: JSON.stringify(batch.map(function(s){ return {chunk_id: s.chunk_id, title: s.title, events: s.events}; }))}
+        {role: "user", content: JSON.stringify(batch.map(function(s){ return {chunk_id: s.chunk_id, title: s.title, events: (s.events || []).map(eventText)}; }))}
       ]);
       var m = r.content.match(/\{[\s\S]*\}/);
       var obj = m ? JSON.parse(m[0]) : {sections: []};
@@ -98,7 +146,9 @@ async function extractArcs(characters, summaries, opts){
     var relevant = [];
     summaries.forEach(function(s){
       (s.events || []).forEach(function(ev){
-        if(ev.indexOf(ch) >= 0 && relevant.length < 20) relevant.push(ev);
+        var t = eventText(ev);
+        var inChars = ev && Array.isArray(ev.characters) && ev.characters.indexOf(ch) >= 0;
+        if((inChars || t.indexOf(ch) >= 0) && relevant.length < 20) relevant.push(t);
       });
     });
     if(!relevant.length) continue;
@@ -138,11 +188,11 @@ function pairForeshadowing(summaries, opts){
     var best = null, bestScore = 0;
     summaries.forEach(function(s, si){
       if(si <= h.setup_idx) return; // 只在之后找 payoff
-      var sText = (s.events || []).join(" ");
+      var sText = (s.events || []).map(eventText).join(" ");
       var score = hKeys.filter(function(k){ return sText.indexOf(k) >= 0; }).length;
       if(score > bestScore){
         bestScore = score;
-        best = {payoff_chunk: s.chunk_id, payoff_event: (s.events || [])[0] || ""};
+        best = {payoff_chunk: s.chunk_id, payoff_event: eventText((s.events || [])[0])};
       }
     });
     if(best && bestScore >= 2){
@@ -157,6 +207,9 @@ return {
   buildOutline: buildOutline,
   extractConflicts: extractConflicts,
   extractArcs: extractArcs,
-  pairForeshadowing: pairForeshadowing
+  pairForeshadowing: pairForeshadowing,
+  buildTimeline: buildTimeline,
+  normEvent: normEvent,
+  eventText: eventText
 };
 })();

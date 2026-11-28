@@ -110,6 +110,36 @@ function foilLines(card, names, name){
   return [];
 }
 
+/* 全书大事记 (2026-11-28 蒸馏补强三期): run.timeline 结构化事件——
+ * 转折点优先, 其次与在场人物相关的事件, 让叙述知道故事走到哪一步。 */
+function timelineLines(run, names){
+  var tl = (run && run.timeline) || [];
+  if(!Array.isArray(tl) || !tl.length) return [];
+  var turning = [], related = [];
+  tl.forEach(function(e){
+    if(!e || !e.event) return;
+    if(e.type === "turning") turning.push(e);
+    else if(hitNames(e.characters, names) > 0) related.push(e);
+  });
+  var pick = turning.slice(0, 2).concat(related.slice(0, 2)).slice(0, 3);
+  return pick.map(function(e){
+    return "· 大事记：" + (e.time_marker ? "[" + cut(e.time_marker, 10) + "] " : "") + cut(e.event, 56);
+  });
+}
+
+/* 关键物品现状 (2026-11-28 蒸馏补强二期): 只报非完好状态的物品,
+ * 防叙述把已遗失/损毁的东西当还在手里用。 */
+function itemLines(run){
+  var items = (run && run.items) || ((run && run.worldbook) || {}).items || [];
+  if(!Array.isArray(items)) return [];
+  var bad = {损毁: 1, 遗失: 1, 被夺: 1, 下落不明: 1};
+  return items.filter(function(it){ return it && it.name && bad[it.status]; }).slice(0, 2)
+    .map(function(it){
+      var holder = (it.owner_chain || []).slice(-1)[0];
+      return "· 物品现状：" + cut(it.name, 16) + " 已" + it.status + (holder ? "（原持有人：" + cut(holder, 10) + "）" : "");
+    });
+}
+
 /* 当前段大纲（sections 与 chapterIdx 同源，见 chat.js buildChapterInstr） */
 function outlineLines(run, chapterIdx){
   var secs = (run && run.sections) || [];
@@ -135,6 +165,8 @@ function build(run, opts){
       foretellLines(run, opts.name, !!(gates && gates.deep)),
       heartLines((opts.cards || [])[0], !!(gates && gates.voice)),
       conflictLines(run, names),
+      timelineLines(run, names),
+      itemLines(run),
       foilLines((opts.cards || [])[0], names, opts.name),
       outlineLines(run, opts.chapterIdx),
     ];
@@ -165,5 +197,6 @@ function narrativeBrief(card){
 
 return {build: build, narrativeBrief: narrativeBrief,
   _foreshadowLines: foreshadowLines, _conflictLines: conflictLines,
-  _constraintLines: constraintLines, _foretellLines: foretellLines};
+  _constraintLines: constraintLines, _foretellLines: foretellLines,
+  _timelineLines: timelineLines, _itemLines: itemLines};
 })();

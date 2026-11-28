@@ -17,6 +17,9 @@ macros.push({label: "📖 " + (r.name || "规则"), text: "" + (r.name || "") + 
 (wb.locations || []).forEach(function(l){
 macros.push({label: "📍 " + (l.name || "场景"), text: "" + (l.name || "") + "：" + (l.desc || "")});
 });
+(wb.items || []).forEach(function(it){
+macros.push({label: "🗡 " + (it.name || "物品"), text: "" + (it.name || "") + "：" + (it.desc || "") + (it.status && it.status !== "完好" ? "（现状：" + it.status + "）" : "")});
+});
 }
 }catch(e){}
 // 角色

@@ -800,10 +800,11 @@ async function onStartDistill(){
       var arcs = await DISTILL_PLOT.extractArcs(chars, summaries, {});
       var pairs = DISTILL_PLOT.pairForeshadowing(summaries, {});
       DISTILL_PACKAGE.saveData(S.pkg.id, "plot", {sections: sections, conflicts: conflicts, arcs: arcs, pairs: pairs});
+      DISTILL_PACKAGE.saveData(S.pkg.id, "timeline", DISTILL_PLOT.buildTimeline(summaries));
 
       // 世界书
       prog("[世界书] 提取世界观...", 88);
-      var worldbook = await DISTILL_WORLDBOOK.extractWorldbook(summaries, chars, {
+      var worldbook = await DISTILL_WORLDBOOK.extractWorldbookFull(summaries, chars, S.chunks, {
         shouldPause: function(){ return S.paused; },
         shouldAbort: function(){ return !!S.aborted; },
         onProgress: function(m){ prog("[世界书] " + m, 88); }
