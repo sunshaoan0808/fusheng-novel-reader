@@ -300,6 +300,42 @@ function sandbox() {
   t("变体预合并: 陈青陈猴不并", pm.some(c => c.name === "陈青") && pm.some(c => c.name === "陈猴"));
   t("变体预合并: 小远不动", pm.some(c => c.name === "小远"));
 
+  /* 亲属称呼专项裁决: 逐对裁决 + 证据门 + 所有格陷阱拦截, 恰好一人过门才合并 */
+  {
+    const kText = "苏清禾拉着小远的手说：妈妈始终会在家里等你。陈猴妈妈在门口吼陈猴。";
+    const kParas = [kText];
+    const fresh = () => ([
+      { name: "苏清禾", aliases: [], importance: 9, count: 61, reason: "" },
+      { name: "妈妈", aliases: [], importance: 9, count: 100, reason: "" },
+      { name: "陈猴", aliases: [], importance: 7, count: 52, reason: "" }
+    ]);
+    const kMock = (verdicts) => async (msgs) => {
+      const payload = JSON.parse(msgs[1].content);
+      return { content: JSON.stringify(verdicts[payload.candidate] || { yes: false }) };
+    };
+    sb.DISTILL_LLM.chat = kMock({
+      "苏清禾": { yes: true, evidence: "苏清禾拉着小远的手说：妈妈始终会在家里等你" },
+      "陈猴": { yes: true, evidence: "陈猴妈妈在门口吼陈猴" }
+    });
+    let res = await D.adjudicateKinship(fresh(), kText, kParas, []);
+    t("亲属裁决: 妈妈并入苏清禾 (陈猴对被所有格陷阱拦下)", !res.some(c => c.name === "妈妈") && res.find(c => c.name === "苏清禾").aliases.includes("妈妈"));
+    sb.DISTILL_LLM.chat = kMock({});
+    res = await D.adjudicateKinship(fresh(), kText, kParas, []);
+    t("亲属裁决: 无人过门保留单列", res.some(c => c.name === "妈妈"));
+    sb.DISTILL_LLM.chat = kMock({
+      "苏清禾": { yes: true, evidence: "苏清禾拉着小远的手说：妈妈始终会在家里等你" },
+      "陈猴": { yes: true, evidence: "妈妈始终会在家里等你" }
+    });
+    res = await D.adjudicateKinship(fresh(), kText, kParas, []);
+    t("亲属裁决: 两人过门视为不唯一不合并", res.some(c => c.name === "妈妈"));
+    sb.DISTILL_LLM.chat = kMock({ "苏清禾": { yes: true, evidence: "苏清禾就是妈妈这是编出来的话" } });
+    res = await D.adjudicateKinship(fresh(), kText, kParas, []);
+    t("亲属裁决: 伪造证据不合并", res.some(c => c.name === "妈妈"));
+    sb.DISTILL_LLM.chat = kMock({ "苏清禾": { yes: true, evidence: "苏清禾拉着小远的手" } });
+    res = await D.adjudicateKinship(fresh(), kText, kParas, []);
+    t("亲属裁决: 证据不含亲属词不合并", res.some(c => c.name === "妈妈"));
+  }
+
   console.log("distill_discover: " + pass + " pass, " + fail + " fail");
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log("ERROR:", e && e.stack || e); process.exit(1); });

@@ -422,6 +422,74 @@ function preMergeVariants(results, paragraphs){
  * 失败不阻断: 原样返回未去重名单。count/importance 合并后按组内最大值重算,
  * 不信 LLM 复述的数字。 */
 var DEDUPE_SYS = "你是角色名单去重器。下面是已确认的小说角色名单, 其中可能有同一人的不同称呼 (全名/小名/昵称/敬称变体, 如「林远」与「小远」、「老杨头」与「杨老头」), 必须合并为一人: 正名取最正式、最完整的写法, 其余称呼放进 aliases。不同的人不要合并 (同姓不同人尤其小心)。合并必须有原文证据: 每组合并要在 evidence 字段给出一句逐字摘自原文的引文 (不超过 60 字), 句中同时出现正名与被合并的称呼, 或明确交代两者是同一人; 给不出原文证据的不要合并, 宁可分开列。名单中若有「叙述者」且另一角色明显是第一人称叙述者本人, 把「叙述者」并入该角色并给证据; 不确定就保留「叙述者」。返回 JSON: {\"characters\": [{\"name\": \"正名\", \"aliases\": [\"别名\"], \"importance\": 1-10, \"reason\": \"一句话理由\", \"evidence\": \"合并证据引文 (仅合并组需要)\"}]}, 包含合并后的全部角色, 不要漏人。";
+/* ── 亲属称呼专项裁决 (2026-11-28 用户拍板) ──────────────────────────
+ * 裸亲属词 (妈妈/爸爸…) 单列成条是陷阱: 它多半专指某位具名人物 (如叙述者的
+ * 母亲有本名), 单列后蒸馏侧按子串计数会被别人的亲属戏份污染成 chimera。
+ * 通用去重轮次里弱模型常漏并这一对, 故在名单定版前对「裸亲属词 × 具名人物」
+ * 强制单独裁决一次: 给亲属词最集中的原文上下文 + 全部具名候选, 模型须指认
+ * 归属并给逐字证据; 证据过门 (真在原文、含该亲属词) 才合并为别名,
+ * 指代多人/独立角色/拿不准/证据不过门的一律保留单列。 */
+var KINSHIP_TERMS = {"妈妈":1,"爸爸":1,"爷爷":1,"奶奶":1,"外公":1,"外婆":1,"叔叔":1,"婶婶":1,"伯伯":1,"姑姑":1,"舅舅":1,"阿姨":1,"哥哥":1,"姐姐":1,"弟弟":1,"妹妹":1,"嫂子":1,"婆婆":1,"公公":1};
+var KINSHIP_SYS = "你是小说亲属称呼归属裁决器。判断给定的亲属称呼是否专指某位具名人物本人。材料里 bridge_context 是两人同段出现的原文 (若有), 是最直接的线索: 若其中是该人物以第一人称自称这个亲属称呼 (如她开口说「妈妈会等你」), 或叙述明确点明她就是这个亲属, 判是。注意陷阱: 原文出现「某人+亲属称呼」或「某人的+亲属称呼」表示那是某人的亲属, 不是某人本人, 应判否。只有当亲属称呼指的就是该人物本人时才判是, 并给出一句逐字原文引文 (不超过60字, 须含该亲属称呼, 且能看出指的是该人物本人)。返回 JSON: {\"yes\": true 或 false, \"evidence\": \"引文 (判是时必填)\"}。拿不准判否。只返回 JSON, 不要多余文字。";
+/* 两人同段共现的段落 (裁决桥): 亲属词与具名人物各自的集中段往往互不相干,
+ * 真正能定归属的是同段证据 (如「“妈妈会等你。”苏清禾的声音响起」)。 */
+function bridgeContext(a, b, paragraphs){
+  var hits = [];
+  for(var i = 0; i < paragraphs.length && hits.length < 2; i++){
+    var p = paragraphs[i];
+    if(p.indexOf(a) >= 0 && p.indexOf(b) >= 0) hits.push(p.length > 220 ? p.slice(0, 220) + "…" : p);
+  }
+  return hits.join("\n");
+}
+async function adjudicateKinship(results, text, paragraphs, warnings){
+  var kin = results.filter(function(c){ return KINSHIP_TERMS[c.name]; });
+  if(!kin.length) return results;
+  var named = results.filter(function(c){ return !KINSHIP_TERMS[c.name]; });
+  if(!named.length) return results;
+  var normText = (text || "").replace(/\s+/g, "");
+  for(var ki = 0; ki < kin.length; ki++){
+    var k = kin[ki];
+    /* 逐对裁决 (实测多选一时弱模型直接弃权): 亲属词 × 每位具名人物各问一次
+     * 「指的是不是他本人」, 恰好一人过门才合并; 多人过门 = 指代不唯一, 不并。 */
+    var yesTargets = [];
+    for(var ni = 0; ni < named.length; ni++){
+      var cand = named[ni];
+      try{
+        var r = await DISTILL_LLM.chat([
+          {role: "system", content: KINSHIP_SYS},
+          {role: "user", content: JSON.stringify({
+            kinship: k.name,
+            candidate: cand.name,
+            kinship_context: extractContext(k.name, paragraphs),
+            candidate_context: extractContext(cand.name, paragraphs),
+            bridge_context: bridgeContext(cand.name, k.name, paragraphs)
+          })}
+        ]);
+        var obj = parseJsonObj(r.content);
+        if(!obj || obj.yes !== true) continue;
+        var ev = String(obj.evidence || "").replace(/\s+/g, "");
+        if(!ev || ev.indexOf(k.name) < 0 || normText.indexOf(ev) < 0) continue;
+        /* 所有格陷阱确定性拦截: 引文含「候选名+亲属词」或「候选名的+亲属词」
+         * 说明那是候选人的亲属, 不是候选人本人, 模型判错也不认。 */
+        if(ev.indexOf(cand.name + k.name) >= 0 || ev.indexOf(cand.name + "的" + k.name) >= 0) continue;
+        yesTargets.push(cand);
+      }catch(e){ /* 单对裁决失败跳过这一对, 不阻断发现 */ }
+    }
+    if(yesTargets.length !== 1) continue;
+    var target = yesTargets[0];
+    if(target.aliases.indexOf(k.name) < 0) target.aliases.push(k.name);
+    (k.aliases || []).forEach(function(a){
+      if(a !== target.name && target.aliases.indexOf(a) < 0) target.aliases.push(a);
+    });
+    target.importance = Math.max(target.importance || 0, k.importance || 0);
+    target.count = Math.max(target.count || 0, k.count || 0);
+    results = results.filter(function(c){ return c !== k; });
+    named = results.filter(function(c){ return !KINSHIP_TERMS[c.name]; });
+    if(warnings) warnings.push("亲属称呼专项裁决: 「" + k.name + "」并入「" + target.name + "」为别名");
+  }
+  return results;
+}
+
 async function dedupeCharacters(results, onProgress, text, warnings){
   warnings = warnings || [];
   if(!results || results.length < 2) return results;
@@ -602,6 +670,7 @@ async function confirmCharacters(candidates, text, opts, warnings){
         r.name = promote;
       }
     });
+    results = await adjudicateKinship(results, text, paragraphs, warnings);
     return results.sort(function(a, b2){ return b2.importance - a.importance || b2.count - a.count; });
   }
   var wmsg = "LLM 确认失败，已降级为规则结果: " + (lastErr ? lastErr.message : "未知错误");
@@ -639,6 +708,8 @@ return {
   cleanAlias: cleanAlias,
   scanNominations: scanNominations,
   probeNarrator: probeNarrator,
+  adjudicateKinship: adjudicateKinship,
+  KINSHIP_TERMS: KINSHIP_TERMS,
   cannotLink: cannotLink,
   variantCore: variantCore,
   preMergeVariants: preMergeVariants
