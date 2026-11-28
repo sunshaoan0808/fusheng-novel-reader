@@ -16,8 +16,12 @@ var FALLBACK_FIELDS = ["core_identity", "core_traits", "speech_style", "typical_
   "reputation", "action_pattern"];
 var PROFILE_FIELDS = (function(){
   try{
-    if(typeof DISTILL_CORE !== "undefined" && DISTILL_CORE.PROFILE_FIELDS &&
-       DISTILL_CORE.PROFILE_FIELDS.length) return DISTILL_CORE.PROFILE_FIELDS.slice();
+    if(typeof DISTILL_CORE !== "undefined"){
+      /* 完整度按核心字段集 (18) 打分: 全套 95 字段是"尽量覆盖"的产出面,
+       * 不是完整度分母, 否则全套模式下完整度恒低、误报"建议重蒸"。 */
+      if(DISTILL_CORE.CORE_FIELDS && DISTILL_CORE.CORE_FIELDS.length) return DISTILL_CORE.CORE_FIELDS.slice();
+      if(DISTILL_CORE.PROFILE_FIELDS && DISTILL_CORE.PROFILE_FIELDS.length) return DISTILL_CORE.PROFILE_FIELDS.slice();
+    }
   }catch(e){}
   return FALLBACK_FIELDS.slice();
 })();

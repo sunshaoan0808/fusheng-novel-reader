@@ -782,6 +782,14 @@ async function onStartDistill(){
         DISTILL_PACKAGE.saveCharacterCard(S.pkg.id, ch, card);
       }
     });
+    // 全套模式: 仲裁冲突与门禁失败落盘, 供人工复核 (不静默吞)
+    var arbReport = {};
+    chars.forEach(function(ch){
+      if(profiles[ch] && ((profiles[ch].conflicts || []).length || (profiles[ch].gateFailures || []).length)){
+        arbReport[ch] = {conflicts: profiles[ch].conflicts || [], gateFailures: profiles[ch].gateFailures || []};
+      }
+    });
+    if(Object.keys(arbReport).length) DISTILL_PACKAGE.saveData(S.pkg.id, "arbitration", arbReport);
     setStage("profile", "done");
     saveCkpt(true);
     abortGuard();   // 已完成的角色卡已落盘，可以安全停下

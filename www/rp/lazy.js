@@ -13,6 +13,7 @@ var GROUPS = {
   distill: [
     "rp/distill_llm.js",
     "rp/distill_chunk.js",
+    "rp/distill_prompt_full.js",
     "rp/distill_core.js",
     "rp/distill_alias.js",
     "rp/distill_relations.js",

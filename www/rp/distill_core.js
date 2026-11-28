@@ -1,7 +1,9 @@
-/* App 端蒸馏核心 (2026-10-07): 移植自 novel-distill。
- * 流程: chunks -> 每人物每块蒸馏 -> 合并档案。
- * 为手机优化: 简化字段, 流式进度, localStorage 断点续跑。
- */
+/* App 端蒸馏核心 (2026-10-07 移植; 2026-11-28 升级为全套方案)。
+ * 全套模式 (distill_prompt_full.js 在场时): 与 novel-distill 管线同源 ——
+ * zaomeng+overlay 全套提示词、95 字段/24 组、出场门/占位词门禁/values 校验、
+ * 字段级仲裁合并 (证据强度记账/冻结字段/冲突队列)、按角色串行增量链。
+ * 旧简化模式 (18 字段批量 JSON) 保留为 legacy: batchProfiles:true 或无全套模块时走。
+ * localStorage 断点续跑两种模式通用 (checkpoint 形状不变)。 */
 var DISTILL_CORE = (function(){
 "use strict";
 
@@ -32,6 +34,17 @@ var FIELD_SPEC = [
   ["action_pattern", "行动模式 (典型行为方式与处事套路)"]
 ];
 var PROFILE_FIELDS = FIELD_SPEC.map(function(f){ return f[0]; });
+/* 全套字段: 核心字段集 (旧 18) 供质量门完整度打分与批量模式使用;
+ * 全套模块在场时 PROFILE_FIELDS 升级为 95 字段 (解析/合并/落卡口径)。 */
+var CORE_FIELDS = PROFILE_FIELDS.slice();
+var FIELD_GROUPS = (typeof DISTILL_PROMPT_FULL !== "undefined" && DISTILL_PROMPT_FULL.groups) || null;
+var FULL_MODE = !!FIELD_GROUPS;
+if(FULL_MODE){
+  PROFILE_FIELDS = [];
+  FIELD_GROUPS.forEach(function(g){ g.fields.forEach(function(f){
+    if(PROFILE_FIELDS.indexOf(f) < 0) PROFILE_FIELDS.push(f);
+  }); });
+}
 /* 批量 JSON 模板的字符段从 FIELD_SPEC 派生: 历史上这里手抄了一遍 8 字段,
  * 提示词加字段而模板不加 → 模型按新口径产出也会被 parseBatch 当噪声丢掉。 */
 var BATCH_FIELD_JSON = FIELD_SPEC.map(function(f){ return '"' + f[0] + '":""'; }).join(",");
@@ -56,6 +69,8 @@ ${FIELD_SPEC.map(function(f){ return "- " + f[0] + ": " + f[1]; }).join("\n")}
 `;
 
 async function distillOne(chunk, character, onProgress){
+  if(FULL_MODE) return distillOneFull(chunk, character,
+    (onProgress && typeof onProgress === "object") ? onProgress : {});
   // 摘录上限与分块上限保持一致 (DISTILL_CHUNK.MAX_CHARS): 块长超过上限时
   // 每块尾部会被永久丢弃, 且相邻块之间留下盲区——不报错, 只是"某情节没记住"。
   var cap = (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000;
@@ -71,6 +86,278 @@ async function distillOne(chunk, character, onProgress){
     {role: "user", content: user}
   ], {maxTokens: 6000});
   return {md: r.content, chunkId: chunk.id, character: character, stage: chunk.stage || "mid"};
+}
+
+
+/* ── 全套模式: 单人蒸馏 (管线同源请求形状) ─────────────────────────
+ * system = zaomeng+overlay 全套提示词; user = REQUEST JSON
+ * {excerpt, chunk_id, chunk_title, characters:[name], alias_map,
+ *  update_mode: incremental|fresh, existing_profiles:{name: md}}。 */
+async function distillOneFull(chunk, character, opts){
+  opts = opts || {};
+  var cap = (typeof DISTILL_CHUNK !== "undefined" && DISTILL_CHUNK.MAX_CHARS) || 6000;
+  var req = {
+    excerpt: chunk.text.slice(0, cap),
+    chunk_id: chunk.id,
+    chunk_title: chunk.title || "",
+    characters: [character],
+    alias_map: opts.aliasMap || {},
+    update_mode: opts.existingMd ? "incremental" : "fresh"
+  };
+  if(opts.existingMd){
+    req.existing_profiles = {};
+    req.existing_profiles[character] = opts.existingMd;
+  }
+  var r = await DISTILL_LLM.chat([
+    {role: "system", content: DISTILL_PROMPT_FULL.text},
+    {role: "user", content: JSON.stringify(req, null, 1)}
+  ], {maxTokens: 16000});
+  return {md: r.content, chunkId: chunk.id, character: character, stage: chunk.stage || "mid", full: true};
+}
+
+/* 畸形字段行剥离: 字段名夹汉字 (如 inner_conflict_两难) 的行整行丢弃,
+ * 不让它混进上一字段的值 (管线侧同名教训)。 */
+function stripMalformedLines(md){
+  return String(md || "").split("\n").filter(function(ln){
+    return !/^\s*-\s*[A-Za-z_][A-Za-z0-9_]*[一-鿿]/.test(ln);
+  }).join("\n");
+}
+
+/* 全套 md 解析: 先按 ## 角色名取节, 跳过 ### 冲突备注节,
+ * 再逐行取字段 (容忍 **field**: 与 **field": 误写)。只收小写 snake_case 名。 */
+function parseFullProfile(md, character){
+  var lines = stripMalformedLines(md).split("\n");
+  var sections = [], cur = null;
+  lines.forEach(function(ln){
+    var h = ln.match(/^##\s+(.+)$/);
+    if(h){ cur = {head: h[1], body: []}; sections.push(cur); }
+    else if(cur) cur.body.push(ln);
+  });
+  var body = lines;
+  if(sections.length){
+    var pick = null;
+    sections.forEach(function(sec){ if(!pick && sec.head.indexOf(character) >= 0) pick = sec; });
+    if(!pick && sections.length === 1) pick = sections[0];
+    if(pick) body = pick.body;
+  }
+  var fields = {}, curKey = null, curVal = [], skipSec = false;
+  function flush(){ if(curKey) fields[curKey] = curVal.join("\n").trim(); }
+  body.forEach(function(ln){
+    var sec = ln.match(/^###\s+(.+)$/);
+    if(sec){ flush(); curKey = null; curVal = []; skipSec = sec[1].indexOf("冲突备注") >= 0; return; }
+    if(skipSec) return;
+    var m = ln.match(/^\s*-\s*\*{0,2}([a-z][a-z0-9_]*)["”]?\*{0,2}\s*[:：]\s*(.*)$/);
+    if(m){ flush(); curKey = m[1]; curVal = [m[2]]; }
+    else if(curKey) curVal.push(ln);
+  });
+  flush();
+  return fields;
+}
+
+/* ── 三道门 (移植管线 distill.py 门禁, 口径一致) ─────────────────── */
+var PLACEHOLDER_TOKENS = ["未判定", "未知", "证据不足", "待判定", "不详"];
+var VALUES_OK_RE = /^[^=；;]+=-?\d+\s*(?:[（(][^）)]*[）)])?\s*(?:[；;\/]\s*[^=；;]+=-?\d+\s*(?:[（(][^）)]*[）)])?\s*)*$/;
+/* 返回第一个违规 {kind, field, value} 或 null。kind: placeholder|values。 */
+function checkGates(fields){
+  var keys = Object.keys(fields || {});
+  for(var i = 0; i < keys.length; i++){
+    var k = keys[i], v = String(fields[k] == null ? "" : fields[k]).trim();
+    if(!v) continue;
+    for(var j = 0; j < PLACEHOLDER_TOKENS.length; j++){
+      if(v.indexOf(PLACEHOLDER_TOKENS[j]) === 0)
+        return {kind: "placeholder", field: k, value: v.slice(0, 40)};
+    }
+    if(k === "values" && !VALUES_OK_RE.test(v))
+      return {kind: "values", field: k, value: v.slice(0, 40)};
+  }
+  return null;
+}
+function countOccurrences(text, needle){
+  if(!needle) return 0;
+  var n = 0, i = 0;
+  while((i = text.indexOf(needle, i)) >= 0){ n++; i += needle.length; }
+  return n;
+}
+/* 出场门计数: 本名 + 全部别名 (≥2 字, 与 buildAliasIndex 同口径) 的出现次数 */
+function countMentions(text, charName, aliasIndex){
+  var n = countOccurrences(text, charName);
+  var al = (aliasIndex && aliasIndex[charName]) || [];
+  for(var i = 0; i < al.length; i++) n += countOccurrences(text, al[i]);
+  return n;
+}
+
+/* ── 字段级仲裁合并 (移植管线 field_arbitration 的 A 型记账) ────────
+ * 每字段记 {value, chunk, strength}: 整值逐字命中原文=2, 值内「」引文命中=1, 其余=0。
+ * 冻结字段一旦以 strength 2 落座不再被覆盖; 同强度不同值 → 保旧值并记冲突队列。 */
+var FROZEN_FIELDS = {core_identity: 1, gender: 1, world_belong: 1, identity_anchor: 1,
+  background_imprint: 1, life_experience: 1, trauma_scar: 1, taboo_topics: 1, forbidden_behaviors: 1};
+function anchorStrength(value, chunkText){
+  if(!value || !chunkText) return 0;
+  var flat = value.replace(/\[[^\]]*\]/g, "").trim();
+  if(flat && chunkText.indexOf(flat) >= 0) return 2;
+  var m, re = /「([^」]+)」/g;
+  while((m = re.exec(value)) !== null){
+    if(m[1].length >= 4 && chunkText.indexOf(m[1]) >= 0) return 1;
+  }
+  return 0;
+}
+function createStore(){ return {fields: {}, conflicts: []}; }
+function applyToStore(store, fields, chunkId, chunkText){
+  Object.keys(fields || {}).forEach(function(k){
+    var v = String(fields[k] == null ? "" : fields[k]).trim();
+    if(!v) return;
+    var cur = store.fields[k];
+    var s = anchorStrength(v, chunkText);
+    if(!cur){ store.fields[k] = {value: v, chunk: chunkId, strength: s, first: chunkId, last: chunkId}; return; }
+    if(cur.value === v){ cur.last = chunkId; return; }
+    if(FROZEN_FIELDS[k] && cur.strength >= 2) return;
+    if(s > cur.strength){ store.fields[k] = {value: v, chunk: chunkId, strength: s, first: cur.first, last: chunkId}; return; }
+    if(s === cur.strength){
+      store.conflicts.push({field: k, kept: cur.value, rejected: v, keptChunk: cur.chunk, chunk: chunkId});
+    }
+  });
+}
+function storeFields(store){
+  var o = {};
+  Object.keys(store.fields).forEach(function(k){ o[k] = store.fields[k].value; });
+  return o;
+}
+/* 字段对象 -> 分组 md (existing_profiles 回灌用; 冲突队列不在字段内, 天然不回灌) */
+function fieldsToMd(fields, name){
+  var out = ["## " + name];
+  if(FIELD_GROUPS){
+    FIELD_GROUPS.forEach(function(g){
+      var lines = [];
+      g.fields.forEach(function(f){ if(fields[f]) lines.push("- " + f + ": " + fields[f]); });
+      if(lines.length) out.push("### " + g.name + "\n" + lines.join("\n"));
+    });
+  }else{
+    Object.keys(fields).forEach(function(f){ if(fields[f]) out.push("- " + f + ": " + fields[f]); });
+  }
+  return out.join("\n");
+}
+
+/* ── 全套蒸馏主流程 ───────────────────────────────────────────────
+ * 按角色串行增量链 (链内块序即仲裁序, existing 回灌当前档案), 角色之间并发。
+ * 出场 <min 跳过; 占位词/values 违规或空档案整块重摇一次, 再犯记 gateFailures 不落盘。 */
+async function distillNovelFull(chunks, characters, opts){
+  var onProgress = opts.onProgress || function(){};
+  var checkpoint = opts.checkpoint || {};
+  var shouldPause = opts.shouldPause || function(){ return false; };
+  var shouldAbort = opts.shouldAbort || function(){ return false; };
+  var aliasIndex = buildAliasIndex(opts.aliasMap);
+  var aliasMap = opts.aliasMap || {};
+  var minMentions = (opts.appearanceMin == null ? 3 : opts.appearanceMin);
+  var concurrency = Math.max(1, Math.min(parseInt(opts.concurrency, 10) || 3, 8));
+  var total = chunks.length * characters.length;
+  var done = 0, aborted = false;
+  async function waitPause(){
+    while(shouldPause() && !shouldAbort()){
+      onProgress(done, total, "已暂停…");
+      await new Promise(function(r){ setTimeout(r, 500); });
+    }
+  }
+  var stores = {}, details = {}, gateFailures = {}, chains = {};
+  characters.forEach(function(ch){
+    stores[ch] = {early: createStore(), mid: createStore(), late: createStore()};
+    details[ch] = []; gateFailures[ch] = []; chains[ch] = [];
+  });
+  chunks.forEach(function(chunk){
+    characters.forEach(function(ch){
+      var key = chunk.id + "|" + ch;
+      var saved = checkpoint[key];
+      if(saved && typeof saved === "object" && saved.fields){
+        chains[ch].push({kind: "restore", chunk: chunk, saved: saved});
+      }else{
+        var hit = minMentions <= 0 ? appearsIn(chunk.text, ch, aliasIndex)
+                                   : countMentions(chunk.text, ch, aliasIndex) >= minMentions;
+        chains[ch].push(hit ? {kind: "work", chunk: chunk, key: key} : {kind: "skip", chunk: chunk});
+      }
+    });
+  });
+  characters.forEach(function(ch){
+    chains[ch].forEach(function(it){
+      if(it.kind !== "restore") return;
+      var st = it.saved.stage || it.chunk.stage || "mid";
+      applyToStore(stores[ch][st] || stores[ch].mid, it.saved.fields, it.chunk.id, it.chunk.text);
+      details[ch].push({fields: it.saved.fields, chunkId: it.chunk.id, md: "", stage: st, cached: true});
+    });
+  });
+  async function runChain(ch){
+    var items = chains[ch];
+    for(var i = 0; i < items.length; i++){
+      if(aborted) return;
+      await waitPause();
+      if(shouldAbort()){ aborted = true; return; }
+      var it = items[i], chunk = it.chunk;
+      var st = chunk.stage || "mid";
+      var store = stores[ch][st] || stores[ch].mid;
+      if(it.kind === "restore"){ done++; continue; }
+      if(it.kind === "skip"){
+        done++;
+        onProgress(done, total, "跳过 " + ch + " @ " + chunk.id + " (出场不足)");
+        continue;
+      }
+      onProgress(done, total, "蒸馏 " + ch + " @ " + chunk.id);
+      var settled = false;
+      for(var attempt = 0; attempt < 2 && !settled; attempt++){
+        try{
+          var hasExisting = Object.keys(store.fields).length > 0;
+          var r = await distillOneFull(chunk, ch, {
+            existingMd: hasExisting ? fieldsToMd(storeFields(store), ch) : "",
+            aliasMap: aliasMap
+          });
+          var fields = parseFullProfile(r.md, ch);
+          if(!Object.keys(fields).length){
+            if(attempt === 0){ onProgress(done, total, "空档案, 重摇 " + ch + " @ " + chunk.id); continue; }
+            gateFailures[ch].push({chunk: chunk.id, kind: "empty", field: ""});
+            settled = true; break;
+          }
+          var vio = checkGates(fields);
+          if(vio){
+            if(attempt === 0){ onProgress(done, total, "门禁拦截(" + vio.kind + "), 重摇 " + ch + " @ " + chunk.id); continue; }
+            gateFailures[ch].push({chunk: chunk.id, kind: vio.kind, field: vio.field});
+            settled = true; break;
+          }
+          checkpoint[it.key] = {fields: fields, stage: st};
+          if(opts.onCheckpoint) opts.onCheckpoint(checkpoint);
+          applyToStore(store, fields, chunk.id, chunk.text);
+          details[ch].push({fields: fields, chunkId: chunk.id, md: "", stage: st});
+          settled = true;
+        }catch(e){
+          onProgress(done, total, "失败 " + ch + " @ " + chunk.id + ": " + e.message);
+          settled = true;
+        }
+      }
+      done++;
+    }
+  }
+  var queue = characters.slice();
+  async function worker(){
+    while(!aborted){
+      var ch = queue.shift();
+      if(!ch) return;
+      await runChain(ch);
+    }
+  }
+  var pool = [];
+  for(var w = 0; w < concurrency; w++) pool.push(worker());
+  await Promise.all(pool);
+  var final = {};
+  characters.forEach(function(ch){
+    var has = ["early", "mid", "late"].some(function(st){ return Object.keys(stores[ch][st].fields).length; });
+    if(!has && !details[ch].length) return;
+    var merged = {};
+    ["early", "mid", "late"].forEach(function(st){ merged[st] = storeFields(stores[ch][st]); });
+    PROFILE_FIELDS.concat(["brief_intro", "appearance", "relationships_summary", "key_events", "arc_summary"]).forEach(function(k){
+      merged[k] = merged.late[k] || merged.mid[k] || merged.early[k] || "";
+    });
+    var conflicts = [];
+    ["early", "mid", "late"].forEach(function(st){ conflicts = conflicts.concat(stores[ch][st].conflicts); });
+    final[ch] = {fields: merged, chunks: details[ch].length, details: details[ch],
+      conflicts: conflicts, gateFailures: gateFailures[ch]};
+  });
+  return final;
 }
 
 /* 批量模式: 一次调用产出该块出现的所有角色。
@@ -257,6 +544,9 @@ function appearsIn(text, charName, aliasIndex){
 
 async function distillNovel(chunks, characters, opts){
   opts = opts || {};
+  if(FULL_MODE && opts.fullScheme !== false && opts.batchProfiles !== true){
+    return distillNovelFull(chunks, characters, opts);
+  }
   var onProgress = opts.onProgress || function(){};
   var checkpoint = opts.checkpoint || {};
   var shouldPause = opts.shouldPause || function(){ return false; };
@@ -432,6 +722,16 @@ return {
   mergeProfiles: mergeProfiles,
   parseBatch: parseBatch,
   PROFILE_FIELDS: PROFILE_FIELDS,
+  CORE_FIELDS: CORE_FIELDS,
+  FIELD_GROUPS: FIELD_GROUPS,
+  FULL_MODE: FULL_MODE,
+  countMentions: countMentions,
+  checkGates: checkGates,
+  parseFullProfile: parseFullProfile,
+  createStore: createStore,
+  applyToStore: applyToStore,
+  storeFields: storeFields,
+  fieldsToMd: fieldsToMd,
   FIELD_SPEC: FIELD_SPEC,
   SYSTEM_PROMPT: SYSTEM_PROMPT,
   BATCH_SYSTEM_PROMPT: BATCH_SYSTEM_PROMPT,
