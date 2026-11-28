@@ -13,7 +13,7 @@
   var SENT = "\u0000ND_IO_ERROR";
   var MARK = "__nd_sec";
   /* 受保护项：obj = 顶层对象的 .key；arr = 数组每个元素的 .key */
-  var PROTECTED = { "nd_api_cfg_v1": "obj", "nd_distill_llm": "obj", "nd_api_profiles": "arr" };
+  var PROTECTED = { "nd_api_cfg_v1": "obj", "nd_distill_llm": "obj", "nd_api_profiles": "arr", "nd_llm_providers_v1": "arr" };
   var state = { enabled: false, reason: "init", migrated: 0 };
   var api = {
     PROTECTED: PROTECTED,

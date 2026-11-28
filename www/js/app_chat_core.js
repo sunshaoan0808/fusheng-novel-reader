@@ -5,7 +5,21 @@
 /* ================= RP 聊天 (RP 引擎) ================= */
 const CFG_KEY = "nd_api_cfg_v1";
 const RPCFG_KEY = "nd_rp_cfg_v1";
-const getCfg = ()=>{ try{return JSON.parse(localStorage.getItem(CFG_KEY))||{}}catch(e){return{}}};
+const getCfg = ()=>{ let c={}; try{ c=JSON.parse(localStorage.getItem(CFG_KEY))||{} }catch(e){ c={} }
+  /* 多厂家用途指派覆盖 (2026-11-28): 指派优先于旧表单; 未指派的用途保持旧值。
+   * 生图覆盖 imgBase/imgKey/imgModel 并切到 api 来源; TTS 只记 ttsBase/ttsKey,
+   * 由 app_tts 在调用时拼路由 (不污染聊天 base/key)。 */
+  try{
+    if(typeof LLM_ROLES!=="undefined"){
+      const ch=LLM_ROLES.resolve("chat");
+      if(ch){ c.base=ch.base; c.key=ch.key; if(ch.model) c.model=ch.model; }
+      const im=LLM_ROLES.resolve("image");
+      if(im){ c.imgBase=im.base; c.imgKey=im.key; if(im.model) c.imgModel=im.model; c.imgSrc="api"; }
+      const tt=LLM_ROLES.resolve("tts");
+      if(tt){ if(tt.model) c.ttsModel=tt.model; c.ttsBase=tt.base; c.ttsKey=tt.key; }
+    }
+  }catch(e){}
+  return c; };
 const saveCfg = (c)=>{ try{ localStorage.setItem(CFG_KEY, JSON.stringify(c)); }catch(e){ try{ rpToastOnce(isQuotaErr(e) ? "存储空间已满，API 配置未保存" : "API 配置保存失败"); }catch(_){} } };
 const getRpCfg = ()=> Object.assign({maxContext:32768, respTokens:2000, summaryModel:"",
   temperature:0.9, topP:1, ooc:true, preset:"classic", optCards:false, optCount:4, optMood:"none", ttsAuto:false, ttsMode:"all", typewriter:true,

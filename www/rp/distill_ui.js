@@ -286,35 +286,20 @@ function renderConfig(){
   if(S.qaMode){
     return renderConfigQA();
   }
-  /* LLM 配置：优先复用主设置页（nd_api_cfg_v1），用户只选模型，不填 Key。
-     模型下拉框读设置页缓存的模型列表（nd_models），默认选中用户已配置的模型，
-     也支持手动输入（对齐设置页行为，不再写死模型名） */
+  /* LLM 配置 (2026-11-28 多厂家改造): 蒸馏用途在「我的 · 设置 → 模型厂家」里
+   * 指派厂家+模型, 这里只展示当前生效配置, 不再在此填 Key/选模型。 */
   var llmBlock;
   if(llmCfg.key){
-    var keySrc = llmCfg._fromMain ? "设置页已配置" : "蒸馏独立配置";
-    var modelList = [];
-    try{ modelList = JSON.parse(localStorage.getItem("nd_models") || "[]"); }catch(e){}
-    var curModel = llmCfg.model || "";
-    var modelOpts = modelList.map(function(m){
-      return `<option value="${esc(m)}"${m === curModel ? " selected" : ""}>${esc(m)}</option>`;
-    }).join("");
-    // 用户已配的模型不在列表里时，补一项保证选中态
-    if(curModel && modelList.indexOf(curModel) < 0){
-      modelOpts = `<option value="${esc(curModel)}" selected>${esc(curModel)}</option>` + modelOpts;
-    }
+    var keySrc = llmCfg._fromRole ? "设置 · 模型厂家指派" : (llmCfg._fromMain ? "设置页已配置" : "蒸馏独立配置");
     llmBlock = `<div class="field">
-      <label>LLM <span style="font-size:calc(11px * var(--fs));color:var(--gold)">✓ ${keySrc}的 Key，无需填写</span></label>
-      <div style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">Key: ${esc(llmCfg.key.slice(0,4))}****${esc(llmCfg.key.slice(-4))}</div>
-    </div>
-    <div class="field">
-      <label>模型</label>
-      <select id="d_model" style="width:100%;padding:8px">${modelOpts}</select>
-      <input id="d_model_custom" placeholder="或手动输入模型名" value="" style="width:100%;margin-top:6px">
+      <label>LLM <span style="font-size:calc(11px * var(--fs));color:var(--gold)">✓ ${keySrc}</span></label>
+      <div style="font-size:calc(12px * var(--fs));color:var(--ink-faint)">模型: ${esc(llmCfg.model || "(未指定)")} · Key: ${esc(llmCfg.key.slice(0,4))}****${esc(llmCfg.key.slice(-4))}</div>
+      <div class="hint">换厂家或模型：去「我的 · 设置 → 模型厂家 · 用途分配」里改「蒸馏」一项。</div>
     </div>`;
   }else{
     llmBlock = `<div class="field">
-      <label>LLM API Key <span style="font-size:calc(11px * var(--fs));color:var(--ink-faint)">（设置页也未配置，请填写）</span></label>
-      <input type="password" id="d_key" value="" placeholder="OpenAI 兼容接口 Key" style="width:100%">
+      <label>LLM 未配置</label>
+      <div class="hint">还没有可用的蒸馏配置：去「我的 · 设置 → 模型厂家」添加厂家，并把一个模型指派给「蒸馏」用途，再回来开始。</div>
     </div>`;
   }
   return `<div class="card">
@@ -383,21 +368,14 @@ function renderPlan(){
   </div>`;
 }
 
-/* 从配置页保存 LLM 选择（点"开始发现角色"时调用） */
+/* 配置校验（点"开始发现角色"时调用）。2026-11-28 多厂家改造后,
+ * 蒸馏的厂家/模型在设置页指派, 这里只校验可用性并保存蒸馏深度。 */
 function saveLlmChoice(){
   var c = DISTILL_LLM.cfg();
-  var keyInput = document.getElementById("d_key");
-  if(keyInput){
-    var key = keyInput.value.trim();
-    if(!key){ alert("请填写 API Key（设置页也未配置）"); return false; }
-    c.key = key; c._fromMain = false; DISTILL_LLM.saveCfg(c);
-  }else{
-    var modelSel = document.getElementById("d_model");
-    var modelCustom = document.getElementById("d_model_custom");
-    var picked = (modelCustom && modelCustom.value.trim()) || (modelSel && modelSel.value);
-    if(picked){ c.model = picked; DISTILL_LLM.saveCfg(c); }
+  if(!c.key || !c.baseUrl){
+    alert("未配置可用的蒸馏 LLM，请先去「我的 · 设置 → 模型厂家」添加厂家并指派「蒸馏」用途");
+    return false;
   }
-  if(!DISTILL_LLM.cfg().key){ alert("未配置 LLM API Key"); return false; }
   var depthSel = document.getElementById("d_depth");
   if(depthSel) S.depth = depthSel.value;
   return true;

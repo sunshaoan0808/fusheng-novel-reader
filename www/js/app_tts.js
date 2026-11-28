@@ -12,6 +12,8 @@ return Math.max(2, Math.ceil(n/4));
 };
 window.fmtDur = (s)=>{ s = Math.max(0, Math.round(s)); return Math.floor(s/60) + ":" + String(s%60).padStart(2,"0"); };
 window.ttsKey = (idx)=> chatHistKey() + "#" + idx;
+/* TTS 用途被指派到独立厂家时, 用该厂家的地址/Key 发起朗读请求 */
+function ttsRouteCfg(cfg){ return (cfg.ttsBase||cfg.ttsKey) ? Object.assign({}, cfg, {base: cfg.ttsBase||cfg.base, key: cfg.ttsKey||cfg.key}) : cfg; }
 function ttsClean(m){ return String((m&&m.content)||"").replace(/[*#`>\-\[\]()]/g,"").slice(0,800); }
 /* 只念对白：抽引号内文字（「」/“”/『』/""）；全文无引号时按分段器口径
  * （无标记 = 整段对白）回落全文，绝不让一整条无引号回复静默。 */
@@ -85,11 +87,12 @@ const m = h[idx]; if(!m || m.role!=="assistant") return;
 const cfg = getCfg();
 const text = ttsClean(m);
 const estDur = window.ttsEstDur(text);
-if(cfg.key && cfg.base && cfg.ttsModel){
+const rc1 = ttsRouteCfg(cfg);
+if(rc1.key && rc1.base && cfg.ttsModel){
 try{
 let url = ttsCache[k];
 if(!url){
-url = await RP_NET.tts(cfg, text, cfg.ttsModel, cfg.ttsVoice||"alloy");
+url = await RP_NET.tts(rc1, text, cfg.ttsModel, cfg.ttsVoice||"alloy");
 /* v37: 缓存上限 20 条，淘汰时 revoke blob URL，避免长聊天持续泄漏内存 */
 try{
   const _ks = Object.keys(ttsCache);
@@ -193,8 +196,9 @@ speakNext();
 return;
 }
 const cfg = getCfg();
-if(cfg.key && cfg.base && cfg.ttsModel){
-RP_NET.tts(cfg, text.slice(0, 800), cfg.ttsModel, cfg.ttsVoice || "alloy").then((url)=>{
+const rc2 = ttsRouteCfg(cfg);
+if(rc2.key && rc2.base && cfg.ttsModel){
+RP_NET.tts(rc2, text.slice(0, 800), cfg.ttsModel, cfg.ttsVoice || "alloy").then((url)=>{
 const a = new Audio(url);
 TTS_PLAY = {key: k, idx: idx, audio: a, local: false, startTs: Date.now(), estDur: estDur, prog: 0};
 a.onended = ()=>{ const i = idx; ttsStop(); ttsPaintStopped(i); };

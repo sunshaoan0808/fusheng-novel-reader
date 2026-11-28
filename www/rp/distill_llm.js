@@ -6,6 +6,14 @@ var DISTILL_LLM = (function(){
 "use strict";
 
 function cfg(){
+  /* 多厂家用途分配优先 (2026-11-28): 「蒸馏」被指派时直接用指派的厂家+模型,
+   * 不再走下方独立配置/继承逻辑。 */
+  try{
+    if(typeof LLM_ROLES !== "undefined"){
+      var rr = LLM_ROLES.resolve("distill");
+      if(rr) return {baseUrl: rr.base, key: rr.key, model: rr.model, _fromRole: true};
+    }
+  }catch(e){}
   /* v37 安全: 不再内置任何第三方默认网关。旧版本默认 baseUrl 指向第三方域名，
    * 且会继承主配置的 Key（用户主配置 base 为空时，Key 会被发往该域名）。
    * 现在 baseUrl 必须由用户显式配置，缺失时调用侧直接报错，绝不静默外发 Key。 */

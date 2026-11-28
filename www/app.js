@@ -179,7 +179,7 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 <div class="field"><label>TTS 音色</label>
 <input id="c_voice" placeholder="alloy" value="${esc(c.ttsVoice||"")}"></div>
 <div class="btnrow"><button class="btn" onclick="saveCfgUI()">保存</button></div>
-</div>`+ (typeof RP_SOUL_CFG!=="undefined" ? RP_SOUL_CFG.profilesCardHTML() : "") +`<h2 class="sec setsec">RP 引擎</h2>
+</div>`+ `<div class="setcard" id="llm_roles_box"></div>` + (typeof RP_SOUL_CFG!=="undefined" ? RP_SOUL_CFG.profilesCardHTML() : "") +`<h2 class="sec setsec">RP 引擎</h2>
 <div class="setcard"><h3>基础</h3>
 <div class="field"><label>${icon("user",15)} 我的人设（全局）</label>
 <div class="btnrow"><button class="btn ghost" onclick="personaEditor(null,'settings')">编辑全局人设</button></div>
@@ -310,6 +310,7 @@ ${fontCardsHTML()}</div>` + `\n<div class="setcard"><h3>${icon("type",15)} 文�
 (function(){
 const rc = getRpCfg();
 document.getElementById("r_ctx").value = rc.maxContext;
+if(typeof LLM_ROLES_UI!=="undefined"){ const lb=document.getElementById("llm_roles_box"); if(lb) LLM_ROLES_UI.mount(lb); }
 document.getElementById("r_resp").value = rc.respTokens;
 document.getElementById("r_summ").value = rc.summaryModel||"";
 document.getElementById("r_temp").value = rc.temperature;
