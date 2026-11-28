@@ -280,6 +280,22 @@ async function distillNovelFull(chunks, characters, opts){
       }
     });
   });
+  /* 兜底 (2026-11-28 真跑实测): 出场分散的人物可能每块都不足出场门槛,
+   * 整条链全跳过 → 最终无档案 (林栀/昆子等 5 人实测中招)。
+   * 凡整条链无 work/restore 的人物, 把其出现最多的那块 (>=1 次) 提升为 work,
+   * 保证至少蒸一块; 全书零出场者不提升 (维持无档案)。 */
+  characters.forEach(function(ch){
+    var items = chains[ch];
+    var hasWork = items.some(function(it){ return it.kind === "work" || it.kind === "restore"; });
+    if(hasWork) return;
+    var best = null, bestN = 0;
+    items.forEach(function(it){
+      if(it.kind !== "skip") return;
+      var n = countMentions(it.chunk.text, ch, aliasIndex);
+      if(n > bestN){ bestN = n; best = it; }
+    });
+    if(best){ best.kind = "work"; best.key = best.chunk.id + "|" + ch; best.fallback = true; }
+  });
   characters.forEach(function(ch){
     chains[ch].forEach(function(it){
       if(it.kind !== "restore") return;
@@ -351,7 +367,10 @@ async function distillNovelFull(chunks, characters, opts){
   var final = {};
   characters.forEach(function(ch){
     var has = ["early", "mid", "late"].some(function(st){ return Object.keys(stores[ch][st].fields).length; });
-    if(!has && !details[ch].length) return;
+    /* 尝试过但全被门禁拦下的人物也要留条目 (空 fields + gateFailures),
+     * 否则失败无声无息: 名单里的人蒸没了都没人知道 (老周/王叔叔实测中招)。
+     * UI 侧凭 fields 全空识别这类条目: 不建卡, 只进仲裁报告。 */
+    if(!has && !details[ch].length && !gateFailures[ch].length) return;
     var merged = {};
     ["early", "mid", "late"].forEach(function(st){ merged[st] = storeFields(stores[ch][st]); });
     PROFILE_FIELDS.concat(["brief_intro", "appearance", "relationships_summary", "key_events", "arc_summary"]).forEach(function(k){

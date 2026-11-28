@@ -151,6 +151,39 @@ const load = (ctx, files) => files.forEach(f => vm.runInContext(rp(f), ctx, { fi
     t("阶段桶保留 (early)", fin["林黛玉"].fields.early.core_identity === "贾府表小姐");
   }
 
+  /* ── 6. 出场分散兜底: 每块都不足门槛的人物至少蒸最集中那块 ──────── */
+  {
+    const calls6 = [];
+    const stubLLM6 = { chat: async (msgs) => {
+      const req = JSON.parse(msgs[1].content);
+      calls6.push(req.chunk_id);
+      return { content: "## 稀客\n### 基础身份定位\n- core_identity: 偶尔路过的稀客\n- values: 守拙=8" };
+    } };
+    const sb = sandbox({ DISTILL_CHUNK: { MAX_CHARS: 6000 }, DISTILL_LLM: stubLLM6 });
+    load(sb, ["distill_prompt_full.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const chunks = [
+      { id: "c3", title: "三", stage: "early", text: "稀客来了，稀客坐下喝茶。" },
+      { id: "c4", title: "四", stage: "mid", text: "稀客又出现了。" }
+    ];
+    const fin = await C.distillNovel(chunks, ["稀客"], { checkpoint: {}, concurrency: 1 });
+    t("兜底: 出场分散人物也有档案", !!fin["稀客"] && fin["稀客"].fields.core_identity === "偶尔路过的稀客");
+    t("兜底: 只蒸出现最多的一块", calls6.length === 1 && calls6[0] === "c3");
+  }
+
+  /* ── 7. 全被门禁拦下的人物不静默消失: 留空条目 + gateFailures ──────── */
+  {
+    const stubLLM7 = { chat: async () => ({ content: "## 苦手\n### 基础身份定位\n- core_identity: 无名苦手\n- values: 重视家庭和睦待人宽厚" }) };
+    const sb = sandbox({ DISTILL_CHUNK: { MAX_CHARS: 6000 }, DISTILL_LLM: stubLLM7 });
+    load(sb, ["distill_prompt_full.js", "distill_core.js"]);
+    const C = sb.DISTILL_CORE;
+    const chunks = [{ id: "c5", title: "五", stage: "early", text: "苦手来了，苦手坐下，苦手喝茶。" }];
+    const fin = await C.distillNovel(chunks, ["苦手"], { checkpoint: {}, concurrency: 1 });
+    t("全拦人物留条目", !!fin["苦手"]);
+    t("全拦条目 fields 为空", !!fin["苦手"] && !String(fin["苦手"].fields.core_identity || "").trim());
+    t("全拦条目带 gateFailures", !!fin["苦手"] && (fin["苦手"].gateFailures || []).length === 1 && fin["苦手"].gateFailures[0].kind === "values");
+  }
+
   console.log("distill_full_parity: " + pass + " pass, " + fail + " fail");
   process.exit(fail ? 1 : 0);
 })().catch(e => { console.log("ERROR:", e && e.stack || e); process.exit(1); });

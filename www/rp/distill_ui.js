@@ -747,9 +747,12 @@ async function onStartDistill(){
       onProgress: function(d, t, m){ prog("[画像] " + m, 20 + d / t * 30); },
       onCheckpoint: function(){ onCkpt(); }
     });
-    // 存角色卡进剧本包
+    // 存角色卡进剧本包 (全套模式下 fields 全空的条目 = 尝试过但被门禁全拦, 不建空卡, 只留仲裁报告)
     chars.forEach(function(ch){
-      if(profiles[ch]){
+      var anyField = profiles[ch] && Object.keys(profiles[ch].fields || {}).some(function(k){
+        return k !== "early" && k !== "mid" && k !== "late" && String(profiles[ch].fields[k] || "").trim();
+      });
+      if(profiles[ch] && (anyField || !profiles[ch].gateFailures)){
         var card = {
           name: ch,
           description: profiles[ch].fields.core_identity || "",
