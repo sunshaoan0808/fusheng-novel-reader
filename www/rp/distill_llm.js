@@ -50,13 +50,18 @@ function fmtStats(){
 
 /* 错误分流: 4xx（除 429）是参数/鉴权问题, 重试 3 次只是让用户多等 6 秒;
  * 5xx、429、网络中断、超时才算可重试。 */
-function mkHttpError(status){
+function mkHttpError(status, bodyText){
   var hint = status === 401 ? " 未授权(Key 无效)"
     : status === 403 ? " 无权限"
     : status === 404 ? " 接口不存在"
     : status === 429 ? " 请求过于频繁"
     : "";
-  var e = new Error("HTTP " + status + hint);
+  var msg = "HTTP " + status + hint;
+  if(bodyText){
+    var snip = String(bodyText).replace(/\s+/g, " ").trim().slice(0, 180);
+    if(snip) msg += ": " + snip;
+  }
+  var e = new Error(msg);
   e.status = status;
   e.retryable = (status === 429 || status >= 500);
   return e;
@@ -90,6 +95,7 @@ async function chatInner(messages, opts, sink){
   var lastErr = null;
   /* v37: 去掉硬编码的第三方 fallback 模型——它会让用户 Key 被发往非预期模型/渠道。 */
   var models = [model];
+  var dropTemp = false;
   for(var mi = 0; mi < models.length; mi++){
     var fatal = false;
     for(var attempt = 0; attempt < 3; attempt++){
@@ -98,7 +104,8 @@ async function chatInner(messages, opts, sink){
       try{
         // 批量画像一次要产出多个角色的档案，输出会明显变长；不显式给上限时
         // 部分网关按 4096 截断，JSON 会断在半途 → 解析失败 → 回退逐人（很慢）。
-        var body = {model: models[mi], messages: messages, temperature: opts.temp || 0.7};
+        var body = {model: models[mi], messages: messages};
+        if(!dropTemp) body.temperature = opts.temp || 0.7;
         var maxTok = parseInt(opts.maxTokens, 10);
         if(maxTok > 0) body.max_tokens = maxTok;
         var r = await fetch(url, {
@@ -107,7 +114,11 @@ async function chatInner(messages, opts, sink){
           body: JSON.stringify(body),
           signal: ctrl ? ctrl.signal : undefined
         });
-        if(!r.ok) throw mkHttpError(r.status);
+        if(!r.ok){
+          var eb = "";
+          try{ eb = await r.text(); }catch(_){}
+          throw mkHttpError(r.status, eb);
+        }
         var d = await r.json();
         var msg0 = (((d.choices || [])[0] || {}).message || {});
         if(sink){ sink.reasoning = msg0.reasoning_content || msg0.reasoning || ""; sink.finish = ((d.choices || [])[0] || {}).finish_reason || ""; }
@@ -119,6 +130,12 @@ async function chatInner(messages, opts, sink){
         lastErr = e;
         if(e && e.name === "AbortError"){
           lastErr = new Error("请求超时 (" + Math.round(timeoutMs / 1000) + "s)");
+          lastErr.retryable = true;
+        }
+        /* 400 且本次带了 temperature: 可能是参数严格型模型拒收,
+         * 去掉 temperature 再试一次 (只翻一次, 不无限重试)。 */
+        if(lastErr && lastErr.status === 400 && !dropTemp){
+          dropTemp = true;
           lastErr.retryable = true;
         }
         // 不可重试的错误直接冒泡, 不要拿 6 秒换同一个 401
